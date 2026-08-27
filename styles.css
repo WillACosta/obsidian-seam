@@ -1,0 +1,22 @@
+/* Seam — Universal Palette styles */
+
+.seam-palette-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.seam-palette-description {
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+.seam-palette-tags {
+    font-size: 0.8em;
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
+.seam-palette-command {
+    border-left: 2px solid var(--interactive-accent);
+    padding-left: 8px;
+}

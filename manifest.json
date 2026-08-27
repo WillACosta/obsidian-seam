@@ -1,0 +1,9 @@
+{
+  "id": "seam",
+  "name": "Seam",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "isDesktopOnly": false,
+  "author": "Will",
+  "description": "Tag-driven note organization with automatic archiving and a Universal Palette."
+}
