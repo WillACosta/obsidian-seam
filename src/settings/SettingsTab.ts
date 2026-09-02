@@ -76,6 +76,62 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
+        new Setting(containerEl)
+            .setName('Remove tags and properties after archiving a note')
+            .setDesc('Automatically clean up temporary workflow tags and properties during archive.')
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableArchiveCleanup)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableArchiveCleanup = value;
+                        await this.plugin.saveSettings();
+                        this.display(); // Refresh to show/hide sub-settings
+                    }),
+            );
+
+        if (this.plugin.settings.enableArchiveCleanup) {
+            new Setting(containerEl)
+                .setName('Tags to remove after archiving')
+                .setDesc('Comma-separated list of tags to strip upon archiving (e.g. #permanent, #todo).')
+                .addText((text) =>
+                    text
+                        .setPlaceholder('#permanent, #todo')
+                        .setValue(this.plugin.settings.archiveCleanupTags)
+                        .onChange(async (value) => {
+                            this.plugin.settings.archiveCleanupTags = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName('Properties to remove after archiving')
+                .setDesc('Comma-separated list of frontmatter property keys to strip upon archiving (e.g. status).')
+                .addText((text) =>
+                    text
+                        .setPlaceholder('status')
+                        .setValue(this.plugin.settings.archiveCleanupProperties)
+                        .onChange(async (value) => {
+                            this.plugin.settings.archiveCleanupProperties = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+        }
+
+        // --- Interface ---
+        containerEl.createEl('h3', { text: 'Universal Palette' });
+
+        new Setting(containerEl)
+            .setName('Show icons in Universal Palette')
+            .setDesc('Display folder and command icons in search and command listings.')
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.showIcons)
+                    .onChange(async (value) => {
+                        this.plugin.settings.showIcons = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
         // --- Advanced ---
         containerEl.createEl('h3', { text: 'Advanced' });
 

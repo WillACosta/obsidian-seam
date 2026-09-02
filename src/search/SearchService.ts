@@ -1,13 +1,12 @@
 import { App, TFile } from 'obsidian';
-import { SeamSettings, SearchResult } from '../types';
+import { SeamSettings, SearchResult, QueryToken } from '../types';
 import { parseQuery } from './QueryParser';
-import { QueryToken } from '../types';
 
 /**
  * Extracts all tags from a file using Obsidian's MetadataCache.
  * Returns normalized tag names (lowercase, without # prefix).
  */
-function getFileTags(app: App, file: TFile): string[] {
+export function getFileTags(app: App, file: TFile): string[] {
     const cache = app.metadataCache.getFileCache(file);
     if (!cache) return [];
 
@@ -37,9 +36,27 @@ function getFileTags(app: App, file: TFile): string[] {
 }
 
 /**
+ * Checks if a note's tag matches a search token value (exact or prefix match).
+ * E.g., token "ele" matches "electronics", "electricity", "electronics/kicad".
+ */
+export function tagMatches(fileTag: string, tokenVal: string): boolean {
+    const normFileTag = fileTag.toLowerCase();
+    const normToken = tokenVal.toLowerCase();
+
+    // Exact match or prefix match on root tag
+    if (normFileTag.startsWith(normToken)) {
+        return true;
+    }
+
+    // Prefix match on any sub-tag segment (e.g., #hardware/electronics matches "ele")
+    const segments = normFileTag.split('/');
+    return segments.some((seg) => seg.startsWith(normToken));
+}
+
+/**
  * Search service for the Universal Palette.
  * Uses MetadataCache for tag-based search and file listing for text search.
- * Does not build a separate search index.
+ * Supports prefix tag filtering and || OR operator.
  */
 export class SearchService {
     private searchVersion = 0;
@@ -55,7 +72,7 @@ export class SearchService {
 
     /**
      * Execute a search query and return matching results.
-     * Supports tag queries (#tag, -#tag, OR) and plain text title/path search.
+     * Supports tag queries (#tag, -#tag, ||, OR) and plain text title/path search.
      */
     search(query: string): SearchResult[] {
         this.searchVersion++;
@@ -140,8 +157,8 @@ export class SearchService {
     }
 
     /**
-     * A segment matches if ALL positive tags are present
-     * AND NO negative tags are present.
+     * A segment matches if ALL positive tags match (prefix or exact)
+     * AND NO negative tags match.
      */
     private segmentMatches(segment: QueryToken[], fileTags: string[]): boolean {
         if (segment.length === 0) return false;
@@ -150,19 +167,14 @@ export class SearchService {
             const tokenVal = token.value.toLowerCase();
 
             if (token.type === 'tag') {
-                // Positive tag: must be present (supports parent match for nested tags)
-                const found = fileTags.some(
-                    (ft) => ft === tokenVal || ft.startsWith(tokenVal + '/'),
-                );
+                // Positive tag: must match at least one file tag (prefix or exact)
+                const found = fileTags.some((ft) => tagMatches(ft, tokenVal));
                 if (!found) return false;
             } else if (token.type === 'negativeTag') {
-                // Negative tag: must NOT be present
-                const found = fileTags.some(
-                    (ft) => ft === tokenVal || ft.startsWith(tokenVal + '/'),
-                );
+                // Negative tag: must NOT match any file tag
+                const found = fileTags.some((ft) => tagMatches(ft, tokenVal));
                 if (found) return false;
             }
-            // 'text' tokens in a tag query are ignored (user likely meant a tag)
         }
 
         return true;

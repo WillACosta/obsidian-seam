@@ -15,6 +15,12 @@ describe('QueryParser', () => {
         assert.deepEqual(result.tokens, [{ type: 'tag', value: 'electronics' }]);
     });
 
+    it('parses partial/prefix tag', () => {
+        const result = parseQuery('#ele');
+        assert.equal(result.isValid, true);
+        assert.deepEqual(result.tokens, [{ type: 'tag', value: 'ele' }]);
+    });
+
     it('parses negative tag', () => {
         const result = parseQuery('-#archived');
         assert.equal(result.isValid, true);
@@ -31,7 +37,37 @@ describe('QueryParser', () => {
         ]);
     });
 
-    it('parses OR queries', () => {
+    it('parses OR queries with || operator', () => {
+        const result = parseQuery('#electronics || #zmk');
+        assert.equal(result.isValid, true);
+        assert.deepEqual(result.tokens, [
+            { type: 'tag', value: 'electronics' },
+            { type: 'or', value: 'or' },
+            { type: 'tag', value: 'zmk' },
+        ]);
+    });
+
+    it('parses || operator without spaces (#a||#b)', () => {
+        const result = parseQuery('#electronics||#zmk');
+        assert.equal(result.isValid, true);
+        assert.deepEqual(result.tokens, [
+            { type: 'tag', value: 'electronics' },
+            { type: 'or', value: 'or' },
+            { type: 'tag', value: 'zmk' },
+        ]);
+    });
+
+    it('parses single | operator', () => {
+        const result = parseQuery('#electronics | #zmk');
+        assert.equal(result.isValid, true);
+        assert.deepEqual(result.tokens, [
+            { type: 'tag', value: 'electronics' },
+            { type: 'or', value: 'or' },
+            { type: 'tag', value: 'zmk' },
+        ]);
+    });
+
+    it('parses OR queries with text OR', () => {
         const result = parseQuery('#electronics OR #zmk');
         assert.equal(result.isValid, true);
         assert.deepEqual(result.tokens, [
@@ -51,18 +87,18 @@ describe('QueryParser', () => {
         ]);
     });
 
-    it('flags invalid queries starting with OR', () => {
-        const result = parseQuery('OR #electronics');
+    it('flags invalid queries starting with ||', () => {
+        const result = parseQuery('|| #electronics');
         assert.equal(result.isValid, false);
     });
 
-    it('flags invalid queries ending with OR', () => {
-        const result = parseQuery('#electronics OR');
+    it('flags invalid queries ending with ||', () => {
+        const result = parseQuery('#electronics ||');
         assert.equal(result.isValid, false);
     });
 
-    it('flags consecutive ORs', () => {
-        const result = parseQuery('#a OR OR #b');
+    it('flags consecutive || operators', () => {
+        const result = parseQuery('#a || || #b');
         assert.equal(result.isValid, false);
     });
 

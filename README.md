@@ -1,7 +1,5 @@
 # Seam — Obsidian Workflow Plugin
 
-> **Simplicity is the new Luxury.**
-
 Seam is a small, native-feeling Obsidian plugin that brings tag-driven organization and lightweight automation to your vault. Write notes, add simple tags, and let the system organize them quietly.
 
 ## Features

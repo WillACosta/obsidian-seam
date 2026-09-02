@@ -5,3 +5,4 @@ data.json
 seam_test_vault/
 .DS_Store
 dist/
+.vscode/

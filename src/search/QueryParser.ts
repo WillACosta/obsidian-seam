@@ -1,12 +1,25 @@
 import { ParsedQuery, QueryToken, QueryTokenType } from '../types';
 
+/**
+ * Parses simplified search query expressions.
+ * Supports:
+ * - Positive tags: #tag
+ * - Negative tags: -#tag
+ * - OR operators: ||, |, or OR
+ * - Plain text tokens
+ */
 export function parseQuery(input: string): ParsedQuery {
     const trimmed = input.trim();
     if (!trimmed) {
         return { tokens: [], isValid: true };
     }
 
-    const rawTokens = trimmed.split(/\s+/);
+    // Normalize OR symbols like || and single | to have surrounding whitespace
+    const normalized = trimmed
+        .replace(/\|\|/g, ' || ')
+        .replace(/(^|\s)\|(\s|$)/g, ' || ');
+
+    const rawTokens = normalized.split(/\s+/).filter((t) => t.length > 0);
     const tokens: QueryToken[] = [];
     let isValid = true;
 
@@ -16,7 +29,7 @@ export function parseQuery(input: string): ParsedQuery {
             tokens.push({ type: 'negativeTag' as QueryTokenType, value: t.substring(2) });
         } else if (t.startsWith('#')) {
             tokens.push({ type: 'tag' as QueryTokenType, value: t.substring(1) });
-        } else if (t.toLowerCase() === 'or') {
+        } else if (t === '||' || t === '|' || t.toLowerCase() === 'or') {
             tokens.push({ type: 'or' as QueryTokenType, value: 'or' });
         } else {
             tokens.push({ type: 'text' as QueryTokenType, value: t });

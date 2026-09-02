@@ -8,6 +8,10 @@ export interface SeamSettings {
     archivedTag: string;
     automaticProcessing: boolean;
     addArchivedState: boolean;
+    enableArchiveCleanup: boolean;
+    archiveCleanupTags: string;
+    archiveCleanupProperties: string;
+    showIcons: boolean;
     reconciliationIntervalMinutes: number;
 }
 
@@ -19,6 +23,10 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     archivedTag: 'archived',
     automaticProcessing: true,
     addArchivedState: true,
+    enableArchiveCleanup: true,
+    archiveCleanupTags: '#permanent, #todo',
+    archiveCleanupProperties: 'status',
+    showIcons: true,
     reconciliationIntervalMinutes: 15,
 };
 

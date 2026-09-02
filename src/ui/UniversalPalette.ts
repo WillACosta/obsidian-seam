@@ -1,4 +1,4 @@
-import { App, SuggestModal } from 'obsidian';
+import { App, SuggestModal, setIcon } from 'obsidian';
 import { PaletteItem, SeamSettings } from '../types';
 import { SearchService } from '../search/SearchService';
 
@@ -40,32 +40,57 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Search mode: delegate to SearchService
         const results = this.searchService.search(trimmed);
-        return results.map((r) => ({
-            id: r.file.path,
-            title: r.title,
-            description: r.path !== r.title ? r.path.replace(`/${r.title}.md`, '').replace('.md', '') : '',
-            type: 'note' as const,
-            file: r.file,
-            tags: r.tags,
-        }));
+        return results.map((r) => {
+            const parentPath = r.file.parent?.path && r.file.parent.path !== '/'
+                ? r.file.parent.path
+                : '';
+            return {
+                id: r.file.path,
+                title: r.title,
+                description: parentPath,
+                type: 'note' as const,
+                file: r.file,
+                tags: r.tags,
+            };
+        });
     }
 
     renderSuggestion(item: PaletteItem, el: HTMLElement): void {
-        const titleEl = el.createDiv({ cls: 'seam-palette-title' });
-        titleEl.setText(item.title);
-
-        if (item.description) {
-            const descEl = el.createDiv({ cls: 'seam-palette-description' });
-            descEl.setText(item.description);
-        }
-
-        if (item.tags && item.tags.length > 0) {
-            const tagsEl = el.createDiv({ cls: 'seam-palette-tags' });
-            tagsEl.setText(item.tags.map((t) => `#${t}`).join(' '));
-        }
-
         if (item.type === 'command' || item.type === 'action') {
-            el.addClass('seam-palette-command');
+            el.addClass('seam-palette-command-item');
+            const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
+
+            if (this.settings.showIcons) {
+                const iconEl = rowEl.createSpan({ cls: 'seam-palette-command-icon' });
+                setIcon(iconEl, 'terminal');
+            }
+
+            const titleEl = rowEl.createSpan({ cls: 'seam-palette-title' });
+            titleEl.setText(item.title);
+
+            if (item.description) {
+                const descEl = el.createDiv({ cls: 'seam-palette-description' });
+                descEl.setText(item.description);
+            }
+        } else {
+            el.addClass('seam-palette-note-item');
+            const titleEl = el.createDiv({ cls: 'seam-palette-title' });
+            titleEl.setText(item.title);
+
+            if (item.description) {
+                const folderEl = el.createDiv({ cls: 'seam-palette-folder' });
+                if (this.settings.showIcons) {
+                    const iconEl = folderEl.createSpan({ cls: 'seam-palette-folder-icon' });
+                    setIcon(iconEl, 'folder');
+                }
+                const nameEl = folderEl.createSpan({ cls: 'seam-palette-folder-name' });
+                nameEl.setText(item.description);
+            }
+
+            if (item.tags && item.tags.length > 0) {
+                const tagsEl = el.createDiv({ cls: 'seam-palette-tags' });
+                tagsEl.setText(item.tags.map((t) => `#${t}`).join(' '));
+            }
         }
     }
 

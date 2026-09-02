@@ -17,16 +17,16 @@ export function hasTag(file: TFile, app: App, targetTag: string): boolean {
         const tags: string[] = Array.isArray(fmTags)
             ? fmTags
             : typeof fmTags === 'string'
-                ? fmTags.split(',').map(t => t.trim())
+                ? fmTags.split(',').map((t) => t.trim())
                 : [];
-        if (tags.some(t => t.replace(/^#/, '').toLowerCase() === normalizedTarget)) {
+        if (tags.some((t) => t.replace(/^#/, '').toLowerCase() === normalizedTarget)) {
             return true;
         }
     }
 
     // Check inline tags
     if (cache.tags) {
-        if (cache.tags.some(t => t.tag.replace(/^#/, '').toLowerCase() === normalizedTarget)) {
+        if (cache.tags.some((t) => t.tag.replace(/^#/, '').toLowerCase() === normalizedTarget)) {
             return true;
         }
     }
@@ -35,77 +35,103 @@ export function hasTag(file: TFile, app: App, targetTag: string): boolean {
 }
 
 /**
- * Removes a tag from a file's frontmatter and inline content.
- * Uses processFrontMatter for YAML tags and vault.process for inline tags.
+ * Atomically updates a note's frontmatter and inline content:
+ * - Removes specified tags from frontmatter and inline text
+ * - Adds specified tags to frontmatter
+ * - Removes specified properties from frontmatter
  */
-export async function removeTag(file: TFile, app: App, tagToRemove: string): Promise<void> {
-    const cache = app.metadataCache.getFileCache(file);
-    if (!cache) return;
+export async function updateNoteTagsAndProperties(
+    file: TFile,
+    app: App,
+    options: {
+        removeTags?: string[];
+        addTags?: string[];
+        removeProperties?: string[];
+    },
+): Promise<void> {
+    const tagsToRemove = (options.removeTags || [])
+        .map((t) => t.replace(/^#/, '').trim().toLowerCase())
+        .filter((t) => t.length > 0);
 
-    const cleanTag = tagToRemove.replace(/^#/, '').toLowerCase();
+    const tagsToAdd = (options.addTags || [])
+        .map((t) => t.replace(/^#/, '').trim())
+        .filter((t) => t.length > 0);
 
-    // Remove from frontmatter if present
-    if (cache.frontmatter?.tags) {
-        await app.fileManager.processFrontMatter(file, (fm) => {
-            if (!fm.tags) return;
+    const propsToRemove = (options.removeProperties || [])
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+
+    // 1. Process Frontmatter
+    await app.fileManager.processFrontMatter(file, (fm) => {
+        // Remove properties
+        for (const prop of propsToRemove) {
+            delete fm[prop];
+        }
+
+        // Handle frontmatter tags
+        if (fm.tags) {
+            let existingTags: string[] = [];
             if (Array.isArray(fm.tags)) {
-                fm.tags = fm.tags.filter(
-                    (t: string) => t.replace(/^#/, '').toLowerCase() !== cleanTag
-                );
-                if (fm.tags.length === 0) {
-                    delete fm.tags;
-                }
+                existingTags = fm.tags.map((t) => String(t));
             } else if (typeof fm.tags === 'string') {
-                const tags = fm.tags
-                    .split(',')
-                    .map((t: string) => t.trim())
-                    .filter((t: string) => t.replace(/^#/, '').toLowerCase() !== cleanTag);
-                if (tags.length === 0) {
-                    delete fm.tags;
-                } else {
-                    fm.tags = tags;
+                existingTags = fm.tags.split(',').map((t) => t.trim());
+            }
+
+            // Filter out tags to remove
+            existingTags = existingTags.filter(
+                (t) => !tagsToRemove.includes(t.replace(/^#/, '').toLowerCase()),
+            );
+
+            // Add new tags if not present
+            for (const tagToAdd of tagsToAdd) {
+                if (!existingTags.some((t) => t.toLowerCase() === tagToAdd.toLowerCase())) {
+                    existingTags.push(tagToAdd);
                 }
             }
-        });
-    }
 
-    // Remove from inline content
-    if (cache.tags?.some(t => t.tag.replace(/^#/, '').toLowerCase() === cleanTag)) {
+            if (existingTags.length === 0) {
+                delete fm.tags;
+            } else {
+                fm.tags = existingTags;
+            }
+        } else if (tagsToAdd.length > 0) {
+            fm.tags = [...tagsToAdd];
+        }
+    });
+
+    // 2. Remove inline tags from content
+    if (tagsToRemove.length > 0) {
         await app.vault.process(file, (content) => {
-            const escapedTag = cleanTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`(^|[ \\t])#${escapedTag}(?=[ \\t]|\\n|$)`, 'gmi');
-            return content
-                .replace(regex, '')
-                .split('\n')
-                .map((line) => line.trimEnd())
-                .join('\n')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim() + '\n';
+            let updated = content;
+            for (const cleanTag of tagsToRemove) {
+                const escapedTag = cleanTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(^|[ \\t])#${escapedTag}(?=[ \\t]|\\n|$)`, 'gmi');
+                updated = updated.replace(regex, '');
+            }
+            return (
+                updated
+                    .split('\n')
+                    .map((line) => line.trimEnd())
+                    .join('\n')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim() + '\n'
+            );
         });
     }
 }
 
 /**
+ * Removes a single tag from a file (frontmatter and inline).
+ */
+export async function removeTag(file: TFile, app: App, tagToRemove: string): Promise<void> {
+    await updateNoteTagsAndProperties(file, app, { removeTags: [tagToRemove] });
+}
+
+/**
  * Adds a tag to a file's frontmatter.
- * Creates the tags array if it doesn't exist.
  */
 export async function addTag(file: TFile, app: App, tagToAdd: string): Promise<void> {
-    const cleanTag = tagToAdd.replace(/^#/, '');
-    await app.fileManager.processFrontMatter(file, (fm) => {
-        if (!fm.tags) {
-            fm.tags = [cleanTag];
-        } else if (Array.isArray(fm.tags)) {
-            if (!fm.tags.some((t: string) => t.toLowerCase() === cleanTag.toLowerCase())) {
-                fm.tags.push(cleanTag);
-            }
-        } else if (typeof fm.tags === 'string') {
-            const tags = fm.tags.split(',').map((t: string) => t.trim());
-            if (!tags.some((t: string) => t.toLowerCase() === cleanTag.toLowerCase())) {
-                tags.push(cleanTag);
-            }
-            fm.tags = tags;
-        }
-    });
+    await updateNoteTagsAndProperties(file, app, { addTags: [tagToAdd] });
 }
 
 export class ArchiveAction {
@@ -141,17 +167,14 @@ export class ArchiveAction {
 
             const newPath = normalizePath(`${settings.archiveFolder}/${currentFile.name}`);
 
-            // If file is already in the destination, just clean up tags
+            // If file is already in destination, clean up tags and properties
             if (newPath === currentFile.path) {
-                await removeTag(currentFile, app, settings.archiveTag);
-                if (settings.addArchivedState) {
-                    await addTag(currentFile, app, settings.archivedTag);
-                }
+                await this.performPostArchiveCleanup(currentFile, app, settings);
                 return {
                     status: 'success',
                     file: currentFile,
                     action: 'archive',
-                    message: 'Tags updated (file already in destination)',
+                    message: 'Tags and properties updated (file already in destination)',
                     newPath,
                 };
             }
@@ -180,13 +203,8 @@ export class ArchiveAction {
             // Move file first (safe ordering: move before tag removal)
             await app.fileManager.renameFile(currentFile, newPath);
 
-            // Only remove tag after successful move
-            await removeTag(currentFile, app, settings.archiveTag);
-
-            // Optionally add archived state tag
-            if (settings.addArchivedState) {
-                await addTag(currentFile, app, settings.archivedTag);
-            }
+            // Clean up action tags, add durable state tag, and remove configured cleanup items
+            await this.performPostArchiveCleanup(currentFile, app, settings);
 
             return {
                 status: 'success',
@@ -204,5 +222,46 @@ export class ArchiveAction {
                 message,
             };
         }
+    }
+
+    /**
+     * Executes atomic tag removal, state tag addition, and configured tag/property cleanups.
+     */
+    private async performPostArchiveCleanup(
+        file: TFile,
+        app: App,
+        settings: SeamSettings,
+    ): Promise<void> {
+        const removeTagsList: string[] = [settings.archiveTag];
+        const removePropertiesList: string[] = [];
+        const addTagsList: string[] = [];
+
+        if (settings.addArchivedState) {
+            addTagsList.push(settings.archivedTag);
+        }
+
+        if (settings.enableArchiveCleanup) {
+            if (settings.archiveCleanupTags) {
+                const cleanupTags = settings.archiveCleanupTags
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter((t) => t.length > 0);
+                removeTagsList.push(...cleanupTags);
+            }
+
+            if (settings.archiveCleanupProperties) {
+                const cleanupProps = settings.archiveCleanupProperties
+                    .split(',')
+                    .map((p) => p.trim())
+                    .filter((p) => p.length > 0);
+                removePropertiesList.push(...cleanupProps);
+            }
+        }
+
+        await updateNoteTagsAndProperties(file, app, {
+            removeTags: removeTagsList,
+            addTags: addTagsList,
+            removeProperties: removePropertiesList,
+        });
     }
 }

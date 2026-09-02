@@ -1,8 +1,53 @@
 /* Seam — Universal Palette styles */
 
+.seam-palette-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.seam-palette-command-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    color: var(--interactive-accent);
+    flex-shrink: 0;
+}
+
+.seam-palette-command-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
 .seam-palette-title {
     font-weight: 600;
     margin-bottom: 2px;
+}
+
+.seam-palette-folder {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.82em;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.seam-palette-folder-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.seam-palette-folder-icon svg {
+    width: 13px;
+    height: 13px;
 }
 
 .seam-palette-description {
@@ -14,9 +59,4 @@
     font-size: 0.8em;
     opacity: 0.6;
     margin-top: 2px;
-}
-
-.seam-palette-command {
-    border-left: 2px solid var(--interactive-accent);
-    padding-left: 8px;
 }

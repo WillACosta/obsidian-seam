@@ -688,7 +688,7 @@ Search notes, #tags or run Seam commands...
 Typing:
 
 ```text
-Dormin
+Wolf
 ```
 
 searches notes.

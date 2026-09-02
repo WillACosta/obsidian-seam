@@ -1,9 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SETTINGS, SeamSettings } from '../src/types';
+import { tagMatches } from '../src/search/SearchService';
 
 describe('Settings & Defaults', () => {
-    it('has default settings per specification', () => {
+    it('has default settings per specification including iteration 01 options', () => {
         assert.equal(DEFAULT_SETTINGS.permanentFolder, 'Permanent');
         assert.equal(DEFAULT_SETTINGS.archiveFolder, 'Archive');
         assert.equal(DEFAULT_SETTINGS.archiveTag, 'archive');
@@ -11,6 +12,10 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.archivedTag, 'archived');
         assert.equal(DEFAULT_SETTINGS.automaticProcessing, true);
         assert.equal(DEFAULT_SETTINGS.addArchivedState, true);
+        assert.equal(DEFAULT_SETTINGS.enableArchiveCleanup, true);
+        assert.equal(DEFAULT_SETTINGS.archiveCleanupTags, '#permanent, #todo');
+        assert.equal(DEFAULT_SETTINGS.archiveCleanupProperties, 'status');
+        assert.equal(DEFAULT_SETTINGS.showIcons, true);
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
     });
 });
@@ -20,7 +25,7 @@ describe('Tag & Conflict Logic', () => {
         tags: string[],
         settings: SeamSettings,
     ): 'archive' | 'permanent' | 'conflict' | 'none' {
-        const normalizedTags = tags.map(t => t.replace(/^#/, '').toLowerCase());
+        const normalizedTags = tags.map((t) => t.replace(/^#/, '').toLowerCase());
         const hasArchive = normalizedTags.includes(settings.archiveTag.toLowerCase());
         const hasPermanent = normalizedTags.includes(settings.permanentTag.toLowerCase());
 
@@ -57,18 +62,41 @@ describe('Tag & Conflict Logic', () => {
     });
 });
 
+describe('Tag Prefix Filtering (tagMatches)', () => {
+    it('matches exact tag', () => {
+        assert.equal(tagMatches('electronics', 'electronics'), true);
+    });
+
+    it('matches prefix tag (#ele -> #electronics)', () => {
+        assert.equal(tagMatches('electronics', 'ele'), true);
+        assert.equal(tagMatches('electricity', 'ele'), true);
+    });
+
+    it('matches nested tags with prefix (#ele -> #electronics/components)', () => {
+        assert.equal(tagMatches('electronics/components', 'ele'), true);
+        assert.equal(tagMatches('hardware/electronics', 'ele'), true);
+    });
+
+    it('does not match non-matching tags', () => {
+        assert.equal(tagMatches('programming', 'ele'), false);
+        assert.equal(tagMatches('kicad', 'ele'), false);
+    });
+});
+
 describe('Inline Tag Removal Regex', () => {
     function removeInlineTag(content: string, tagToRemove: string): string {
         const cleanTag = tagToRemove.replace(/^#/, '').toLowerCase();
         const escapedTag = cleanTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(^|[ \\t])#${escapedTag}(?=[ \\t]|\\n|$)`, 'gmi');
-        return content
-            .replace(regex, '')
-            .split('\n')
-            .map((line) => line.trimEnd())
-            .join('\n')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim() + '\n';
+        return (
+            content
+                .replace(regex, '')
+                .split('\n')
+                .map((line) => line.trimEnd())
+                .join('\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim() + '\n'
+        );
     }
 
     it('removes inline action tag while preserving other tags and content', () => {
@@ -87,5 +115,12 @@ describe('Inline Tag Removal Regex', () => {
         const input = '#permanent_marker #permanent\n\nNote.';
         const result = removeInlineTag(input, 'permanent');
         assert.equal(result, '#permanent_marker\n\nNote.\n');
+    });
+
+    it('removes multiple cleanup tags sequentially', () => {
+        let content = '#electronics #permanent #todo\n\nNote.';
+        content = removeInlineTag(content, '#permanent');
+        content = removeInlineTag(content, 'todo');
+        assert.equal(content, '#electronics\n\nNote.\n');
     });
 });
