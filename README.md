@@ -18,26 +18,28 @@ Seam is a small, native-feeling Obsidian plugin that brings tag-driven organizat
 1. Clone this repository into your vault's `.obsidian/plugins/` directory:
    ```bash
    cd <your-vault>/.obsidian/plugins/
-   git clone https://github.com/WillACosta/obsidian-seam.git seam
-   cd seam
-   npm install
-   npm run build
+   git clone https://github.com/WillACosta/obsidian-seam.git obsidian-seam
+   cd obsidian-seam
+   pnpm install
+   pnpm build
    ```
 2. Open Obsidian and enable **Seam** under **Settings > Community plugins**.
 
 ## Development
 
 ```bash
-npm install
-npm run dev    # Watch mode
-npm run build  # Production build
-npm test       # Run unit test suite
+pnpm install
+pnpm dev    # Watch mode
+pnpm build  # Production build
+pnpm test   # Run unit test suite
 ```
 
-## Specifications
+## Specifications & Changelog
 
-- [Product Specification (SDD v0.1.0)](docs/specs/product_v0.1.0.md)
-- [Technical Companion (v0.1.0)](docs/specs/tech_v0.1.0.md)
+- [Development Log Registry](docs/DEVELOPMENT_LOG.md)
+- [Product Specification (SDD v0.1.0)](docs/specs/main/product_v0.1.0.md)
+- [Technical Companion (v0.1.0)](docs/specs/main/tech_v0.1.0.md)
+- [Iteration 01 Specs](docs/specs/iteraction_01/)
 
 ## License
 
