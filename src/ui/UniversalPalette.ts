@@ -97,8 +97,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     /**
      * Returns suggestions for the given query.
-     * For text queries, returns a Promise to enable async in-note content search
-     * while preserving arrow-key navigation (Obsidian natively supports async getSuggestions).
+     * For text queries, returns a Promise to enable async in-note content search.
+     * For tag queries, shows tag suggestions when the last token is an incomplete tag.
      */
     getSuggestions(query: string): PaletteItem[] | Promise<PaletteItem[]> {
         const trimmed = query.trim();
@@ -120,14 +120,68 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             );
         }
 
-        // Tag queries: synchronous
+        // Tag mode: check if we should show tag suggestions or note results
         if (trimmed.includes('#')) {
-            const results = this.searchService.search(trimmed);
-            return this.mapSearchResults(results, trimmed);
+            return this.handleTagQuery(trimmed);
         }
 
         // Text queries: async (in-note content search)
         return this.getAsyncSuggestions(trimmed);
+    }
+
+    /**
+     * Handles tag queries. Two modes:
+     * 1. Tag suggestion mode: last token is an incomplete tag (e.g., "#" or "#arch")
+     *    → show matching tags as selectable items.
+     * 2. Note results mode: all tags are complete (resolved to known tags)
+     *    → show notes matching those tags.
+     */
+    private handleTagQuery(query: string): PaletteItem[] {
+        const tokens = query.split(/\s+/);
+        const lastToken = tokens[tokens.length - 1];
+
+        // Determine completed tags (all tokens except the last one that start with #)
+        const completedTags: string[] = [];
+        for (let i = 0; i < tokens.length - 1; i++) {
+            const t = tokens[i];
+            if (t.startsWith('#') && t.length > 1) {
+                completedTags.push(t.substring(1));
+            }
+        }
+
+        // Check if the last token is a bare # or an incomplete tag prefix
+        if (lastToken === '#' || (lastToken.startsWith('#') && lastToken.length > 1)) {
+            const prefix = lastToken.length > 1 ? lastToken.substring(1) : '';
+
+            // Get matching tags, excluding already-completed ones
+            const matchingTags = this.searchService.getTagsMatchingPrefix(prefix, completedTags);
+
+            // If there are tag suggestions to show, display them
+            if (matchingTags.length > 0) {
+                // Build the query prefix (everything before the last token)
+                const queryPrefix = tokens.length > 1
+                    ? tokens.slice(0, -1).join(' ') + ' '
+                    : '';
+
+                return matchingTags.map((tag) => ({
+                    id: `tag-${tag}`,
+                    title: `#${tag}`,
+                    description: '',
+                    type: 'tag' as const,
+                    icon: 'hash',
+                    action: () => {
+                        // Insert the selected tag into the input and trigger re-search
+                        const newQuery = `${queryPrefix}#${tag} `;
+                        this.inputEl.value = newQuery;
+                        this.inputEl.dispatchEvent(new Event('input'));
+                    },
+                }));
+            }
+        }
+
+        // No tag suggestions: show note results for the current tag query
+        const results = this.searchService.search(query);
+        return this.mapSearchResults(results, query);
     }
 
     /**
@@ -184,6 +238,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     /**
      * Creates a new note in the fleeting folder and opens it.
+     * If a template is configured, uses its content as the initial note body.
      */
     private async createNote(title: string): Promise<void> {
         const folderPath = normalizePath(this.settings.fleetingFolder);
@@ -209,13 +264,36 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return;
         }
 
+        // Read template content if configured
+        let initialContent = '';
+        if (this.settings.fleetingNoteTemplate) {
+            initialContent = await this.readTemplate(this.settings.fleetingNoteTemplate);
+        }
+
         try {
-            const file = await this.app.vault.create(filePath, '');
+            const file = await this.app.vault.create(filePath, initialContent);
             await this.app.workspace.openLinkText(file.path, '', false);
             new Notice(`Created note: ${title}`);
         } catch (e) {
             const message = e instanceof Error ? e.message : 'Unknown error';
             new Notice(`Failed to create note: ${message}`);
+        }
+    }
+
+    /**
+     * Reads the content of a template file from the vault.
+     * Returns empty string if the template doesn't exist or can't be read.
+     */
+    private async readTemplate(templatePath: string): Promise<string> {
+        const normalized = normalizePath(templatePath.replace(/\.md$/, '') + '.md');
+        const file = this.app.vault.getAbstractFileByPath(normalized);
+        if (!file || !(file instanceof TFile)) {
+            return '';
+        }
+        try {
+            return await this.app.vault.cachedRead(file);
+        } catch {
+            return '';
         }
     }
 
@@ -239,6 +317,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 const descEl = el.createDiv({ cls: 'seam-palette-description' });
                 descEl.setText(item.description);
             }
+        } else if (item.type === 'tag') {
+            el.addClass('seam-palette-tag-item');
+            const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
+
+            if (this.settings.showIcons) {
+                const iconEl = rowEl.createSpan({ cls: 'seam-palette-command-icon' });
+                setIcon(iconEl, item.icon || 'hash');
+            }
+
+            const titleEl = rowEl.createSpan({ cls: 'seam-palette-title' });
+            renderHighlightedText(titleEl, item.title, highlightQuery);
         } else {
             el.addClass('seam-palette-note-item');
 
@@ -318,6 +407,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             // Default Enter: open in current tab
             // Mod+Enter (new tab) is handled by the scope handler registered in the constructor
             this.app.workspace.openLinkText(item.file.path, '', false);
+        } else if (item.type === 'tag' && item.action) {
+            // Tag suggestion: insert into query (action updates the input)
+            item.action();
         } else if (
             (item.type === 'command' || item.type === 'action' || item.type === 'create') &&
             item.action

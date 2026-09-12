@@ -78,3 +78,7 @@
     border-radius: 2px;
     padding: 0 1px;
 }
+
+.seam-palette-tag-item .seam-palette-title {
+    color: var(--text-accent);
+}

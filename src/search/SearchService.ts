@@ -129,6 +129,39 @@ export class SearchService {
     }
 
     /**
+     * Returns all unique tags from the vault (without # prefix, lowercase).
+     */
+    getAllTags(): string[] {
+        const allTags = new Set<string>();
+        const files = this.app.vault.getMarkdownFiles();
+        for (const file of files) {
+            const tags = getFileTags(this.app, file);
+            for (const tag of tags) {
+                allTags.add(tag);
+            }
+        }
+        return [...allTags].sort();
+    }
+
+    /**
+     * Returns tags matching a prefix, optionally excluding tags already present in the query.
+     */
+    getTagsMatchingPrefix(prefix: string, excludeTags: string[]): string[] {
+        const allTags = this.getAllTags();
+        const lowerPrefix = prefix.toLowerCase();
+        const lowerExclude = new Set(excludeTags.map((t) => t.toLowerCase()));
+
+        return allTags.filter((tag) => {
+            // Exclude tags already in the query
+            if (lowerExclude.has(tag)) return false;
+            // If prefix is empty, return all non-excluded tags
+            if (!lowerPrefix) return true;
+            // Match tag name or any segment
+            return tagMatches(tag, lowerPrefix);
+        });
+    }
+
+    /**
      * Execute a search query and return matching results.
      * Supports tag queries (#tag, -#tag, ||, OR) and plain text title/path/content search.
      */

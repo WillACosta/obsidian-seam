@@ -4,6 +4,25 @@ This document serves as the authoritative development log and evolution tracker 
 
 ---
 
+## [Iteration 03] - 2026-09-12
+
+- **Iteration ID:** `iteraction_03`
+- **Date:** `2026-09-12`
+- **Specs Directory:** [`docs/specs/iteraction_03`](specs/iteraction_03/)
+  - `fleeting_template.md`
+  - `tag_results.md`
+
+### Summary of Changes
+
+#### Added
+- **Tag Suggestion Mode in Universal Palette**: Typing `#` in the palette now displays all available tags from the vault as selectable suggestions. Typing further (e.g., `#arch`) live-filters the tags. Selecting a tag inserts it into the query and, once all tags are resolved, shows matching notes. When refining a multi-tag query (e.g., `#electronics #`), already-selected tags are excluded from suggestions. Tags are rendered with accent-colored text and a `#` icon.
+- **`getAllTags()` and `getTagsMatchingPrefix()` Methods**: New SearchService methods that collect all unique tags from the vault via MetadataCache and filter by prefix while excluding already-selected tags.
+- **Fleeting Note Template Setting**: New `fleetingNoteTemplate` setting (default: empty) allows users to specify a vault path to a template note. When creating a new note from the palette's "Create new note" action, the template's content is used as the initial body.
+- **`readTemplate()` Helper**: Private method in UniversalPalette that reads the configured template file from the vault, gracefully returning empty string if the file doesn't exist.
+- **Tag Suggestion CSS**: Added `.seam-palette-tag-item` styling with accent-colored tag text via `--text-accent`.
+
+---
+
 ## [Iteration 02] - 2026-09-11
 
 - **Iteration ID:** `iteraction_02`

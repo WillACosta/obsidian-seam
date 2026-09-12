@@ -4,10 +4,11 @@ import { DEFAULT_SETTINGS, SeamSettings } from '../src/types';
 import { tagMatches, extractMatchSnippet } from '../src/search/SearchService';
 
 describe('Settings & Defaults', () => {
-    it('has default settings per specification including iteration 02 options', () => {
+    it('has default settings per specification including iteration 03 options', () => {
         assert.equal(DEFAULT_SETTINGS.permanentFolder, 'Permanent');
         assert.equal(DEFAULT_SETTINGS.archiveFolder, 'Archive');
         assert.equal(DEFAULT_SETTINGS.fleetingFolder, 'Fleeting');
+        assert.equal(DEFAULT_SETTINGS.fleetingNoteTemplate, '');
         assert.equal(DEFAULT_SETTINGS.archiveTag, 'archive');
         assert.equal(DEFAULT_SETTINGS.permanentTag, 'permanent');
         assert.equal(DEFAULT_SETTINGS.archivedTag, 'archived');

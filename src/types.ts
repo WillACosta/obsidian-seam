@@ -4,6 +4,7 @@ export interface SeamSettings {
     permanentFolder: string;
     archiveFolder: string;
     fleetingFolder: string;
+    fleetingNoteTemplate: string;
     archiveTag: string;
     permanentTag: string;
     archivedTag: string;
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     permanentFolder: 'Permanent',
     archiveFolder: 'Archive',
     fleetingFolder: 'Fleeting',
+    fleetingNoteTemplate: '',
     archiveTag: 'archive',
     permanentTag: 'permanent',
     archivedTag: 'archived',
@@ -88,7 +90,7 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action' | 'create';
+    type: 'note' | 'command' | 'action' | 'create' | 'tag';
     icon?: string;
     file?: TFile;
     tags?: string[];

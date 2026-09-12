@@ -59,6 +59,19 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
+        new Setting(containerEl)
+            .setName('Fleeting note template')
+            .setDesc('Path to a template note (e.g. Templates/Fleeting). Leave empty for no template.')
+            .addText((text) =>
+                text
+                    .setPlaceholder('Templates/Fleeting')
+                    .setValue(this.plugin.settings.fleetingNoteTemplate)
+                    .onChange(async (value) => {
+                        this.plugin.settings.fleetingNoteTemplate = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
         // --- Automation ---
         containerEl.createEl('h3', { text: 'Automation' });
 
