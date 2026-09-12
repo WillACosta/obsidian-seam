@@ -1,0 +1,19 @@
+{
+  "switcher:open": [],
+  "seam:open-palette": [
+    {
+      "modifiers": [
+        "Mod"
+      ],
+      "key": "O"
+    }
+  ],
+  "obsidian-seam:open-palette": [
+    {
+      "modifiers": [
+        "Mod"
+      ],
+      "key": "O"
+    }
+  ]
+}
