@@ -105,6 +105,62 @@ export class AutomationService {
         };
     }
 
+    /**
+     * Directly archive a specific file (used by "Archive current note" command).
+     * Adds the archive tag then processes the file through the normal pipeline.
+     */
+    async archiveFile(file: TFile): Promise<AutomationResult> {
+        const currentFile = this.app.vault.getAbstractFileByPath(file.path);
+        if (!currentFile || !(currentFile instanceof TFile)) {
+            return {
+                status: 'skipped',
+                file,
+                action: 'archive',
+                message: 'File no longer exists',
+            };
+        }
+
+        // If the file already has the archive tag, just process it
+        if (hasTag(currentFile, this.app, this.settings.archiveTag)) {
+            return this.archiveAction.apply(currentFile, this.app, this.settings);
+        }
+
+        // Add the archive tag, then process
+        const { addTag } = await import('./actions/ArchiveAction');
+        await addTag(currentFile, this.app, this.settings.archiveTag);
+        const result = await this.archiveAction.apply(currentFile, this.app, this.settings);
+        this.recordResult(currentFile.path, result);
+        return result;
+    }
+
+    /**
+     * Directly move a specific file to permanent folder (used by "Move to Permanent" command).
+     * Adds the permanent tag then processes the file through the normal pipeline.
+     */
+    async moveFileToPermanent(file: TFile): Promise<AutomationResult> {
+        const currentFile = this.app.vault.getAbstractFileByPath(file.path);
+        if (!currentFile || !(currentFile instanceof TFile)) {
+            return {
+                status: 'skipped',
+                file,
+                action: 'permanent',
+                message: 'File no longer exists',
+            };
+        }
+
+        // If the file already has the permanent tag, just process it
+        if (hasTag(currentFile, this.app, this.settings.permanentTag)) {
+            return this.permanentAction.apply(currentFile, this.app, this.settings);
+        }
+
+        // Add the permanent tag, then process
+        const { addTag } = await import('./actions/ArchiveAction');
+        await addTag(currentFile, this.app, this.settings.permanentTag);
+        const result = await this.permanentAction.apply(currentFile, this.app, this.settings);
+        this.recordResult(currentFile.path, result);
+        return result;
+    }
+
     updateSettings(settings: SeamSettings): void {
         this.settings = settings;
     }

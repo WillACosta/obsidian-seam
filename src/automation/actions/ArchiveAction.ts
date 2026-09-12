@@ -240,17 +240,17 @@ export class ArchiveAction {
             addTagsList.push(settings.archivedTag);
         }
 
-        if (settings.enableArchiveCleanup) {
-            if (settings.archiveCleanupTags) {
-                const cleanupTags = settings.archiveCleanupTags
+        if (settings.enableMoveCleanup) {
+            if (settings.moveCleanupTags) {
+                const cleanupTags = settings.moveCleanupTags
                     .split(',')
                     .map((t) => t.trim())
                     .filter((t) => t.length > 0);
                 removeTagsList.push(...cleanupTags);
             }
 
-            if (settings.archiveCleanupProperties) {
-                const cleanupProps = settings.archiveCleanupProperties
+            if (settings.moveCleanupProperties) {
+                const cleanupProps = settings.moveCleanupProperties
                     .split(',')
                     .map((p) => p.trim())
                     .filter((p) => p.length > 0);

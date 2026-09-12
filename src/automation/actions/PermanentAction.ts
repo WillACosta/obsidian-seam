@@ -1,6 +1,6 @@
 import { App, TFile, normalizePath } from 'obsidian';
 import { SeamSettings, AutomationResult } from '../../types';
-import { hasTag, removeTag } from './ArchiveAction';
+import { hasTag, updateNoteTagsAndProperties } from './ArchiveAction';
 
 export class PermanentAction {
     canApply(file: TFile, app: App, settings: SeamSettings): boolean {
@@ -35,14 +35,14 @@ export class PermanentAction {
 
             const newPath = normalizePath(`${settings.permanentFolder}/${currentFile.name}`);
 
-            // If file is already in the destination, just clean up tags
+            // If file is already in the destination, clean up tags and properties
             if (newPath === currentFile.path) {
-                await removeTag(currentFile, app, settings.permanentTag);
+                await this.performPostMoveCleanup(currentFile, app, settings);
                 return {
                     status: 'success',
                     file: currentFile,
                     action: 'permanent',
-                    message: 'Tag removed (file already in destination)',
+                    message: 'Tags and properties updated (file already in destination)',
                     newPath,
                 };
             }
@@ -71,8 +71,8 @@ export class PermanentAction {
             // Move file first (safe ordering: move before tag removal)
             await app.fileManager.renameFile(currentFile, newPath);
 
-            // Only remove tag after successful move
-            await removeTag(currentFile, app, settings.permanentTag);
+            // Clean up action tags and configured cleanup items after successful move
+            await this.performPostMoveCleanup(currentFile, app, settings);
 
             return {
                 status: 'success',
@@ -90,5 +90,40 @@ export class PermanentAction {
                 message,
             };
         }
+    }
+
+    /**
+     * Executes atomic tag removal and configured tag/property cleanups after permanent move.
+     */
+    private async performPostMoveCleanup(
+        file: TFile,
+        app: App,
+        settings: SeamSettings,
+    ): Promise<void> {
+        const removeTagsList: string[] = [settings.permanentTag];
+        const removePropertiesList: string[] = [];
+
+        if (settings.enableMoveCleanup) {
+            if (settings.moveCleanupTags) {
+                const cleanupTags = settings.moveCleanupTags
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter((t) => t.length > 0);
+                removeTagsList.push(...cleanupTags);
+            }
+
+            if (settings.moveCleanupProperties) {
+                const cleanupProps = settings.moveCleanupProperties
+                    .split(',')
+                    .map((p) => p.trim())
+                    .filter((p) => p.length > 0);
+                removePropertiesList.push(...cleanupProps);
+            }
+        }
+
+        await updateNoteTagsAndProperties(file, app, {
+            removeTags: removeTagsList,
+            removeProperties: removePropertiesList,
+        });
     }
 }

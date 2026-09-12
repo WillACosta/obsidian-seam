@@ -46,6 +46,19 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
+        new Setting(containerEl)
+            .setName('Fleeting folder')
+            .setDesc('Vault-relative path for new fleeting notes created from the palette.')
+            .addText((text) =>
+                text
+                    .setPlaceholder('Fleeting')
+                    .setValue(this.plugin.settings.fleetingFolder)
+                    .onChange(async (value) => {
+                        this.plugin.settings.fleetingFolder = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
         // --- Automation ---
         containerEl.createEl('h3', { text: 'Automation' });
 
@@ -76,42 +89,45 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
+        // --- Moving Notes Behavior ---
+        containerEl.createEl('h3', { text: 'Moving Notes Behavior' });
+
         new Setting(containerEl)
-            .setName('Remove tags and properties after archiving a note')
-            .setDesc('Automatically clean up temporary workflow tags and properties during archive.')
+            .setName('Remove tags and properties after moving a note')
+            .setDesc('Automatically clean up temporary workflow tags and properties when archiving or moving to permanent.')
             .addToggle((toggle) =>
                 toggle
-                    .setValue(this.plugin.settings.enableArchiveCleanup)
+                    .setValue(this.plugin.settings.enableMoveCleanup)
                     .onChange(async (value) => {
-                        this.plugin.settings.enableArchiveCleanup = value;
+                        this.plugin.settings.enableMoveCleanup = value;
                         await this.plugin.saveSettings();
                         this.display(); // Refresh to show/hide sub-settings
                     }),
             );
 
-        if (this.plugin.settings.enableArchiveCleanup) {
+        if (this.plugin.settings.enableMoveCleanup) {
             new Setting(containerEl)
-                .setName('Tags to remove after archiving')
-                .setDesc('Comma-separated list of tags to strip upon archiving (e.g. #permanent, #todo).')
+                .setName('Tags to remove after moving')
+                .setDesc('Comma-separated list of tags to strip upon moving (e.g. #permanent, #todo).')
                 .addText((text) =>
                     text
                         .setPlaceholder('#permanent, #todo')
-                        .setValue(this.plugin.settings.archiveCleanupTags)
+                        .setValue(this.plugin.settings.moveCleanupTags)
                         .onChange(async (value) => {
-                            this.plugin.settings.archiveCleanupTags = value;
+                            this.plugin.settings.moveCleanupTags = value;
                             await this.plugin.saveSettings();
                         }),
                 );
 
             new Setting(containerEl)
-                .setName('Properties to remove after archiving')
-                .setDesc('Comma-separated list of frontmatter property keys to strip upon archiving (e.g. status).')
+                .setName('Properties to remove after moving')
+                .setDesc('Comma-separated list of frontmatter property keys to strip upon moving (e.g. status).')
                 .addText((text) =>
                     text
                         .setPlaceholder('status')
-                        .setValue(this.plugin.settings.archiveCleanupProperties)
+                        .setValue(this.plugin.settings.moveCleanupProperties)
                         .onChange(async (value) => {
-                            this.plugin.settings.archiveCleanupProperties = value;
+                            this.plugin.settings.moveCleanupProperties = value;
                             await this.plugin.saveSettings();
                         }),
                 );

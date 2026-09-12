@@ -9,6 +9,14 @@ import { UniversalPalette } from './ui/UniversalPalette';
 import { SeamSettingsTab } from './settings/SettingsTab';
 
 /**
+ * Tags and properties that Seam uses as action triggers.
+ * We preserve these in the tag/property suggestion cache so Obsidian
+ * continues to auto-suggest them even after Seam removes all occurrences.
+ */
+const SEAM_MANAGED_TAGS = ['archive', 'permanent', 'archived', 'todo'];
+const SEAM_MANAGED_PROPERTIES = ['status'];
+
+/**
  * Seam — Tag-driven note organization for Obsidian.
  *
  * The plugin adds a small behavioral layer over Obsidian:
@@ -67,6 +75,31 @@ export default class SeamPlugin extends Plugin {
             callback: () => this.showStatus(),
         });
 
+        // Commands that operate on the current open note
+        this.addCommand({
+            id: 'archive-current-note',
+            name: 'Archive current note',
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md') return false;
+                if (checking) return true;
+                this.archiveCurrentNote(file);
+                return true;
+            },
+        });
+
+        this.addCommand({
+            id: 'move-to-permanent',
+            name: `Move current note to ${this.settings.permanentFolder}`,
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md') return false;
+                if (checking) return true;
+                this.moveCurrentNoteToPermanent(file);
+                return true;
+            },
+        });
+
         // 4. Register settings tab
         this.addSettingTab(new SeamSettingsTab(this.app, this));
 
@@ -86,7 +119,8 @@ export default class SeamPlugin extends Plugin {
 
     /**
      * Called after workspace.onLayoutReady().
-     * Registers vault event handlers and runs startup reconciliation.
+     * Registers vault event handlers, runs startup reconciliation,
+     * and seeds the tag suggestion cache.
      */
     private initializeAfterLayout(): void {
         // Register vault event handlers
@@ -119,6 +153,71 @@ export default class SeamPlugin extends Plugin {
 
         // Set up periodic reconciliation (safety net)
         this.startPeriodicReconciliation();
+
+        // Seed tag/property suggestions so Obsidian autocompletes them
+        this.seedTagSuggestions();
+    }
+
+    /**
+     * Seeds Obsidian's tag suggestion cache with Seam-managed tags.
+     *
+     * Obsidian auto-suggests tags based on what exists in the vault's metadata cache.
+     * When Seam removes all occurrences of an action tag (e.g., #permanent, #archive),
+     * Obsidian stops suggesting it. We maintain a hidden registry note that preserves
+     * these tags in the metadata cache so they continue to be suggested.
+     */
+    private async seedTagSuggestions(): Promise<void> {
+        const registryPath = '.obsidian/plugins/obsidian-seam/.tag-registry.md';
+
+        // Collect all tags that should be preserved
+        const tagsToPreserve = [
+            ...SEAM_MANAGED_TAGS,
+            this.settings.archiveTag,
+            this.settings.permanentTag,
+            this.settings.archivedTag,
+        ];
+
+        // Deduplicate
+        const uniqueTags = [...new Set(tagsToPreserve.map((t) => t.replace(/^#/, '').toLowerCase()))];
+
+        // Build frontmatter content
+        const frontmatterTags = uniqueTags.map((t) => `  - ${t}`).join('\n');
+
+        // Build properties to preserve
+        const propertiesToPreserve = [...SEAM_MANAGED_PROPERTIES];
+        if (this.settings.enableMoveCleanup && this.settings.moveCleanupProperties) {
+            const cleanupProps = this.settings.moveCleanupProperties
+                .split(',')
+                .map((p) => p.trim())
+                .filter((p) => p.length > 0);
+            propertiesToPreserve.push(...cleanupProps);
+        }
+        const uniqueProps = [...new Set(propertiesToPreserve)];
+
+        const propsYaml = uniqueProps.map((p) => `${p}: ""`).join('\n');
+
+        const content = [
+            '---',
+            `tags:`,
+            frontmatterTags,
+            propsYaml,
+            '---',
+            '',
+            '> This file is managed by the Seam plugin. It preserves tag and property suggestions in the vault.',
+            '> Do not edit or delete this file manually.',
+            '',
+        ].join('\n');
+
+        try {
+            const existingFile = this.app.vault.getAbstractFileByPath(registryPath);
+            if (existingFile && existingFile instanceof TFile) {
+                await this.app.vault.modify(existingFile, content);
+            } else {
+                await this.app.vault.create(registryPath, content);
+            }
+        } catch {
+            // Non-critical: if we can't create the registry, tag suggestions degrade gracefully
+        }
     }
 
     /**
@@ -180,6 +279,30 @@ export default class SeamPlugin extends Plugin {
         }
     }
 
+    /**
+     * Archives the current active note by processing it through automation.
+     */
+    private async archiveCurrentNote(file: TFile): Promise<void> {
+        const result = await this.automationService.archiveFile(file);
+        if (result.status === 'success') {
+            new Notice(`Archived: ${file.basename}`);
+        } else {
+            new Notice(`Archive failed: ${result.message}`);
+        }
+    }
+
+    /**
+     * Moves the current active note to the Permanent folder.
+     */
+    private async moveCurrentNoteToPermanent(file: TFile): Promise<void> {
+        const result = await this.automationService.moveFileToPermanent(file);
+        if (result.status === 'success') {
+            new Notice(`Moved to ${this.settings.permanentFolder}: ${file.basename}`);
+        } else {
+            new Notice(`Move failed: ${result.message}`);
+        }
+    }
+
     private async processPending(): Promise<void> {
         await this.automationQueue.flush();
         this.reconciler.scan();
@@ -202,7 +325,7 @@ export default class SeamPlugin extends Plugin {
      * Returns the list of commands available in the Universal Palette.
      */
     private getPaletteCommands(): PaletteItem[] {
-        return [
+        const commands: PaletteItem[] = [
             {
                 id: 'cmd-archive-all',
                 title: 'Archive all notes with #archive',
@@ -225,12 +348,49 @@ export default class SeamPlugin extends Plugin {
                 action: () => this.showStatus(),
             },
         ];
+
+        // Contextual commands: only when a note is active
+        const activeFile = this.app.workspace.getActiveFile();
+        if (activeFile && activeFile.extension === 'md') {
+            commands.push(
+                {
+                    id: 'cmd-archive-current',
+                    title: 'Archive current note',
+                    description: `Move "${activeFile.basename}" to ${this.settings.archiveFolder}/`,
+                    type: 'action',
+                    action: () => this.archiveCurrentNote(activeFile),
+                },
+                {
+                    id: 'cmd-move-permanent',
+                    title: `Move current note to ${this.settings.permanentFolder}`,
+                    description: `Move "${activeFile.basename}" to ${this.settings.permanentFolder}/`,
+                    type: 'action',
+                    action: () => this.moveCurrentNoteToPermanent(activeFile),
+                },
+            );
+        }
+
+        return commands;
     }
 
     // ---- Settings ----
 
     async loadSettings(): Promise<void> {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+        // Migration: rename old archive cleanup settings to move cleanup
+        const raw = await this.loadData();
+        if (raw) {
+            if ('enableArchiveCleanup' in raw && !('enableMoveCleanup' in raw)) {
+                this.settings.enableMoveCleanup = raw.enableArchiveCleanup;
+            }
+            if ('archiveCleanupTags' in raw && !('moveCleanupTags' in raw)) {
+                this.settings.moveCleanupTags = raw.archiveCleanupTags;
+            }
+            if ('archiveCleanupProperties' in raw && !('moveCleanupProperties' in raw)) {
+                this.settings.moveCleanupProperties = raw.archiveCleanupProperties;
+            }
+        }
     }
 
     async saveSettings(): Promise<void> {
@@ -246,5 +406,8 @@ export default class SeamPlugin extends Plugin {
         this.reconciler?.updateSettings(this.settings);
         this.searchService?.updateSettings(this.settings);
         this.startPeriodicReconciliation();
+
+        // Re-seed tag suggestions when settings change
+        this.seedTagSuggestions();
     }
 }

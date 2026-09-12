@@ -3,14 +3,15 @@ import { TFile } from 'obsidian';
 export interface SeamSettings {
     permanentFolder: string;
     archiveFolder: string;
+    fleetingFolder: string;
     archiveTag: string;
     permanentTag: string;
     archivedTag: string;
     automaticProcessing: boolean;
     addArchivedState: boolean;
-    enableArchiveCleanup: boolean;
-    archiveCleanupTags: string;
-    archiveCleanupProperties: string;
+    enableMoveCleanup: boolean;
+    moveCleanupTags: string;
+    moveCleanupProperties: string;
     showIcons: boolean;
     reconciliationIntervalMinutes: number;
 }
@@ -18,14 +19,15 @@ export interface SeamSettings {
 export const DEFAULT_SETTINGS: SeamSettings = {
     permanentFolder: 'Permanent',
     archiveFolder: 'Archive',
+    fleetingFolder: 'Fleeting',
     archiveTag: 'archive',
     permanentTag: 'permanent',
     archivedTag: 'archived',
     automaticProcessing: true,
     addArchivedState: true,
-    enableArchiveCleanup: true,
-    archiveCleanupTags: '#permanent, #todo',
-    archiveCleanupProperties: 'status',
+    enableMoveCleanup: true,
+    moveCleanupTags: '#permanent, #todo',
+    moveCleanupProperties: 'status',
     showIcons: true,
     reconciliationIntervalMinutes: 15,
 };
@@ -46,6 +48,13 @@ export interface SearchResult {
     path: string;
     tags: string[];
     snippet?: string;
+    matchSnippet?: MatchSnippet;
+}
+
+export interface MatchSnippet {
+    text: string;
+    matchStart: number;
+    matchEnd: number;
 }
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'or' | 'text';
@@ -79,9 +88,10 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action';
+    type: 'note' | 'command' | 'action' | 'create';
     icon?: string;
     file?: TFile;
     tags?: string[];
+    matchSnippet?: MatchSnippet;
     action?: () => void | Promise<void>;
 }

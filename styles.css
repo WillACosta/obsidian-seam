@@ -60,3 +60,21 @@
     opacity: 0.6;
     margin-top: 2px;
 }
+
+.seam-palette-snippet {
+    font-size: 0.82em;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.seam-palette-highlight {
+    background-color: var(--text-highlight-bg);
+    color: var(--text-normal);
+    border-radius: 2px;
+    padding: 0 1px;
+}
