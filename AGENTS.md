@@ -1,7 +1,8 @@
 # Seam — AI Agent Instructions
 
-**Project:** Seam (Obsidian Plugin)  
+**Project:** Seam (Obsidian Plugin)
 **Philosophy:** *"Simplicity is the new Luxury."*
+**Dev Instructions:** README.dev.md
 
 ---
 

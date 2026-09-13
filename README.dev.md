@@ -50,7 +50,7 @@ obsidian dev:errors
 Each release in [`CHANGELOG.md`](CHANGELOG.md) stores an iteration range marker:
 
 ```markdown
-## [0.1.0] - 2026-09-13
+## [1.0.0] - 2026-09-13
 <!-- iterations: iteration_00..iteration_05 -->
 ```
 
@@ -60,16 +60,16 @@ The release script (`scripts/changelog.mjs`) reads this marker to determine wher
 ```bash
 # Auto-detects all unreleased iterations (e.g. iteration_06, iteration_07)
 # and prepends the new section to CHANGELOG.md:
-pnpm run changelog:generate 0.2.0 --update
+pnpm run changelog:generate 1.1.0 --update
 ```
 
 You can also target specific ranges manually if needed:
 ```bash
 # Group iterations starting after iteration_05:
-pnpm run changelog:generate 0.2.0 --since iteration_05 --update
+pnpm run changelog:generate 1.1.0 --since iteration_05 --update
 
 # Or specify a precise range:
-pnpm run changelog:generate 0.2.0 --from 6 --to 8 --update
+pnpm run changelog:generate 1.1.0 --from 6 --to 8 --update
 ```
 
 ---
