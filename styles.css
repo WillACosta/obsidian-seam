@@ -82,3 +82,80 @@
 .seam-palette-tag-item .seam-palette-title {
     color: var(--text-accent);
 }
+
+/* Palette input container with chips */
+.prompt-input-container.seam-palette-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    min-height: 48px;
+    height: auto;
+}
+
+.seam-palette-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.prompt-input-container.seam-palette-input-container .prompt-input {
+    flex: 1 1 140px;
+    min-width: 80px;
+    width: auto;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    height: 32px;
+}
+
+/* Tag Chip Styles */
+.seam-palette-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--tag-background, rgba(var(--accent-rgb, 120, 100, 255), 0.15));
+    color: var(--tag-color, var(--text-accent));
+    border: 1px solid var(--tag-border-color, rgba(var(--accent-rgb, 120, 100, 255), 0.25));
+    border-radius: var(--tag-radius, 4px);
+    padding: 2px 8px;
+    font-size: 0.85em;
+    font-weight: 500;
+    line-height: 1.4;
+    user-select: none;
+}
+
+.seam-palette-chip:hover {
+    background-color: var(--background-modifier-accent-hover, rgba(var(--accent-rgb, 120, 100, 255), 0.25));
+}
+
+.seam-palette-chip-text {
+    font-weight: 600;
+}
+
+.seam-palette-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    margin-left: 2px;
+    opacity: 0.6;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.seam-palette-chip-remove:hover {
+    opacity: 1;
+    background-color: var(--background-modifier-hover);
+}
+
+.seam-palette-chip-remove svg {
+    width: 10px;
+    height: 10px;
+}
+

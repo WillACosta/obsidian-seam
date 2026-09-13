@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SETTINGS, SeamSettings } from '../src/types';
-import { tagMatches, extractMatchSnippet } from '../src/search/SearchService';
+import { tagMatches, noteHasTag, extractMatchSnippet } from '../src/search/SearchService';
 
 describe('Settings & Defaults', () => {
     it('has default settings per specification including iteration 03 options', () => {
@@ -72,6 +72,28 @@ describe('Tag Prefix Filtering (tagMatches)', () => {
     it('does not match non-matching tags', () => {
         assert.equal(tagMatches('programming', 'ele'), false);
         assert.equal(tagMatches('kicad', 'ele'), false);
+    });
+});
+
+describe('Tag Filter Matching (noteHasTag)', () => {
+    it('matches exact tag', () => {
+        assert.equal(noteHasTag('ai', 'ai'), true);
+        assert.equal(noteHasTag('#ai', '#ai'), true);
+    });
+
+    it('matches nested sub-tags of target tag', () => {
+        assert.equal(noteHasTag('ai/sdd', 'ai'), true);
+        assert.equal(noteHasTag('ai/sdd/spec', 'ai'), true);
+        assert.equal(noteHasTag('ai/sdd', 'ai/sdd'), true);
+    });
+
+    it('does not match parent tag when sub-tag is targeted', () => {
+        assert.equal(noteHasTag('ai', 'ai/sdd'), false);
+    });
+
+    it('does not match distinct tags with prefix overlap', () => {
+        assert.equal(noteHasTag('airplane', 'ai'), false);
+        assert.equal(noteHasTag('electronics-store', 'electronics'), false);
     });
 });
 

@@ -54,6 +54,16 @@ export function tagMatches(fileTag: string, tokenVal: string): boolean {
 }
 
 /**
+ * Checks if a note tag matches a target selected tag filter.
+ * Matches exact tag or any descendant sub-tag (e.g. "ai" matches "ai" and "ai/sdd").
+ */
+export function noteHasTag(fileTag: string, targetTag: string): boolean {
+    const f = fileTag.toLowerCase().replace(/^#/, '');
+    const t = targetTag.toLowerCase().replace(/^#/, '');
+    return f === t || f.startsWith(t + '/');
+}
+
+/**
  * Extracts a short snippet of text surrounding a match in the content.
  * Returns the snippet text along with the match position within the snippet.
  */
@@ -148,17 +158,136 @@ export class SearchService {
      */
     getTagsMatchingPrefix(prefix: string, excludeTags: string[]): string[] {
         const allTags = this.getAllTags();
-        const lowerPrefix = prefix.toLowerCase();
-        const lowerExclude = new Set(excludeTags.map((t) => t.toLowerCase()));
+        const lowerPrefix = prefix.toLowerCase().replace(/^#/, '');
+        const lowerExclude = new Set(excludeTags.map((t) => t.toLowerCase().replace(/^#/, '')));
 
         return allTags.filter((tag) => {
-            // Exclude tags already in the query
-            if (lowerExclude.has(tag)) return false;
+            const lowerTag = tag.toLowerCase();
+            // Exclude tags already in the query / selected
+            if (lowerExclude.has(lowerTag)) return false;
             // If prefix is empty, return all non-excluded tags
             if (!lowerPrefix) return true;
-            // Match tag name or any segment
-            return tagMatches(tag, lowerPrefix);
+            // Match tag name containing prefix or matching tag prefix
+            return lowerTag.includes(lowerPrefix) || tagMatches(lowerTag, lowerPrefix);
         });
+    }
+
+    /**
+     * Searches for notes matching all given tags (AND logic).
+     * Optionally filters additionally by a text query.
+     */
+    searchBySelectedTags(selectedTags: string[], textQuery: string = ''): SearchResult[] {
+        if (selectedTags.length === 0) return [];
+        const files = this.app.vault.getMarkdownFiles();
+        const lowerTags = selectedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
+        const lowerText = textQuery.trim().toLowerCase();
+
+        const results: SearchResult[] = [];
+
+        for (const file of files) {
+            const fileTags = getFileTags(this.app, file);
+
+            // Must match ALL selected tags (exact tag or subtag)
+            const matchesAll = lowerTags.every((selTag) =>
+                fileTags.some((ft) => noteHasTag(ft, selTag)),
+            );
+            if (!matchesAll) continue;
+
+            if (lowerText) {
+                const titleMatch =
+                    file.basename.toLowerCase().includes(lowerText) ||
+                    file.path.toLowerCase().includes(lowerText);
+                if (!titleMatch) continue;
+            }
+
+            results.push({
+                file,
+                title: file.basename,
+                path: file.path,
+                tags: fileTags,
+            });
+        }
+
+        results.sort((a, b) => a.title.localeCompare(b.title));
+        return results;
+    }
+
+    /**
+     * Asynchronously searches for notes matching all given tags (AND logic),
+     * including in-note content search for the text query.
+     */
+    async searchBySelectedTagsWithContent(
+        selectedTags: string[],
+        textQuery: string = '',
+    ): Promise<SearchResult[]> {
+        if (selectedTags.length === 0) return [];
+        this.searchVersion++;
+        const currentVersion = this.searchVersion;
+
+        const files = this.app.vault.getMarkdownFiles();
+        const lowerTags = selectedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
+        const lowerText = textQuery.trim().toLowerCase();
+
+        const results: SearchResult[] = [];
+
+        for (const file of files) {
+            if (this.searchVersion !== currentVersion) return [];
+
+            const fileTags = getFileTags(this.app, file);
+
+            const matchesAll = lowerTags.every((selTag) =>
+                fileTags.some((ft) => noteHasTag(ft, selTag)),
+            );
+            if (!matchesAll) continue;
+
+            let matchSnippet: MatchSnippet | undefined;
+
+            if (lowerText) {
+                const titleMatch =
+                    file.basename.toLowerCase().includes(lowerText) ||
+                    file.path.toLowerCase().includes(lowerText);
+
+                if (!titleMatch) {
+                    try {
+                        const content = await this.app.vault.cachedRead(file);
+                        if (content) {
+                            const body = this.stripFrontmatter(content);
+                            const snippet = extractMatchSnippet(body, textQuery);
+                            if (snippet) {
+                                matchSnippet = snippet;
+                            } else {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    } catch {
+                        continue;
+                    }
+                }
+            }
+
+            results.push({
+                file,
+                title: file.basename,
+                path: file.path,
+                tags: fileTags,
+                matchSnippet,
+            });
+        }
+
+        if (this.searchVersion !== currentVersion) return [];
+
+        results.sort((a, b) => {
+            if (lowerText) {
+                const aTitle = a.title.toLowerCase().includes(lowerText) ? 0 : 1;
+                const bTitle = b.title.toLowerCase().includes(lowerText) ? 0 : 1;
+                if (aTitle !== bTitle) return aTitle - bTitle;
+            }
+            return a.title.localeCompare(b.title);
+        });
+
+        return results;
     }
 
     /**

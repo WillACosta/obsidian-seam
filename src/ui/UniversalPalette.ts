@@ -60,6 +60,8 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
  */
 export class UniversalPalette extends SuggestModal<PaletteItem> {
     private lastQuery = '';
+    private selectedTags: string[] = [];
+    private chipsContainerEl: HTMLElement | null = null;
 
     constructor(
         app: App,
@@ -81,9 +83,144 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 this.close();
                 const leaf = this.app.workspace.getLeaf('tab');
                 leaf.openFile(item.file);
+            } else if (item?.type === 'tag') {
+                this.selectSuggestion(item, evt);
             }
             return false;
         });
+    }
+
+    onOpen(): void {
+        super.onOpen();
+        this.setupChipsContainer();
+    }
+
+    onClose(): void {
+        this.selectedTags = [];
+    }
+
+    /**
+     * Sets up the chips container inside the prompt input container.
+     */
+    private setupChipsContainer(): void {
+        const parent = this.inputEl.parentElement;
+        if (!parent) return;
+
+        parent.addClass('seam-palette-input-container');
+
+        this.chipsContainerEl = createDiv({ cls: 'seam-palette-chips-container' });
+        this.chipsContainerEl.style.display = 'none';
+        parent.insertBefore(this.chipsContainerEl, this.inputEl);
+
+        // Click anywhere in container focuses the input
+        parent.addEventListener('click', (e) => {
+            if (e.target === parent || e.target === this.chipsContainerEl) {
+                this.inputEl.focus();
+            }
+        });
+
+        // Keydown listener on inputEl for Backspace removal of chips
+        this.inputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
+            if (
+                evt.key === 'Backspace' &&
+                this.inputEl.selectionStart === 0 &&
+                this.inputEl.selectionEnd === 0
+            ) {
+                if (this.selectedTags.length > 0) {
+                    evt.preventDefault();
+                    this.removeSelectedTag(this.selectedTags[this.selectedTags.length - 1]);
+                }
+            }
+        });
+
+        // Also automatically convert a completed tag when user types space (e.g. "#ai ")
+        this.inputEl.addEventListener('input', () => {
+            const val = this.inputEl.value;
+            const match = val.match(/^#([^\s#]+)\s+$/);
+            if (match) {
+                const tag = match[1];
+                this.inputEl.value = '';
+                this.addSelectedTag(tag);
+            }
+        });
+    }
+
+    /**
+     * Renders the active tag chips in the input bar.
+     */
+    private renderChips(): void {
+        if (!this.chipsContainerEl) return;
+        this.chipsContainerEl.empty();
+
+        if (this.selectedTags.length === 0) {
+            this.chipsContainerEl.style.display = 'none';
+            this.setPlaceholder('Search notes, #tags or run Seam commands...');
+            return;
+        }
+
+        this.chipsContainerEl.style.display = 'flex';
+        this.setPlaceholder('Type # to add tag, or search notes...');
+
+        for (const tag of this.selectedTags) {
+            const chipEl = this.chipsContainerEl.createSpan({ cls: 'seam-palette-chip' });
+
+            const textEl = chipEl.createSpan({ cls: 'seam-palette-chip-text' });
+            textEl.setText(`#${tag}`);
+
+            const removeEl = chipEl.createSpan({ cls: 'seam-palette-chip-remove' });
+            setIcon(removeEl, 'x');
+            removeEl.setAttribute('aria-label', `Remove #${tag}`);
+            removeEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeSelectedTag(tag);
+                this.inputEl.focus();
+            });
+        }
+    }
+
+    /**
+     * Appends a tag to the active filter conditions and refreshes suggestions.
+     */
+    private addSelectedTag(tag: string): void {
+        const normTag = tag.replace(/^#/, '').trim().toLowerCase();
+        if (!normTag) return;
+
+        if (!this.selectedTags.includes(normTag)) {
+            this.selectedTags.push(normTag);
+        }
+
+        this.inputEl.value = '';
+        this.renderChips();
+        this.refreshSuggestions();
+    }
+
+    /**
+     * Removes a tag from the active filter conditions and refreshes suggestions.
+     */
+    private removeSelectedTag(tag: string): void {
+        const normTag = tag.replace(/^#/, '').trim().toLowerCase();
+        this.selectedTags = this.selectedTags.filter((t) => t !== normTag);
+        this.renderChips();
+        this.refreshSuggestions();
+    }
+
+    /**
+     * Programmatically re-triggers the SuggestModal's input handler to update suggestions.
+     */
+    private refreshSuggestions(): void {
+        this.inputEl.dispatchEvent(new Event('input'));
+    }
+
+    /**
+     * Intercept suggestion selection to keep the modal open when a tag is selected.
+     */
+    selectSuggestion(value: PaletteItem, evt: MouseEvent | KeyboardEvent): void {
+        if (value.type === 'tag') {
+            const tag = value.title.replace(/^#/, '');
+            this.addSelectedTag(tag);
+            return;
+        }
+        super.selectSuggestion(value, evt);
     }
 
     /**
@@ -98,16 +235,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     /**
      * Returns suggestions for the given query.
      * For text queries, returns a Promise to enable async in-note content search.
-     * For tag queries, shows tag suggestions when the last token is an incomplete tag.
+     * For tag queries, shows tag suggestions when '#' is present in the input.
+     * When tags are selected in chips, shows notes matching those tags.
      */
     getSuggestions(query: string): PaletteItem[] | Promise<PaletteItem[]> {
         const trimmed = query.trim();
         this.lastQuery = trimmed;
-
-        // Empty query: show available commands
-        if (!trimmed) {
-            return this.commands;
-        }
 
         // Command mode: > prefix
         if (trimmed.startsWith('>')) {
@@ -120,72 +253,87 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             );
         }
 
-        // Tag mode: check if we should show tag suggestions or note results
-        if (trimmed.includes('#')) {
-            return this.handleTagQuery(trimmed);
+        // Tag search mode: user has typed '#' in the current input
+        if (query.includes('#')) {
+            return this.handleTagQuery(query);
         }
 
-        // Text queries: async (in-note content search)
+        // Notes search mode when tags are selected
+        if (this.selectedTags.length > 0) {
+            if (!trimmed) {
+                // Return all notes matching selected tags synchronously
+                const results = this.searchService.searchBySelectedTags(this.selectedTags);
+                return this.mapSearchResults(results, '');
+            }
+            // Additional text filter with selected tags: async with content
+            return this.getAsyncSelectedTagsSuggestions(this.selectedTags, trimmed);
+        }
+
+        // No tags selected and empty query: show available commands
+        if (!trimmed) {
+            return this.commands;
+        }
+
+        // Plain text queries without tags: async (in-note content search)
         return this.getAsyncSuggestions(trimmed);
     }
 
     /**
-     * Handles tag queries. Two modes:
-     * 1. Tag suggestion mode: last token is an incomplete tag (e.g., "#" or "#arch")
-     *    → show matching tags as selectable items.
-     * 2. Note results mode: all tags are complete (resolved to known tags)
-     *    → show notes matching those tags.
+     * Handles tag search queries when '#' is typed into the input.
+     * Swaps the results listing for available vault tags.
      */
     private handleTagQuery(query: string): PaletteItem[] {
-        const tokens = query.split(/\s+/);
-        const lastToken = tokens[tokens.length - 1];
+        // Extract the search prefix from the current token after '#'
+        const lastToken = query.split(/\s+/).pop() || '';
+        const prefix = lastToken.replace(/^#/, '');
 
-        // Determine completed tags (all tokens except the last one that start with #)
-        const completedTags: string[] = [];
-        for (let i = 0; i < tokens.length - 1; i++) {
-            const t = tokens[i];
-            if (t.startsWith('#') && t.length > 1) {
-                completedTags.push(t.substring(1));
-            }
+        // Get matching tags, excluding already-selected tags
+        const matchingTags = this.searchService.getTagsMatchingPrefix(prefix, this.selectedTags);
+
+        if (matchingTags.length > 0) {
+            return matchingTags.map((tag) => ({
+                id: `tag-${tag}`,
+                title: `#${tag}`,
+                description: '',
+                type: 'tag' as const,
+                icon: 'hash',
+            }));
         }
 
-        // Check if the last token is a bare # or an incomplete tag prefix
-        if (lastToken === '#' || (lastToken.startsWith('#') && lastToken.length > 1)) {
-            const prefix = lastToken.length > 1 ? lastToken.substring(1) : '';
-
-            // Get matching tags, excluding already-completed ones
-            const matchingTags = this.searchService.getTagsMatchingPrefix(prefix, completedTags);
-
-            // If there are tag suggestions to show, display them
-            if (matchingTags.length > 0) {
-                // Build the query prefix (everything before the last token)
-                const queryPrefix = tokens.length > 1
-                    ? tokens.slice(0, -1).join(' ') + ' '
-                    : '';
-
-                return matchingTags.map((tag) => ({
-                    id: `tag-${tag}`,
-                    title: `#${tag}`,
-                    description: '',
+        // If a prefix was typed but no matching tags exist in the vault, allow adding it as custom tag
+        if (prefix.length > 0) {
+            return [
+                {
+                    id: `tag-${prefix}`,
+                    title: `#${prefix}`,
+                    description: 'Filter by tag',
                     type: 'tag' as const,
                     icon: 'hash',
-                    action: () => {
-                        // Insert the selected tag into the input and trigger re-search
-                        const newQuery = `${queryPrefix}#${tag} `;
-                        this.inputEl.value = newQuery;
-                        this.inputEl.dispatchEvent(new Event('input'));
-                    },
-                }));
-            }
+                },
+            ];
         }
 
-        // No tag suggestions: show note results for the current tag query
-        const results = this.searchService.search(query);
-        return this.mapSearchResults(results, query);
+        return [];
     }
 
     /**
-     * Async content search for text queries.
+     * Async content search for text queries matching selected tags.
+     */
+    private async getAsyncSelectedTagsSuggestions(
+        tags: string[],
+        textQuery: string,
+    ): Promise<PaletteItem[]> {
+        const results = await this.searchService.searchBySelectedTagsWithContent(tags, textQuery);
+
+        if (this.lastQuery !== textQuery) {
+            return [];
+        }
+
+        return this.mapSearchResults(results, textQuery);
+    }
+
+    /**
+     * Async content search for plain text queries.
      * Uses vault.cachedRead for in-note searching.
      */
     private async getAsyncSuggestions(query: string): Promise<PaletteItem[]> {
@@ -221,8 +369,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             };
         });
 
-        // If no results found and query is plain text, offer to create a new note
-        if (items.length === 0 && query.length > 0 && !query.includes('#') && !query.startsWith('>')) {
+        // If no results found and query is plain text without tags, offer to create a new note
+        if (
+            items.length === 0 &&
+            query.length > 0 &&
+            !query.includes('#') &&
+            !query.startsWith('>') &&
+            this.selectedTags.length === 0
+        ) {
             items.push({
                 id: 'create-note',
                 title: `Create new note: ${query}`,
@@ -367,11 +521,28 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 }
             }
 
-            // Tags with highlighting
+            // Tags with highlighting for all active selected tags and search query
             if (item.tags && item.tags.length > 0) {
                 const tagsEl = el.createDiv({ cls: 'seam-palette-tags' });
-                const tagsText = item.tags.map((t) => `#${t}`).join(' ');
-                renderHighlightedText(tagsEl, tagsText, highlightQuery);
+                const lowerHighlight = highlightQuery.toLowerCase();
+                const selectedTagSet = new Set(this.selectedTags.map((t) => t.toLowerCase()));
+
+                item.tags.forEach((tag, idx) => {
+                    if (idx > 0) tagsEl.appendText(' ');
+
+                    const lowerTag = tag.toLowerCase();
+                    const isSelected = selectedTagSet.has(lowerTag) ||
+                        Array.from(selectedTagSet).some((st) => lowerTag.startsWith(st + '/'));
+                    const matchesQuery = lowerHighlight.length > 0 &&
+                        (lowerTag.includes(lowerHighlight) || lowerTag.startsWith(lowerHighlight));
+
+                    if (isSelected || matchesQuery) {
+                        const span = tagsEl.createSpan({ cls: 'seam-palette-highlight' });
+                        span.setText(`#${tag}`);
+                    } else {
+                        tagsEl.appendText(`#${tag}`);
+                    }
+                });
             }
         }
     }
@@ -388,15 +559,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Command mode: no highlighting
         if (query.startsWith('>')) return '';
 
-        // Tag query: extract tag values for highlighting
+        // Tag query: extract tag value for highlighting
         if (query.includes('#')) {
-            // Extract tag tokens without # prefix for highlighting
-            const tagTokens = query
-                .split(/\s+/)
-                .filter((t) => t.startsWith('#') && !t.startsWith('-#'))
-                .map((t) => t.substring(1))
-                .filter((t) => t.length > 0);
-            return tagTokens[0] || '';
+            const lastToken = query.split(/\s+/).pop() || '';
+            return lastToken.replace(/^#/, '');
         }
 
         return query;
@@ -407,9 +573,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             // Default Enter: open in current tab
             // Mod+Enter (new tab) is handled by the scope handler registered in the constructor
             this.app.workspace.openLinkText(item.file.path, '', false);
-        } else if (item.type === 'tag' && item.action) {
-            // Tag suggestion: insert into query (action updates the input)
-            item.action();
         } else if (
             (item.type === 'command' || item.type === 'action' || item.type === 'create') &&
             item.action
