@@ -1,0 +1,1 @@
+Hide tag icons on search results if "Show icons in Universal Palette" is disabled
