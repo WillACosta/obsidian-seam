@@ -35,6 +35,9 @@ export function hasTag(file: TFile, app: App, targetTag: string): boolean {
     return false;
 }
 
+import { getArchiveCleanupTags, getMoveCleanupProperties } from '../TagCleanup';
+export { getArchiveCleanupTags, getMoveCleanupProperties };
+
 /**
  * Atomically updates a note's frontmatter and inline content:
  * - Removes specified tags from frontmatter and inline text
@@ -50,17 +53,29 @@ export async function updateNoteTagsAndProperties(
         removeProperties?: string[];
     },
 ): Promise<void> {
-    const tagsToRemove = (options.removeTags || [])
-        .map((t) => t.replace(/^#/, '').trim().toLowerCase())
-        .filter((t) => t.length > 0);
+    const tagsToRemove = Array.from(
+        new Set(
+            (options.removeTags || [])
+                .map((t) => t.replace(/^#/, '').trim().toLowerCase())
+                .filter((t) => t.length > 0),
+        ),
+    );
 
-    const tagsToAdd = (options.addTags || [])
-        .map((t) => t.replace(/^#/, '').trim())
-        .filter((t) => t.length > 0);
+    const tagsToAdd = Array.from(
+        new Set(
+            (options.addTags || [])
+                .map((t) => t.replace(/^#/, '').trim())
+                .filter((t) => t.length > 0),
+        ),
+    );
 
-    const propsToRemove = (options.removeProperties || [])
-        .map((p) => p.trim())
-        .filter((p) => p.length > 0);
+    const propsToRemove = Array.from(
+        new Set(
+            (options.removeProperties || [])
+                .map((p) => p.trim())
+                .filter((p) => p.length > 0),
+        ),
+    );
 
     // 1. Process Frontmatter
     await app.fileManager.processFrontMatter(file, (fm) => {
@@ -238,30 +253,12 @@ export class ArchiveAction {
         app: App,
         settings: SeamSettings,
     ): Promise<void> {
-        const removeTagsList: string[] = [settings.archiveTag];
-        const removePropertiesList: string[] = [];
+        const removeTagsList = getArchiveCleanupTags(settings);
+        const removePropertiesList = getMoveCleanupProperties(settings);
         const addTagsList: string[] = [];
 
-        if (settings.addArchivedState) {
+        if (settings.addArchivedState && settings.archivedTag) {
             addTagsList.push(settings.archivedTag);
-        }
-
-        if (settings.enableMoveCleanup) {
-            if (settings.moveCleanupTags) {
-                const cleanupTags = settings.moveCleanupTags
-                    .split(',')
-                    .map((t) => t.trim())
-                    .filter((t) => t.length > 0);
-                removeTagsList.push(...cleanupTags);
-            }
-
-            if (settings.moveCleanupProperties) {
-                const cleanupProps = settings.moveCleanupProperties
-                    .split(',')
-                    .map((p) => p.trim())
-                    .filter((p) => p.length > 0);
-                removePropertiesList.push(...cleanupProps);
-            }
         }
 
         await updateNoteTagsAndProperties(file, app, {

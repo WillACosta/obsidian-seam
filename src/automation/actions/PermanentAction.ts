@@ -1,6 +1,7 @@
 import { App, TFile, normalizePath } from 'obsidian';
 import { SeamSettings, AutomationResult } from '../../types';
 import { hasTag, updateNoteTagsAndProperties } from './ArchiveAction';
+import { getPermanentCleanupTags, getMoveCleanupProperties } from '../TagCleanup';
 import { t } from '../../i18n';
 
 export class PermanentAction {
@@ -106,26 +107,8 @@ export class PermanentAction {
         app: App,
         settings: SeamSettings,
     ): Promise<void> {
-        const removeTagsList: string[] = [settings.permanentTag];
-        const removePropertiesList: string[] = [];
-
-        if (settings.enableMoveCleanup) {
-            if (settings.moveCleanupTags) {
-                const cleanupTags = settings.moveCleanupTags
-                    .split(',')
-                    .map((t) => t.trim())
-                    .filter((t) => t.length > 0);
-                removeTagsList.push(...cleanupTags);
-            }
-
-            if (settings.moveCleanupProperties) {
-                const cleanupProps = settings.moveCleanupProperties
-                    .split(',')
-                    .map((p) => p.trim())
-                    .filter((p) => p.length > 0);
-                removePropertiesList.push(...cleanupProps);
-            }
-        }
+        const removeTagsList = getPermanentCleanupTags(settings);
+        const removePropertiesList = getMoveCleanupProperties(settings);
 
         await updateNoteTagsAndProperties(file, app, {
             removeTags: removeTagsList,

@@ -2,6 +2,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SETTINGS, SeamSettings } from '../src/types';
 import { tagMatches, noteHasTag, extractMatchSnippet } from '../src/search/SearchService';
+import {
+    getPermanentCleanupTags,
+    getArchiveCleanupTags,
+    getMoveCleanupProperties,
+} from '../src/automation/TagCleanup';
 
 describe('Settings & Defaults', () => {
     it('has default settings per specification including iteration 03 options', () => {
@@ -190,3 +195,67 @@ describe('Inline Tag Removal Regex', () => {
         assert.equal(content, '#electronics\n\nNote.\n');
     });
 });
+
+describe('Post-Move Tag & Property Cleanup (Iteration 05)', () => {
+    it('always includes #permanent, #archive, and #archived when moving to Permanent', () => {
+        const tags = getPermanentCleanupTags(DEFAULT_SETTINGS);
+        assert.ok(tags.includes('permanent'), 'must remove #permanent');
+        assert.ok(tags.includes('archive'), 'must remove #archive');
+        assert.ok(tags.includes('archived'), 'must remove #archived');
+        assert.ok(tags.includes('todo'), 'must remove configured cleanup tag #todo');
+    });
+
+    it('removes #archived even when enableMoveCleanup is false', () => {
+        const settings: SeamSettings = {
+            ...DEFAULT_SETTINGS,
+            enableMoveCleanup: false,
+        };
+        const tags = getPermanentCleanupTags(settings);
+        assert.deepEqual(tags.sort(), ['archive', 'archived', 'permanent']);
+    });
+
+    it('strips leading # and deduplicates tags for permanent cleanup', () => {
+        const settings: SeamSettings = {
+            ...DEFAULT_SETTINGS,
+            moveCleanupTags: '#permanent, #todo, todo, #custom',
+        };
+        const tags = getPermanentCleanupTags(settings);
+        assert.deepEqual(tags.sort(), ['archive', 'archived', 'custom', 'permanent', 'todo']);
+    });
+
+    it('always includes #archive and #permanent when moving to Archive', () => {
+        const tags = getArchiveCleanupTags(DEFAULT_SETTINGS);
+        assert.ok(tags.includes('archive'), 'must remove #archive');
+        assert.ok(tags.includes('permanent'), 'must remove #permanent');
+        assert.ok(tags.includes('todo'), 'must remove configured cleanup tag #todo');
+        assert.equal(tags.includes('archived'), false, 'must not remove #archived when archiving');
+    });
+
+    it('extracts cleanup properties correctly', () => {
+        const props = getMoveCleanupProperties(DEFAULT_SETTINGS);
+        assert.deepEqual(props, ['status']);
+
+        const disabledProps = getMoveCleanupProperties({
+            ...DEFAULT_SETTINGS,
+            enableMoveCleanup: false,
+        });
+        assert.deepEqual(disabledProps, []);
+
+        const customProps = getMoveCleanupProperties({
+            ...DEFAULT_SETTINGS,
+            moveCleanupProperties: 'status, draft, review, status',
+        });
+        assert.deepEqual(customProps.sort(), ['draft', 'review', 'status']);
+    });
+
+    it('cleans frontmatter tags and removes #archived when un-archiving to Permanent', () => {
+        const cleanupTags = getPermanentCleanupTags(DEFAULT_SETTINGS);
+        const frontmatterTags = ['archived', 'todo', 'electronics'];
+
+        const remainingTags = frontmatterTags.filter(
+            (t) => !cleanupTags.includes(t.replace(/^#/, '').toLowerCase()),
+        );
+        assert.deepEqual(remainingTags, ['electronics']);
+    });
+});
+
