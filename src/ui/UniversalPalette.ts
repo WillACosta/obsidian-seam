@@ -293,7 +293,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (matchingTags.length > 0) {
             return matchingTags.map((tag) => ({
                 id: `tag-${tag}`,
-                title: `#${tag}`,
+                title: tag,
                 description: '',
                 type: 'tag' as const,
                 icon: 'hash',
@@ -305,7 +305,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return [
                 {
                     id: `tag-${prefix}`,
-                    title: `#${prefix}`,
+                    title: prefix,
                     description: 'Filter by tag',
                     type: 'tag' as const,
                     icon: 'hash',
@@ -475,10 +475,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             el.addClass('seam-palette-tag-item');
             const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
 
-            if (this.settings.showIcons) {
-                const iconEl = rowEl.createSpan({ cls: 'seam-palette-command-icon' });
-                setIcon(iconEl, item.icon || 'hash');
-            }
+            const iconEl = rowEl.createSpan({ cls: 'seam-palette-command-icon' });
+            setIcon(iconEl, item.icon || 'hash');
 
             const titleEl = rowEl.createSpan({ cls: 'seam-palette-title' });
             renderHighlightedText(titleEl, item.title, highlightQuery);

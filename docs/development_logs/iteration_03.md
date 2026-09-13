@@ -25,3 +25,4 @@
   - Typing `#` again dynamically swaps back to the tag suggestions listing, excluding tags already selected.
   - Multiple selected tags combine using AND logic, narrowing down matching notes as more tags are chosen.
   - All active tags in note results are individually highlighted in the tags metadata line.
+- **Tag Listing UI Refactoring**: Removed the redundant text `#` symbol from tag names in suggestion results, displaying only the native `#` icon alongside the clean tag name for visual consistency with command and note results.
