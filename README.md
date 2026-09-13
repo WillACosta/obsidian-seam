@@ -11,6 +11,8 @@ Seam is a small, native-feeling Obsidian plugin that brings tag-driven organizat
 - **Safe & Recoverable**: Non-destructive conflict detection, atomic tag removal only after successful moves, and startup/periodic reconciliation.
 - **Mobile First-Class**: Runs entirely on Obsidian's public native APIs without Node.js or desktop-only dependencies.
 
+!["Obsidian Seam"](./docs/images/seam_showcase.png)
+
 ## Installation
 
 ### From Source
@@ -33,13 +35,6 @@ pnpm dev    # Watch mode
 pnpm build  # Production build
 pnpm test   # Run unit test suite
 ```
-
-## Specifications & Changelog
-
-- [Development Log Registry](docs/DEVELOPMENT_LOG.md)
-- [Product Specification (SDD v0.1.0)](docs/specs/main/product_v0.1.0.md)
-- [Technical Companion (v0.1.0)](docs/specs/main/tech_v0.1.0.md)
-- [Iteration 01 Specs](docs/specs/iteraction_01/)
 
 ## License
 
