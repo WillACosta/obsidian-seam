@@ -176,7 +176,8 @@ export default class SeamPlugin extends Plugin {
      * these tags in the metadata cache so they continue to be suggested.
      */
     private async seedTagSuggestions(): Promise<void> {
-        const registryPath = '.obsidian/plugins/obsidian-seam/.tag-registry.md';
+        const pluginDir = this.manifest.dir || `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
+        const registryPath = `${pluginDir}/.tag-registry.md`;
 
         // Collect all tags that should be preserved
         const tagsToPreserve = [

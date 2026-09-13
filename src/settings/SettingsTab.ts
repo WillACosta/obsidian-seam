@@ -174,9 +174,10 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
+        const paletteCommandId = `${this.plugin.manifest.id}:open-palette`;
         const currentDisplay = getCommandHotkeyDisplay(
             this.app,
-            'obsidian-seam:open-palette',
+            paletteCommandId,
             this.plugin.settings.paletteHotkey || 'Mod+K',
         );
 
@@ -201,7 +202,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                     if (parsed) {
                         this.plugin.settings.paletteHotkey = trimmed;
                         await this.plugin.saveSettings();
-                        await setCommandHotkey(this.app, 'obsidian-seam:open-palette', parsed);
+                        await setCommandHotkey(this.app, paletteCommandId, parsed);
                         new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
                         this.display();
                     }
@@ -234,7 +235,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                     text.setValue(shortcutString);
                     this.plugin.settings.paletteHotkey = shortcutString;
                     await this.plugin.saveSettings();
-                    await setCommandHotkey(this.app, 'obsidian-seam:open-palette', parsed);
+                    await setCommandHotkey(this.app, paletteCommandId, parsed);
                     new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
                     this.display();
                 }
@@ -251,7 +252,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                     await resetCommandHotkey(
                         this.app,
-                        'obsidian-seam:open-palette',
+                        paletteCommandId,
                         defaultHotkey as any,
                     );
                     new Notice(strings.noticeHotkeyUpdated(formatHotkey(defaultHotkey as any)));

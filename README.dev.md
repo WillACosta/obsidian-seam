@@ -23,7 +23,7 @@ pnpm run symlink
 
 Test against `seam_test_vault/` using the Obsidian CLI:
 ```bash
-obsidian plugin:reload id=obsidian-seam
+obsidian plugin:reload id=seam
 obsidian dev:errors
 ```
 

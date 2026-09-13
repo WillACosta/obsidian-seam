@@ -66,7 +66,7 @@ Always validate code changes against the running test vault:
 pnpm build
 
 # 2. Reload Seam in the test vault
-obsidian plugin:reload id=obsidian-seam
+obsidian plugin:reload id=seam
 
 # 3. Check for runtime errors
 obsidian dev:errors
