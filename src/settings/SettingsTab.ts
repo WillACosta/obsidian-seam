@@ -1,5 +1,14 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type SeamPlugin from '../main';
+import { t } from '../i18n';
+import {
+    getCommandHotkeyDisplay,
+    parseHotkeyString,
+    formatHotkey,
+    setCommandHotkey,
+    resetCommandHotkey,
+    isMacPlatform,
+} from '../utils/hotkey';
 
 /**
  * Settings tab for the Seam plugin.
@@ -17,12 +26,16 @@ export class SeamSettingsTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        containerEl.createEl('h2', { text: 'Seam Settings' });
+        const strings = t();
+
+        containerEl.createEl('h2', { text: strings.settingsTitle });
 
         // --- Folders ---
+        containerEl.createEl('h3', { text: strings.settingsFolderHeading });
+
         new Setting(containerEl)
-            .setName('Permanent folder')
-            .setDesc('Vault-relative path for permanent notes.')
+            .setName(strings.settingsPermanentFolder)
+            .setDesc(strings.settingsPermanentFolderDesc)
             .addText((text) =>
                 text
                     .setPlaceholder('Permanent')
@@ -34,8 +47,8 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('Archive folder')
-            .setDesc('Vault-relative path for archived notes.')
+            .setName(strings.settingsArchiveFolder)
+            .setDesc(strings.settingsArchiveFolderDesc)
             .addText((text) =>
                 text
                     .setPlaceholder('Archive')
@@ -47,8 +60,8 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('Fleeting folder')
-            .setDesc('Vault-relative path for new fleeting notes created from the palette.')
+            .setName(strings.settingsFleetingFolder)
+            .setDesc(strings.settingsFleetingFolderDesc)
             .addText((text) =>
                 text
                     .setPlaceholder('Fleeting')
@@ -60,8 +73,8 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('Fleeting note template')
-            .setDesc('Path to a template note (e.g. Templates/Fleeting). Leave empty for no template.')
+            .setName(strings.settingsFleetingTemplate)
+            .setDesc(strings.settingsFleetingTemplateDesc)
             .addText((text) =>
                 text
                     .setPlaceholder('Templates/Fleeting')
@@ -73,11 +86,11 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         // --- Automation ---
-        containerEl.createEl('h3', { text: 'Automation' });
+        containerEl.createEl('h3', { text: strings.settingsAutomationHeading });
 
         new Setting(containerEl)
-            .setName('Enable automatic processing')
-            .setDesc('Automatically process notes when action tags are detected.')
+            .setName(strings.settingsAutoProcessing)
+            .setDesc(strings.settingsAutoProcessingDesc)
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.automaticProcessing)
@@ -88,11 +101,11 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         // --- Archive behavior ---
-        containerEl.createEl('h3', { text: 'Archive Behavior' });
+        containerEl.createEl('h3', { text: strings.settingsArchiveBehaviorHeading });
 
         new Setting(containerEl)
-            .setName('Add #archived after archiving')
-            .setDesc('Add a durable #archived state tag when a note is archived.')
+            .setName(strings.settingsAddArchivedState)
+            .setDesc(strings.settingsAddArchivedStateDesc)
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.addArchivedState)
@@ -103,11 +116,11 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         // --- Moving Notes Behavior ---
-        containerEl.createEl('h3', { text: 'Moving Notes Behavior' });
+        containerEl.createEl('h3', { text: strings.settingsMovingHeading });
 
         new Setting(containerEl)
-            .setName('Remove tags and properties after moving a note')
-            .setDesc('Automatically clean up temporary workflow tags and properties when archiving or moving to permanent.')
+            .setName(strings.settingsEnableMoveCleanup)
+            .setDesc(strings.settingsEnableMoveCleanupDesc)
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.enableMoveCleanup)
@@ -120,8 +133,8 @@ export class SeamSettingsTab extends PluginSettingTab {
 
         if (this.plugin.settings.enableMoveCleanup) {
             new Setting(containerEl)
-                .setName('Tags to remove after moving')
-                .setDesc('Comma-separated list of tags to strip upon moving (e.g. #permanent, #todo).')
+                .setName(strings.settingsMoveCleanupTags)
+                .setDesc(strings.settingsMoveCleanupTagsDesc)
                 .addText((text) =>
                     text
                         .setPlaceholder('#permanent, #todo')
@@ -133,8 +146,8 @@ export class SeamSettingsTab extends PluginSettingTab {
                 );
 
             new Setting(containerEl)
-                .setName('Properties to remove after moving')
-                .setDesc('Comma-separated list of frontmatter property keys to strip upon moving (e.g. status).')
+                .setName(strings.settingsMoveCleanupProps)
+                .setDesc(strings.settingsMoveCleanupPropsDesc)
                 .addText((text) =>
                     text
                         .setPlaceholder('status')
@@ -147,11 +160,11 @@ export class SeamSettingsTab extends PluginSettingTab {
         }
 
         // --- Interface ---
-        containerEl.createEl('h3', { text: 'Universal Palette' });
+        containerEl.createEl('h3', { text: strings.settingsInterfaceHeading });
 
         new Setting(containerEl)
-            .setName('Show icons in Universal Palette')
-            .setDesc('Display folder and command icons in search and command listings.')
+            .setName(strings.settingsShowIcons)
+            .setDesc(strings.settingsShowIconsDesc)
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.showIcons)
@@ -161,12 +174,115 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
+        const currentDisplay = getCommandHotkeyDisplay(
+            this.app,
+            'obsidian-seam:open-palette',
+            this.plugin.settings.paletteHotkey || 'Mod+K',
+        );
+
+        const hotkeySetting = new Setting(containerEl)
+            .setName(strings.settingsPaletteHotkey)
+            .setDesc(strings.settingsPaletteHotkeyDesc);
+
+        // Append current shortcut badge next to setting name
+        hotkeySetting.nameEl.createEl('kbd', {
+            cls: 'seam-hotkey-badge',
+            text: currentDisplay,
+        });
+
+        // Text input with live key capture
+        hotkeySetting.addText((text) => {
+            text.setPlaceholder('Mod+K')
+                .setValue(this.plugin.settings.paletteHotkey || 'Mod+K')
+                .onChange(async (value) => {
+                    const trimmed = value.trim();
+                    if (!trimmed) return;
+                    const parsed = parseHotkeyString(trimmed);
+                    if (parsed) {
+                        this.plugin.settings.paletteHotkey = trimmed;
+                        await this.plugin.saveSettings();
+                        await setCommandHotkey(this.app, 'obsidian-seam:open-palette', parsed);
+                        new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
+                        this.display();
+                    }
+                });
+
+            // Listen for key combinations directly in the input box
+            text.inputEl.addEventListener('keydown', async (evt: KeyboardEvent) => {
+                if (evt.key === 'Tab' || evt.key === 'Escape') return;
+                if (['Control', 'Shift', 'Alt', 'Meta'].includes(evt.key)) return;
+
+                evt.preventDefault();
+                evt.stopPropagation();
+
+                const isMac = isMacPlatform();
+                const modifiers: string[] = [];
+                if (evt.metaKey) modifiers.push(isMac ? 'Cmd' : 'Win');
+                if (evt.ctrlKey) modifiers.push('Ctrl');
+                if (evt.altKey) modifiers.push('Alt');
+                if (evt.shiftKey) modifiers.push('Shift');
+
+                if (modifiers.length === 0) {
+                    modifiers.push('Mod');
+                }
+
+                const keyName = evt.key.length === 1 ? evt.key.toUpperCase() : evt.key;
+                const shortcutString = `${modifiers.join('+')}+${keyName}`;
+
+                const parsed = parseHotkeyString(shortcutString);
+                if (parsed) {
+                    text.setValue(shortcutString);
+                    this.plugin.settings.paletteHotkey = shortcutString;
+                    await this.plugin.saveSettings();
+                    await setCommandHotkey(this.app, 'obsidian-seam:open-palette', parsed);
+                    new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
+                    this.display();
+                }
+            });
+        });
+
+        // Reset to default button (Mod+K)
+        hotkeySetting.addButton((btn) => {
+            btn.setButtonText(strings.settingsPaletteHotkeyReset)
+                .setTooltip('Reset to Mod+K (Cmd+K / Ctrl+K)')
+                .onClick(async () => {
+                    const defaultHotkey = { modifiers: ['Mod'], key: 'K' } as const;
+                    this.plugin.settings.paletteHotkey = 'Mod+K';
+                    await this.plugin.saveSettings();
+                    await resetCommandHotkey(
+                        this.app,
+                        'obsidian-seam:open-palette',
+                        defaultHotkey as any,
+                    );
+                    new Notice(strings.noticeHotkeyUpdated(formatHotkey(defaultHotkey as any)));
+                    this.display();
+                });
+        });
+
+        // Button to open Obsidian's native Hotkeys settings tab filtered to Seam
+        hotkeySetting.addExtraButton((btn) => {
+            btn.setIcon('external-link')
+                .setTooltip(strings.settingsPaletteHotkeyOpenObsidian)
+                .onClick(() => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const settingApp = this.app as any;
+                    if (settingApp.setting?.openTabById) {
+                        settingApp.setting.open();
+                        const tab = settingApp.setting.openTabById('hotkeys');
+                        if (tab?.searchComponent) {
+                            tab.searchComponent.setValue('Seam');
+                            tab.searchComponent.inputEl.dispatchEvent(new Event('input'));
+                        }
+                    }
+                });
+        });
+
         // --- Advanced ---
-        containerEl.createEl('h3', { text: 'Advanced' });
+        containerEl.createEl('h3', { text: strings.settingsAdvancedHeading });
 
         new Setting(containerEl)
-            .setName('Reconciliation interval (minutes)')
-            .setDesc('How often the plugin scans for missed action tags while Obsidian is running.')
+            .setName(strings.settingsReconInterval)
+            .setDesc(strings.settingsReconIntervalDesc)
             .addSlider((slider) =>
                 slider
                     .setLimits(5, 60, 5)

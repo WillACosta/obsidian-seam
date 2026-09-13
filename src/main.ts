@@ -1,4 +1,4 @@
-import { Notice, Plugin, TAbstractFile, TFile } from 'obsidian';
+import { Hotkey, Notice, Plugin, TAbstractFile, TFile } from 'obsidian';
 import { DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
@@ -7,6 +7,8 @@ import { Reconciler } from './automation/Reconciler';
 import { SearchService } from './search/SearchService';
 import { UniversalPalette } from './ui/UniversalPalette';
 import { SeamSettingsTab } from './settings/SettingsTab';
+import { t } from './i18n';
+import { parseHotkeyString } from './utils/hotkey';
 
 /**
  * Tags and properties that Seam uses as action triggers.
@@ -51,34 +53,41 @@ export default class SeamPlugin extends Plugin {
         this.searchService = new SearchService(this.app, this.settings);
 
         // 3. Register commands
+        const configuredHotkey = parseHotkeyString(this.settings.paletteHotkey);
+        const defaultHotkey: Hotkey = {
+            modifiers: ['Mod'],
+            key: 'K',
+        };
+
         this.addCommand({
             id: 'open-palette',
-            name: 'Open Universal Palette',
+            name: t().cmdOpenPalette,
             callback: () => this.openPalette(),
+            hotkeys: [configuredHotkey || defaultHotkey],
         });
 
         this.addCommand({
             id: 'archive-all',
-            name: 'Archive all notes with #archive',
+            name: t().cmdArchiveAll,
             callback: () => this.archiveAll(),
         });
 
         this.addCommand({
             id: 'process-pending',
-            name: 'Process pending automations',
+            name: t().cmdProcessPending,
             callback: () => this.processPending(),
         });
 
         this.addCommand({
             id: 'show-status',
-            name: 'Show automation status',
+            name: t().cmdShowStatus,
             callback: () => this.showStatus(),
         });
 
         // Commands that operate on the current open note
         this.addCommand({
             id: 'archive-current-note',
-            name: 'Archive current note',
+            name: t().cmdArchiveCurrentNote,
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
                 if (!file || file.extension !== 'md') return false;
@@ -90,7 +99,7 @@ export default class SeamPlugin extends Plugin {
 
         this.addCommand({
             id: 'move-to-permanent',
-            name: `Move current note to ${this.settings.permanentFolder}`,
+            name: t().cmdMoveToPermanent,
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
                 if (!file || file.extension !== 'md') return false;
@@ -269,13 +278,13 @@ export default class SeamPlugin extends Plugin {
         }
 
         if (archivedCount > 0 || errorCount > 0) {
-            let message = `Archived ${archivedCount} note${archivedCount !== 1 ? 's' : ''}`;
-            if (errorCount > 0) {
-                message += `. ${errorCount} error${errorCount !== 1 ? 's' : ''}.`;
-            }
+            const message =
+                errorCount > 0
+                    ? t().noticeArchivedCountWithErrors(archivedCount, errorCount)
+                    : t().noticeArchivedCount(archivedCount);
             new Notice(message);
         } else {
-            new Notice('No notes with #archive found.');
+            new Notice(t().noticeNoNotesWithArchive);
         }
     }
 
@@ -285,9 +294,9 @@ export default class SeamPlugin extends Plugin {
     private async archiveCurrentNote(file: TFile): Promise<void> {
         const result = await this.automationService.archiveFile(file);
         if (result.status === 'success') {
-            new Notice(`Archived: ${file.basename}`);
+            new Notice(t().noticeArchived(file.basename));
         } else {
-            new Notice(`Archive failed: ${result.message}`);
+            new Notice(t().noticeArchiveFailed(result.message));
         }
     }
 
@@ -297,26 +306,26 @@ export default class SeamPlugin extends Plugin {
     private async moveCurrentNoteToPermanent(file: TFile): Promise<void> {
         const result = await this.automationService.moveFileToPermanent(file);
         if (result.status === 'success') {
-            new Notice(`Moved to ${this.settings.permanentFolder}: ${file.basename}`);
+            new Notice(t().noticeMovedToPermanent(this.settings.permanentFolder, file.basename));
         } else {
-            new Notice(`Move failed: ${result.message}`);
+            new Notice(t().noticeMoveFailed(result.message));
         }
     }
 
     private async processPending(): Promise<void> {
         await this.automationQueue.flush();
         this.reconciler.scan();
-        new Notice('Processed pending automations.');
+        new Notice(t().noticeProcessedPending);
     }
 
     private showStatus(): void {
         const status = this.automationService.getStatus();
         const message = [
-            'Seam Automation',
+            t().statusTitle,
             '',
-            `Pending: ${status.pending}`,
-            `Processed: ${status.processed}`,
-            `Failed: ${status.failed}`,
+            t().statusPending(status.pending),
+            t().statusProcessed(status.processed),
+            t().statusFailed(status.failed),
         ].join('\n');
         new Notice(message, 5000);
     }
@@ -328,22 +337,22 @@ export default class SeamPlugin extends Plugin {
         const commands: PaletteItem[] = [
             {
                 id: 'cmd-archive-all',
-                title: 'Archive all notes with #archive',
-                description: 'Process all notes tagged with #archive',
+                title: t().paletteArchiveAllTitle,
+                description: t().paletteArchiveAllDesc,
                 type: 'command',
                 action: () => this.archiveAll(),
             },
             {
                 id: 'cmd-process-pending',
-                title: 'Process pending automations',
-                description: 'Manually trigger reconciliation',
+                title: t().cmdProcessPending,
+                description: t().cmdProcessPending,
                 type: 'command',
                 action: () => this.processPending(),
             },
             {
                 id: 'cmd-show-status',
-                title: 'Show automation status',
-                description: 'Display pending, processed, and failed counts',
+                title: t().cmdShowStatus,
+                description: t().cmdShowStatus,
                 type: 'command',
                 action: () => this.showStatus(),
             },
@@ -355,15 +364,21 @@ export default class SeamPlugin extends Plugin {
             commands.push(
                 {
                     id: 'cmd-archive-current',
-                    title: 'Archive current note',
-                    description: `Move "${activeFile.basename}" to ${this.settings.archiveFolder}/`,
+                    title: t().paletteArchiveCurrentTitle(activeFile.basename),
+                    description: t().paletteArchiveCurrentDesc(
+                        this.settings.archiveFolder,
+                        activeFile.basename,
+                    ),
                     type: 'action',
                     action: () => this.archiveCurrentNote(activeFile),
                 },
                 {
                     id: 'cmd-move-permanent',
-                    title: `Move current note to ${this.settings.permanentFolder}`,
-                    description: `Move "${activeFile.basename}" to ${this.settings.permanentFolder}/`,
+                    title: t().palettePermanentCurrentTitle(activeFile.basename),
+                    description: t().palettePermanentCurrentDesc(
+                        this.settings.permanentFolder,
+                        activeFile.basename,
+                    ),
                     type: 'action',
                     action: () => this.moveCurrentNoteToPermanent(activeFile),
                 },

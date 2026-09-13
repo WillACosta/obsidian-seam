@@ -2,6 +2,7 @@ import { App, TFile, Notice } from 'obsidian';
 import { SeamSettings, AutomationResult, AutomationStatus, AutomationError } from '../types';
 import { ArchiveAction, hasTag } from './actions/ArchiveAction';
 import { PermanentAction } from './actions/PermanentAction';
+import { t } from '../i18n';
 
 /**
  * Single authoritative automation service.
@@ -36,7 +37,7 @@ export class AutomationService {
                 status: 'skipped',
                 file,
                 action: 'none',
-                message: 'File no longer exists',
+                message: t().msgFileNoLongerExists,
             };
         }
 
@@ -49,7 +50,7 @@ export class AutomationService {
                 status: 'conflict',
                 file: currentFile,
                 action: 'conflict',
-                message: 'File has both #archive and #permanent tags. Resolve manually.',
+                message: t().msgConflictBothTags,
             };
             this.recordFailure(currentFile.path, result);
             return result;
@@ -74,7 +75,7 @@ export class AutomationService {
             status: 'skipped',
             file: currentFile,
             action: 'none',
-            message: 'No applicable automation',
+            message: t().msgNoApplicableAutomation,
         };
     }
 
@@ -107,7 +108,8 @@ export class AutomationService {
 
     /**
      * Directly archive a specific file (used by "Archive current note" command).
-     * Adds the archive tag then processes the file through the normal pipeline.
+     * Bypasses tag precondition verification ({ force: true }) so manual archiving
+     * succeeds immediately without race conditions or metadata cache delays.
      */
     async archiveFile(file: TFile): Promise<AutomationResult> {
         const currentFile = this.app.vault.getAbstractFileByPath(file.path);
@@ -116,26 +118,21 @@ export class AutomationService {
                 status: 'skipped',
                 file,
                 action: 'archive',
-                message: 'File no longer exists',
+                message: t().msgFileNoLongerExists,
             };
         }
 
-        // If the file already has the archive tag, just process it
-        if (hasTag(currentFile, this.app, this.settings.archiveTag)) {
-            return this.archiveAction.apply(currentFile, this.app, this.settings);
-        }
-
-        // Add the archive tag, then process
-        const { addTag } = await import('./actions/ArchiveAction');
-        await addTag(currentFile, this.app, this.settings.archiveTag);
-        const result = await this.archiveAction.apply(currentFile, this.app, this.settings);
+        const result = await this.archiveAction.apply(currentFile, this.app, this.settings, {
+            force: true,
+        });
         this.recordResult(currentFile.path, result);
         return result;
     }
 
     /**
      * Directly move a specific file to permanent folder (used by "Move to Permanent" command).
-     * Adds the permanent tag then processes the file through the normal pipeline.
+     * Bypasses tag precondition verification ({ force: true }) so manual moving
+     * succeeds immediately without race conditions or metadata cache delays.
      */
     async moveFileToPermanent(file: TFile): Promise<AutomationResult> {
         const currentFile = this.app.vault.getAbstractFileByPath(file.path);
@@ -144,19 +141,13 @@ export class AutomationService {
                 status: 'skipped',
                 file,
                 action: 'permanent',
-                message: 'File no longer exists',
+                message: t().msgFileNoLongerExists,
             };
         }
 
-        // If the file already has the permanent tag, just process it
-        if (hasTag(currentFile, this.app, this.settings.permanentTag)) {
-            return this.permanentAction.apply(currentFile, this.app, this.settings);
-        }
-
-        // Add the permanent tag, then process
-        const { addTag } = await import('./actions/ArchiveAction');
-        await addTag(currentFile, this.app, this.settings.permanentTag);
-        const result = await this.permanentAction.apply(currentFile, this.app, this.settings);
+        const result = await this.permanentAction.apply(currentFile, this.app, this.settings, {
+            force: true,
+        });
         this.recordResult(currentFile.path, result);
         return result;
     }

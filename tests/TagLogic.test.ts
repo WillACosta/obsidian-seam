@@ -18,6 +18,7 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.moveCleanupTags, '#permanent, #todo');
         assert.equal(DEFAULT_SETTINGS.moveCleanupProperties, 'status');
         assert.equal(DEFAULT_SETTINGS.showIcons, true);
+        assert.equal(DEFAULT_SETTINGS.paletteHotkey, 'Mod+K');
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
     });
 });

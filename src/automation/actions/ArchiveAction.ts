@@ -1,5 +1,6 @@
 import { App, TFile, normalizePath } from 'obsidian';
 import { SeamSettings, AutomationResult } from '../../types';
+import { t } from '../../i18n';
 
 /**
  * Checks whether a file has a specific tag (frontmatter or inline).
@@ -142,7 +143,12 @@ export class ArchiveAction {
         return hasArchiveTag && !hasPermanentTag;
     }
 
-    async apply(file: TFile, app: App, settings: SeamSettings): Promise<AutomationResult> {
+    async apply(
+        file: TFile,
+        app: App,
+        settings: SeamSettings,
+        options?: { force?: boolean },
+    ): Promise<AutomationResult> {
         try {
             // Re-verify file existence
             const currentFile = app.vault.getAbstractFileByPath(file.path);
@@ -151,17 +157,17 @@ export class ArchiveAction {
                     status: 'skipped',
                     file,
                     action: 'archive',
-                    message: 'File no longer exists',
+                    message: t().msgFileNoLongerExists,
                 };
             }
 
-            // Re-verify tag presence
-            if (!this.canApply(currentFile, app, settings)) {
+            // Re-verify tag presence (bypassed if force is true, e.g. from direct command)
+            if (!options?.force && !this.canApply(currentFile, app, settings)) {
                 return {
                     status: 'skipped',
                     file: currentFile,
                     action: 'archive',
-                    message: 'Conditions no longer met',
+                    message: t().msgConditionsNoLongerMet,
                 };
             }
 
@@ -174,7 +180,7 @@ export class ArchiveAction {
                     status: 'success',
                     file: currentFile,
                     action: 'archive',
-                    message: 'Tags and properties updated (file already in destination)',
+                    message: t().msgTagsUpdatedAlreadyInDest,
                     newPath,
                 };
             }
@@ -186,7 +192,7 @@ export class ArchiveAction {
                     status: 'conflict',
                     file: currentFile,
                     action: 'archive',
-                    message: `Destination file already exists: ${newPath}`,
+                    message: t().msgDestFileExists(newPath),
                 };
             }
 
@@ -210,7 +216,7 @@ export class ArchiveAction {
                 status: 'success',
                 file: currentFile,
                 action: 'archive',
-                message: `Archived to ${newPath}`,
+                message: t().msgArchivedTo(newPath),
                 newPath,
             };
         } catch (e: unknown) {

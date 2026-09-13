@@ -1,0 +1,96 @@
+import { Translations } from './en';
+
+export const ptBr: Translations = {
+    // Commands
+    cmdOpenPalette: 'Abrir Paleta Universal',
+    cmdArchiveCurrentNote: 'Arquivar nota atual',
+    cmdArchiveAll: 'Arquivar todas as notas com #archive',
+    cmdMoveToPermanent: 'Mover para Permanente',
+    cmdProcessPending: 'Processar automações pendentes',
+    cmdShowStatus: 'Mostrar status da automação',
+
+    // Universal Palette items & actions
+    paletteCreateNoteTitle: (title: string) => `Criar nova nota: "${title}"`,
+    paletteCreateNoteDesc: (folder: string) => `Criar nova nota em ${folder}/`,
+    paletteArchiveAllTitle: 'Arquivar todas as notas com #archive',
+    paletteArchiveAllDesc: 'Processar todas as notas com a tag #archive',
+    paletteArchiveCurrentTitle: (basename: string) => `Arquivar "${basename}"`,
+    paletteArchiveCurrentDesc: (folder: string, basename: string) => `Mover "${basename}" para ${folder}/`,
+    palettePermanentCurrentTitle: (basename: string) => `Mover "${basename}" para Permanente`,
+    palettePermanentCurrentDesc: (folder: string, basename: string) => `Mover "${basename}" para ${folder}/`,
+    paletteFilterByTag: (tag: string) => `Filtrar por tag: #${tag}`,
+    paletteNotesMatchingTag: (tag: string) => `Notas correspondentes a #${tag}`,
+    paletteAllTags: 'Todas as tags',
+
+    // Universal Palette UI
+    palettePlaceholder: 'Digite o nome de uma nota ou #tag...',
+    paletteTagPlaceholder: 'Buscar tags para adicionar filtro (ex: #ia)...',
+    paletteHelpText: (isMac: boolean) =>
+        `↑↓ navegar · ↵ abrir · ${isMac ? '⌘↵' : 'Ctrl↵'} nova aba · esc fechar`,
+
+    // Notices & Status
+    noticeArchived: (basename: string) => `Arquivado: ${basename}`,
+    noticeArchiveFailed: (reason: string) => `Falha ao arquivar: ${reason}`,
+    noticeMovedToPermanent: (folder: string, basename: string) => `Movido para ${folder}: ${basename}`,
+    noticeMoveFailed: (reason: string) => `Falha ao mover: ${reason}`,
+    noticeArchivedCount: (count: number) => `Arquivada(s) ${count} nota${count !== 1 ? 's' : ''}.`,
+    noticeArchivedCountWithErrors: (count: number, errors: number) =>
+        `Arquivada(s) ${count} nota${count !== 1 ? 's' : ''}. ${errors} erro${errors !== 1 ? 's' : ''}.`,
+    noticeNoNotesWithArchive: 'Nenhuma nota encontrada com #archive.',
+    noticeProcessedPending: 'Automações pendentes processadas.',
+    statusTitle: 'Automação Seam',
+    statusPending: (count: number) => `Pendentes: ${count}`,
+    statusProcessed: (count: number) => `Processados: ${count}`,
+    statusFailed: (count: number) => `Falhas: ${count}`,
+
+    // Automation Messages
+    msgFileNoLongerExists: 'Arquivo não existe mais',
+    msgConditionsNoLongerMet: 'Condições não atendidas',
+    msgDestFileExists: (path: string) => `Arquivo de destino já existe: ${path}`,
+    msgConflictBothTags: 'O arquivo possui ambas as tags #archive e #permanent. Resolva manualmente.',
+    msgTagsUpdatedAlreadyInDest: 'Tags e propriedades atualizadas (arquivo já está no destino)',
+    msgArchivedTo: (path: string) => `Arquivado em ${path}`,
+    msgMovedTo: (path: string) => `Movido para ${path}`,
+    msgNoApplicableAutomation: 'Nenhuma automação aplicável',
+
+    // Settings Tab
+    settingsTitle: 'Configurações do Seam',
+    settingsFolderHeading: 'Pastas',
+    settingsPermanentFolder: 'Pasta Permanente',
+    settingsPermanentFolderDesc: 'Caminho relativo no vault para notas permanentes.',
+    settingsArchiveFolder: 'Pasta Arquivo',
+    settingsArchiveFolderDesc: 'Caminho relativo no vault para notas arquivadas.',
+    settingsFleetingFolder: 'Pasta Efêmera (Fleeting)',
+    settingsFleetingFolderDesc: 'Caminho relativo no vault para novas notas efêmeras criadas pela paleta.',
+    settingsFleetingTemplate: 'Modelo de nota efêmera',
+    settingsFleetingTemplateDesc: 'Caminho para uma nota modelo (ex: Templates/Fleeting). Deixe vazio para não usar modelo.',
+
+    settingsAutomationHeading: 'Automação',
+    settingsAutoProcessing: 'Habilitar processamento automático',
+    settingsAutoProcessingDesc: 'Processar notas automaticamente quando tags de ação forem detectadas.',
+
+    settingsArchiveBehaviorHeading: 'Comportamento do Arquivo',
+    settingsAddArchivedState: 'Adicionar #archived após arquivar',
+    settingsAddArchivedStateDesc: 'Adicionar uma tag de estado durável #archived quando uma nota for arquivada.',
+
+    settingsMovingHeading: 'Comportamento de Movimentação de Notas',
+    settingsEnableMoveCleanup: 'Remover tags e propriedades após mover uma nota',
+    settingsEnableMoveCleanupDesc: 'Limpar automaticamente tags e propriedades temporárias de fluxo de trabalho ao arquivar ou mover para permanente.',
+    settingsMoveCleanupTags: 'Tags a serem removidas após mover',
+    settingsMoveCleanupTagsDesc: 'Lista separada por vírgulas de tags a serem removidas ao mover (ex: #permanent, #todo).',
+    settingsMoveCleanupProps: 'Propriedades a serem removidas após mover',
+    settingsMoveCleanupPropsDesc: 'Lista separada por vírgulas de chaves de propriedades do frontmatter a serem removidas ao mover (ex: status).',
+
+    settingsInterfaceHeading: 'Paleta Universal',
+    settingsShowIcons: 'Mostrar ícones na Paleta Universal',
+    settingsShowIconsDesc: 'Exibir ícones de pastas e comandos nas listagens de busca e comandos.',
+    settingsPaletteHotkey: 'Atalho da Paleta Universal',
+    settingsPaletteHotkeyDesc: 'Personalize o atalho do teclado para abrir a Paleta Universal (padrão: Cmd+K no Mac, Ctrl+K no Windows/Linux).',
+    settingsPaletteHotkeyReset: 'Restaurar padrão',
+    settingsPaletteHotkeyOpenObsidian: 'Abrir nos Atalhos do Obsidian',
+    noticeHotkeyUpdated: (hotkey: string) => `Atalho atualizado: ${hotkey}`,
+
+    settingsAdvancedHeading: 'Avançado',
+    settingsReconInterval: 'Intervalo de reconciliação (minutos)',
+    settingsReconIntervalDesc: 'Frequência com que o plugin verifica tags de ação perdidas enquanto o Obsidian está em execução.',
+};

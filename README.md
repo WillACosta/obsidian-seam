@@ -1,5 +1,7 @@
 # Seam — Frictionless Note Organization for Obsidian
 
+> **English** · [Português](https://github.com/wilACosta/seam/blob/main/README.pt-br.md)
+
 > Capture thoughts, tag naturally, and let Seam organize your vault quietly in the background.
 
 Seam is a lightweight, native-feeling Obsidian plugin designed to eliminate organization friction. Instead of manually dragging notes into deep folder trees or managing complex productivity systems, Seam lets you focus on writing.
@@ -27,7 +29,7 @@ Seam introduces a quiet, tag-driven philosophy:
 Integrating Seam into your daily routine is simple and intuitive:
 
 ### 1. Capture Without Friction (Fleeting Notes)
-Whenever inspiration strikes, open the **Universal Palette** (`Cmd/Ctrl + Shift + P` or configured hotkey) and type a note title. If the note doesn't exist yet, hit Enter to create it instantly in your `Fleeting/` folder. You can even configure a custom template with your preferred frontmatter or headings.
+Whenever inspiration strikes, open the **Universal Palette** (`Cmd + K` on Mac, `Ctrl + K` on Win/Linux, or your configured shortcut) and type a note title. If the note doesn't exist yet, hit Enter to create it instantly in your `Fleeting/` folder. You can even configure a custom template with your preferred frontmatter or headings.
 
 ```
 Universal Palette → "Meeting with Design Team" → [Create new note]
@@ -95,7 +97,7 @@ Customize Seam under **Settings → Community Plugins → Seam**:
 - **Action Tags**: Customize the tag names for archiving (`archive`), filing (`permanent`), and archive state (`archived`).
 - **Automation**: Toggle background automation and configure periodic reconciliation intervals.
 - **Moving Notes Behavior**: Choose whether to strip scratch tags (`#todo`, `#permanent`) and frontmatter properties (`status`) when moving notes.
-- **Universal Palette**: Toggle icons in search results and commands.
+- **Universal Palette**: Set your preferred keyboard shortcut (default: `Cmd + K` on Mac, `Ctrl + K` on Windows/Linux) and toggle icons in search results and commands.
 
 ## Installation
 
@@ -115,15 +117,32 @@ Customize Seam under **Settings → Community Plugins → Seam**:
 
 ## Keyboard Shortcuts & Commands
 
-| Command | Palette Syntax / Action | Description |
+| Command | Shortcut / Action | Description |
 |:---|:---|:---|
-| **Open Universal Palette** | Open modal | Universal search for notes, tags, content, and commands |
+| **Open Universal Palette** | `Cmd + K` / `Ctrl + K` (configurable) | Universal search for notes, tags, content, and commands |
 | **Open in New Tab** | `Cmd + Enter` / `Ctrl + Enter` | Open the selected note suggestion in a new editor tab |
 | **Filter by Tag** | `#<tag>` | Search and filter notes by tag with interactive chips |
 | **Command Mode** | `>` | Browse and trigger Seam commands directly |
 | **Archive current note** | Command palette | Archives the currently open markdown note |
 | **Move to Permanent** | Command palette | Moves the currently open markdown note to Permanent |
 | **Archive all notes** | Command palette | Processes all notes in the vault tagged with `#archive` |
+
+## Internationalization (i18n)
+
+Seam detects Obsidian's current language and automatically displays the corresponding localized interface:
+
+- **English (US)**
+- **Portuguese (BR)**
+
+If an unsupported language is set as Obsidian's language, Seam falls back to English as default.
+
+### Contributing Translations
+
+Want to see Seam in your native language? Contributions are warmly welcome:
+
+1. Create a new locale file in `src/i18n/locales/<locale-code>.ts` (e.g., `es.ts`, `fr.ts`, `de.ts`) implementing the `Translations` type.
+2. Register the new locale in `src/i18n/index.ts`.
+3. Open a Pull Request on [GitHub](https://github.com/WillACosta/obsidian-seam).
 
 ## Support the Project
 

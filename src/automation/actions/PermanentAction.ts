@@ -1,6 +1,7 @@
 import { App, TFile, normalizePath } from 'obsidian';
 import { SeamSettings, AutomationResult } from '../../types';
 import { hasTag, updateNoteTagsAndProperties } from './ArchiveAction';
+import { t } from '../../i18n';
 
 export class PermanentAction {
     canApply(file: TFile, app: App, settings: SeamSettings): boolean {
@@ -10,7 +11,12 @@ export class PermanentAction {
         return hasPermanentTag && !hasArchiveTag;
     }
 
-    async apply(file: TFile, app: App, settings: SeamSettings): Promise<AutomationResult> {
+    async apply(
+        file: TFile,
+        app: App,
+        settings: SeamSettings,
+        options?: { force?: boolean },
+    ): Promise<AutomationResult> {
         try {
             // Re-verify file existence
             const currentFile = app.vault.getAbstractFileByPath(file.path);
@@ -19,17 +25,17 @@ export class PermanentAction {
                     status: 'skipped',
                     file,
                     action: 'permanent',
-                    message: 'File no longer exists',
+                    message: t().msgFileNoLongerExists,
                 };
             }
 
-            // Re-verify tag presence
-            if (!this.canApply(currentFile, app, settings)) {
+            // Re-verify tag presence (bypassed if force is true, e.g. from direct command)
+            if (!options?.force && !this.canApply(currentFile, app, settings)) {
                 return {
                     status: 'skipped',
                     file: currentFile,
                     action: 'permanent',
-                    message: 'Conditions no longer met',
+                    message: t().msgConditionsNoLongerMet,
                 };
             }
 
@@ -42,7 +48,7 @@ export class PermanentAction {
                     status: 'success',
                     file: currentFile,
                     action: 'permanent',
-                    message: 'Tags and properties updated (file already in destination)',
+                    message: t().msgTagsUpdatedAlreadyInDest,
                     newPath,
                 };
             }
@@ -54,7 +60,7 @@ export class PermanentAction {
                     status: 'conflict',
                     file: currentFile,
                     action: 'permanent',
-                    message: `Destination file already exists: ${newPath}`,
+                    message: t().msgDestFileExists(newPath),
                 };
             }
 
@@ -78,7 +84,7 @@ export class PermanentAction {
                 status: 'success',
                 file: currentFile,
                 action: 'permanent',
-                message: `Moved to ${newPath}`,
+                message: t().msgMovedTo(newPath),
                 newPath,
             };
         } catch (e: unknown) {

@@ -1,6 +1,7 @@
 import { App, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
 import { PaletteItem, SeamSettings } from '../types';
 import { SearchService } from '../search/SearchService';
+import { t } from '../i18n';
 
 /**
  * Internal interface for the SuggestModal's chooser.
@@ -70,7 +71,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         private commands: PaletteItem[],
     ) {
         super(app);
-        this.setPlaceholder('Search notes, #tags or run Seam commands...');
+        this.setPlaceholder(t().palettePlaceholder);
         this.emptyStateText = 'No results found.';
 
         // Register Mod+Enter (Cmd on Mac, Ctrl on Win/Linux) to open in new tab.
@@ -154,12 +155,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         if (this.selectedTags.length === 0) {
             this.chipsContainerEl.style.display = 'none';
-            this.setPlaceholder('Search notes, #tags or run Seam commands...');
+            this.setPlaceholder(t().palettePlaceholder);
             return;
         }
 
         this.chipsContainerEl.style.display = 'flex';
-        this.setPlaceholder('Type # to add tag, or search notes...');
+        this.setPlaceholder(t().paletteTagPlaceholder);
 
         for (const tag of this.selectedTags) {
             const chipEl = this.chipsContainerEl.createSpan({ cls: 'seam-palette-chip' });
@@ -306,7 +307,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 {
                     id: `tag-${prefix}`,
                     title: prefix,
-                    description: 'Filter by tag',
+                    description: t().paletteFilterByTag(prefix),
                     type: 'tag' as const,
                     icon: 'hash',
                 },
@@ -379,8 +380,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         ) {
             items.push({
                 id: 'create-note',
-                title: `Create new note: ${query}`,
-                description: `New note in ${this.settings.fleetingFolder}/`,
+                title: t().paletteCreateNoteTitle(query),
+                description: t().paletteCreateNoteDesc(this.settings.fleetingFolder),
                 type: 'create',
                 icon: 'file-plus',
                 action: () => this.createNote(query),
@@ -475,8 +476,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             el.addClass('seam-palette-tag-item');
             const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
 
-            const iconEl = rowEl.createSpan({ cls: 'seam-palette-command-icon' });
-            setIcon(iconEl, item.icon || 'hash');
+            if (this.settings.showIcons) {
+                const iconEl = rowEl.createSpan({ cls: 'seam-palette-command-icon' });
+                setIcon(iconEl, item.icon || 'hash');
+            }
 
             const titleEl = rowEl.createSpan({ cls: 'seam-palette-title' });
             renderHighlightedText(titleEl, item.title, highlightQuery);

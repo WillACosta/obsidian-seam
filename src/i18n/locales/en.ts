@@ -1,0 +1,96 @@
+export const en = {
+    // Commands
+    cmdOpenPalette: 'Open Universal Palette',
+    cmdArchiveCurrentNote: 'Archive current note',
+    cmdArchiveAll: 'Archive all notes with #archive',
+    cmdMoveToPermanent: 'Move to Permanent',
+    cmdProcessPending: 'Process pending automations',
+    cmdShowStatus: 'Show automation status',
+
+    // Universal Palette items & actions
+    paletteCreateNoteTitle: (title: string) => `Create new note: "${title}"`,
+    paletteCreateNoteDesc: (folder: string) => `Create new note in ${folder}/`,
+    paletteArchiveAllTitle: 'Archive all notes with #archive',
+    paletteArchiveAllDesc: 'Process all notes tagged with #archive',
+    paletteArchiveCurrentTitle: (basename: string) => `Archive "${basename}"`,
+    paletteArchiveCurrentDesc: (folder: string, basename: string) => `Move "${basename}" to ${folder}/`,
+    palettePermanentCurrentTitle: (basename: string) => `Move "${basename}" to Permanent`,
+    palettePermanentCurrentDesc: (folder: string, basename: string) => `Move "${basename}" to ${folder}/`,
+    paletteFilterByTag: (tag: string) => `Filter by tag: #${tag}`,
+    paletteNotesMatchingTag: (tag: string) => `Notes matching #${tag}`,
+    paletteAllTags: 'All tags',
+
+    // Universal Palette UI
+    palettePlaceholder: 'Type a note name or #tag...',
+    paletteTagPlaceholder: 'Search tags to add filter (e.g. #ai)...',
+    paletteHelpText: (isMac: boolean) =>
+        `↑↓ navigate · ↵ open · ${isMac ? '⌘↵' : 'Ctrl↵'} new tab · esc close`,
+
+    // Notices & Status
+    noticeArchived: (basename: string) => `Archived: ${basename}`,
+    noticeArchiveFailed: (reason: string) => `Archive failed: ${reason}`,
+    noticeMovedToPermanent: (folder: string, basename: string) => `Moved to ${folder}: ${basename}`,
+    noticeMoveFailed: (reason: string) => `Move failed: ${reason}`,
+    noticeArchivedCount: (count: number) => `Archived ${count} note${count !== 1 ? 's' : ''}.`,
+    noticeArchivedCountWithErrors: (count: number, errors: number) =>
+        `Archived ${count} note${count !== 1 ? 's' : ''}. ${errors} error${errors !== 1 ? 's' : ''}.`,
+    noticeNoNotesWithArchive: 'No notes with #archive found.',
+    noticeProcessedPending: 'Processed pending automations.',
+    statusTitle: 'Seam Automation',
+    statusPending: (count: number) => `Pending: ${count}`,
+    statusProcessed: (count: number) => `Processed: ${count}`,
+    statusFailed: (count: number) => `Failed: ${count}`,
+
+    // Automation Messages
+    msgFileNoLongerExists: 'File no longer exists',
+    msgConditionsNoLongerMet: 'Conditions no longer met',
+    msgDestFileExists: (path: string) => `Destination file already exists: ${path}`,
+    msgConflictBothTags: 'File has both #archive and #permanent tags. Resolve manually.',
+    msgTagsUpdatedAlreadyInDest: 'Tags and properties updated (file already in destination)',
+    msgArchivedTo: (path: string) => `Archived to ${path}`,
+    msgMovedTo: (path: string) => `Moved to ${path}`,
+    msgNoApplicableAutomation: 'No applicable automation',
+
+    // Settings Tab
+    settingsTitle: 'Seam Settings',
+    settingsFolderHeading: 'Folders',
+    settingsPermanentFolder: 'Permanent folder',
+    settingsPermanentFolderDesc: 'Vault-relative path for permanent notes.',
+    settingsArchiveFolder: 'Archive folder',
+    settingsArchiveFolderDesc: 'Vault-relative path for archived notes.',
+    settingsFleetingFolder: 'Fleeting folder',
+    settingsFleetingFolderDesc: 'Vault-relative path for new fleeting notes created from the palette.',
+    settingsFleetingTemplate: 'Fleeting note template',
+    settingsFleetingTemplateDesc: 'Path to a template note (e.g. Templates/Fleeting). Leave empty for no template.',
+
+    settingsAutomationHeading: 'Automation',
+    settingsAutoProcessing: 'Enable automatic processing',
+    settingsAutoProcessingDesc: 'Automatically process notes when action tags are detected.',
+
+    settingsArchiveBehaviorHeading: 'Archive Behavior',
+    settingsAddArchivedState: 'Add #archived after archiving',
+    settingsAddArchivedStateDesc: 'Add a durable #archived state tag when a note is archived.',
+
+    settingsMovingHeading: 'Moving Notes Behavior',
+    settingsEnableMoveCleanup: 'Remove tags and properties after moving a note',
+    settingsEnableMoveCleanupDesc: 'Automatically clean up temporary workflow tags and properties when archiving or moving to permanent.',
+    settingsMoveCleanupTags: 'Tags to remove after moving',
+    settingsMoveCleanupTagsDesc: 'Comma-separated list of tags to strip upon moving (e.g. #permanent, #todo).',
+    settingsMoveCleanupProps: 'Properties to remove after moving',
+    settingsMoveCleanupPropsDesc: 'Comma-separated list of frontmatter property keys to strip upon moving (e.g. status).',
+
+    settingsInterfaceHeading: 'Universal Palette',
+    settingsShowIcons: 'Show icons in Universal Palette',
+    settingsShowIconsDesc: 'Display folder and command icons in search and command listings.',
+    settingsPaletteHotkey: 'Universal Palette shortcut',
+    settingsPaletteHotkeyDesc: 'Customize the keyboard shortcut to open the Universal Palette (default: Cmd+K on Mac, Ctrl+K on Windows/Linux).',
+    settingsPaletteHotkeyReset: 'Reset to default',
+    settingsPaletteHotkeyOpenObsidian: 'Open in Obsidian Hotkeys',
+    noticeHotkeyUpdated: (hotkey: string) => `Shortcut updated: ${hotkey}`,
+
+    settingsAdvancedHeading: 'Advanced',
+    settingsReconInterval: 'Reconciliation interval (minutes)',
+    settingsReconIntervalDesc: 'How often the plugin scans for missed action tags while Obsidian is running.',
+};
+
+export type Translations = typeof en;

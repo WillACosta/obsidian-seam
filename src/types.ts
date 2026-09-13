@@ -14,6 +14,7 @@ export interface SeamSettings {
     moveCleanupTags: string;
     moveCleanupProperties: string;
     showIcons: boolean;
+    paletteHotkey: string;
     reconciliationIntervalMinutes: number;
 }
 
@@ -31,6 +32,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     moveCleanupTags: '#permanent, #todo',
     moveCleanupProperties: 'status',
     showIcons: true,
+    paletteHotkey: 'Mod+K',
     reconciliationIntervalMinutes: 15,
 };
 
