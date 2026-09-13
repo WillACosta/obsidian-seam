@@ -1,6 +1,6 @@
 # Seam — Frictionless Note Organization for Obsidian
 
-> **English** · [Português](https://github.com/wilACosta/seam/blob/main/README.pt-br.md)
+> **English** · [Português](README.pt-br.md)
 
 > Capture thoughts, tag naturally, and let Seam organize your vault quietly in the background.
 
@@ -50,7 +50,7 @@ Done with a project, task, or meeting note? Add `#archive`:
 2. The `#archive` action tag is removed.
 3. A durable `#archived` state tag is added so you can still find it later.
 
-![!"Archiving a note"](./docs/images/archiving.png)
+!["Archiving a note"](./docs/images/archiving.png)
 
 ### 4. Search and Filter with Live Tag Chips
 Press your hotkey to open the **Universal Palette**:
@@ -146,9 +146,7 @@ Want to see Seam in your native language? Contributions are warmly welcome:
 
 ## Support the Project
 
-Seam is free, open-source software built with passion. If Seam saves you time and makes your Obsidian vault a calmer place to think, consider supporting its continued development!
-
-Support ongoing development and future iterations:
+Seam is free, open-source software built with passion. If Seam saves you time and makes your Obsidian vault a calmer place to think, consider supporting ongoing development and future iterations:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willacosta)
 
@@ -156,12 +154,17 @@ Support ongoing development and future iterations:
 
 !["QRCode PIX"](./docs/images/qrcode.svg)
 
+## Development
+
+For developer instructions, Spec-Driven Development (SDD) guidelines, and release procedures, see [README.dev.md](README.dev.md).
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
 
 ## Built with
 
-Seam was built with the help of AI agents. Every iteration (phase-by-phase build) was tracked as plain spec-files, written by me.
+Seam was built with the help of AI agents. Every iteration (phase-by-phase build) was tracked as plain spec files, written by me.
 
 Crafted with care by **William A. Costa** ([@WillACosta](https://github.com/WillACosta)).
+

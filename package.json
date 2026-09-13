@@ -7,7 +7,11 @@
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
     "test": "tsx --test tests/**/*.test.ts",
-    "symlink": "node scripts/symlink.mjs"
+    "symlink": "node scripts/symlink.mjs",
+    "changelog:extract": "node scripts/changelog.mjs extract",
+    "changelog:generate": "node scripts/changelog.mjs generate",
+    "changelog:validate": "node scripts/changelog.mjs validate",
+    "release:check": "node scripts/changelog.mjs validate"
   },
   "devDependencies": {
     "@types/node": "^16.11.6",

@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. 0.1.0)"
+        required: true
 
 permissions:
   contents: write
@@ -36,11 +41,21 @@ jobs:
       - name: Build plugin
         run: pnpm build
 
+      - name: Validate release consistency
+        run: node scripts/changelog.mjs validate "${{ inputs.tag || github.ref_name }}"
+
+      - name: Extract release notes
+        run: node scripts/changelog.mjs extract "${{ inputs.tag || github.ref_name }}" --out release_notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          name: ${{ inputs.tag || github.ref_name }}
+          body_path: release_notes.md
           files: |
             main.js
             manifest.json
             styles.css
-          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
