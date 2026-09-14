@@ -1,4 +1,4 @@
-import { App, TFile, Notice } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { SeamSettings, AutomationResult, AutomationStatus, AutomationError } from '../types';
 import { ArchiveAction, hasTag } from './actions/ArchiveAction';
 import { PermanentAction } from './actions/PermanentAction';

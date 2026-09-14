@@ -1,19 +1,33 @@
-import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, Hotkey } from 'obsidian';
 import type SeamPlugin from '../main';
 import { t } from '../i18n';
 import {
-    getCommandHotkeyDisplay,
     parseHotkeyString,
     formatHotkey,
+    getCommandHotkeyDisplay,
     setCommandHotkey,
     resetCommandHotkey,
     isMacPlatform,
 } from '../utils/hotkey';
 
-/**
- * Settings tab for the Seam plugin.
- * Intentionally small surface as specified by the SDD.
- */
+interface SearchComponentLike {
+    setValue(value: string): void;
+    inputEl: HTMLInputElement;
+}
+
+interface HotkeysSettingTabLike {
+    searchComponent?: SearchComponentLike;
+}
+
+interface SettingDialogLike {
+    open(): void;
+    openTabById(id: string): HotkeysSettingTabLike | null | undefined;
+}
+
+interface AppWithSettingDialog extends App {
+    setting?: SettingDialogLike;
+}
+
 export class SeamSettingsTab extends PluginSettingTab {
     plugin: SeamPlugin;
 
@@ -28,10 +42,10 @@ export class SeamSettingsTab extends PluginSettingTab {
 
         const strings = t();
 
-        containerEl.createEl('h2', { text: strings.settingsTitle });
+        new Setting(containerEl).setName(strings.settingsTitle).setHeading();
 
         // --- Folders ---
-        containerEl.createEl('h3', { text: strings.settingsFolderHeading });
+        new Setting(containerEl).setName(strings.settingsFolderHeading).setHeading();
 
         new Setting(containerEl)
             .setName(strings.settingsPermanentFolder)
@@ -86,7 +100,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         // --- Automation ---
-        containerEl.createEl('h3', { text: strings.settingsAutomationHeading });
+        new Setting(containerEl).setName(strings.settingsAutomationHeading).setHeading();
 
         new Setting(containerEl)
             .setName(strings.settingsAutoProcessing)
@@ -101,7 +115,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         // --- Archive behavior ---
-        containerEl.createEl('h3', { text: strings.settingsArchiveBehaviorHeading });
+        new Setting(containerEl).setName(strings.settingsArchiveBehaviorHeading).setHeading();
 
         new Setting(containerEl)
             .setName(strings.settingsAddArchivedState)
@@ -116,7 +130,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         // --- Moving Notes Behavior ---
-        containerEl.createEl('h3', { text: strings.settingsMovingHeading });
+        new Setting(containerEl).setName(strings.settingsMovingHeading).setHeading();
 
         new Setting(containerEl)
             .setName(strings.settingsEnableMoveCleanup)
@@ -160,7 +174,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         }
 
         // --- Interface ---
-        containerEl.createEl('h3', { text: strings.settingsInterfaceHeading });
+        new Setting(containerEl).setName(strings.settingsInterfaceHeading).setHeading();
 
         new Setting(containerEl)
             .setName(strings.settingsShowIcons)
@@ -209,7 +223,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                 });
 
             // Listen for key combinations directly in the input box
-            text.inputEl.addEventListener('keydown', async (evt: KeyboardEvent) => {
+            text.inputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
                 if (evt.key === 'Tab' || evt.key === 'Escape') return;
                 if (['Control', 'Shift', 'Alt', 'Meta'].includes(evt.key)) return;
 
@@ -234,10 +248,12 @@ export class SeamSettingsTab extends PluginSettingTab {
                 if (parsed) {
                     text.setValue(shortcutString);
                     this.plugin.settings.paletteHotkey = shortcutString;
-                    await this.plugin.saveSettings();
-                    await setCommandHotkey(this.app, paletteCommandId, parsed);
-                    new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
-                    this.display();
+                    void (async () => {
+                        await this.plugin.saveSettings();
+                        await setCommandHotkey(this.app, paletteCommandId, parsed);
+                        new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
+                        this.display();
+                    })();
                 }
             });
         });
@@ -247,15 +263,15 @@ export class SeamSettingsTab extends PluginSettingTab {
             btn.setButtonText(strings.settingsPaletteHotkeyReset)
                 .setTooltip('Reset to Mod+K (Cmd+K / Ctrl+K)')
                 .onClick(async () => {
-                    const defaultHotkey = { modifiers: ['Mod'], key: 'K' } as const;
+                    const defaultHotkey: Hotkey = { modifiers: ['Mod'], key: 'K' };
                     this.plugin.settings.paletteHotkey = 'Mod+K';
                     await this.plugin.saveSettings();
                     await resetCommandHotkey(
                         this.app,
                         paletteCommandId,
-                        defaultHotkey as any,
+                        defaultHotkey,
                     );
-                    new Notice(strings.noticeHotkeyUpdated(formatHotkey(defaultHotkey as any)));
+                    new Notice(strings.noticeHotkeyUpdated(formatHotkey(defaultHotkey)));
                     this.display();
                 });
         });
@@ -265,8 +281,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             btn.setIcon('external-link')
                 .setTooltip(strings.settingsPaletteHotkeyOpenObsidian)
                 .onClick(() => {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const settingApp = this.app as any;
+                    const settingApp = this.app as unknown as AppWithSettingDialog;
                     if (settingApp.setting?.openTabById) {
                         settingApp.setting.open();
                         const tab = settingApp.setting.openTabById('hotkeys');
@@ -279,7 +294,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         });
 
         // --- Advanced ---
-        containerEl.createEl('h3', { text: strings.settingsAdvancedHeading });
+        new Setting(containerEl).setName(strings.settingsAdvancedHeading).setHeading();
 
         new Setting(containerEl)
             .setName(strings.settingsReconInterval)
@@ -288,7 +303,6 @@ export class SeamSettingsTab extends PluginSettingTab {
                 slider
                     .setLimits(5, 60, 5)
                     .setValue(this.plugin.settings.reconciliationIntervalMinutes)
-                    .setDynamicTooltip()
                     .onChange(async (value) => {
                         this.plugin.settings.reconciliationIntervalMinutes = value;
                         await this.plugin.saveSettings();

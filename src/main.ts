@@ -53,17 +53,10 @@ export default class SeamPlugin extends Plugin {
         this.searchService = new SearchService(this.app, this.settings);
 
         // 3. Register commands
-        const configuredHotkey = parseHotkeyString(this.settings.paletteHotkey);
-        const defaultHotkey: Hotkey = {
-            modifiers: ['Mod'],
-            key: 'K',
-        };
-
         this.addCommand({
             id: 'open-palette',
             name: t().cmdOpenPalette,
             callback: () => this.openPalette(),
-            hotkeys: [configuredHotkey || defaultHotkey],
         });
 
         this.addCommand({
@@ -92,7 +85,7 @@ export default class SeamPlugin extends Plugin {
                 const file = this.app.workspace.getActiveFile();
                 if (!file || file.extension !== 'md') return false;
                 if (checking) return true;
-                this.archiveCurrentNote(file);
+                void this.archiveCurrentNote(file);
                 return true;
             },
         });
@@ -104,7 +97,7 @@ export default class SeamPlugin extends Plugin {
                 const file = this.app.workspace.getActiveFile();
                 if (!file || file.extension !== 'md') return false;
                 if (checking) return true;
-                this.moveCurrentNoteToPermanent(file);
+                void this.moveCurrentNoteToPermanent(file);
                 return true;
             },
         });
@@ -114,7 +107,7 @@ export default class SeamPlugin extends Plugin {
 
         // 5. Defer heavy initialization until layout is ready
         this.app.workspace.onLayoutReady(() => {
-            this.initializeAfterLayout();
+            void this.initializeAfterLayout();
         });
     }
 
@@ -158,13 +151,13 @@ export default class SeamPlugin extends Plugin {
         );
 
         // Run startup reconciliation
-        this.reconciler.scan();
+        void this.reconciler.scan();
 
         // Set up periodic reconciliation (safety net)
         this.startPeriodicReconciliation();
 
         // Seed tag/property suggestions so Obsidian autocompletes them
-        this.seedTagSuggestions();
+        void this.seedTagSuggestions();
     }
 
     /**
@@ -243,7 +236,7 @@ export default class SeamPlugin extends Plugin {
         this.reconciliationIntervalId = this.registerInterval(
             window.setInterval(() => {
                 if (this.settings.automaticProcessing) {
-                    this.reconciler.scan();
+                    void this.reconciler.scan();
                 }
             }, intervalMs),
         );
@@ -392,20 +385,23 @@ export default class SeamPlugin extends Plugin {
     // ---- Settings ----
 
     async loadSettings(): Promise<void> {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const raw: unknown = await this.loadData();
+        if (typeof raw === 'object' && raw !== null) {
+            const data = raw as Record<string, unknown>;
+            this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
-        // Migration: rename old archive cleanup settings to move cleanup
-        const raw = await this.loadData();
-        if (raw) {
-            if ('enableArchiveCleanup' in raw && !('enableMoveCleanup' in raw)) {
-                this.settings.enableMoveCleanup = raw.enableArchiveCleanup;
+            // Migration: rename old archive cleanup settings to move cleanup
+            if ('enableArchiveCleanup' in data && !('enableMoveCleanup' in data)) {
+                this.settings.enableMoveCleanup = Boolean(data.enableArchiveCleanup);
             }
-            if ('archiveCleanupTags' in raw && !('moveCleanupTags' in raw)) {
-                this.settings.moveCleanupTags = raw.archiveCleanupTags;
+            if ('archiveCleanupTags' in data && !('moveCleanupTags' in data)) {
+                this.settings.moveCleanupTags = String(data.archiveCleanupTags);
             }
-            if ('archiveCleanupProperties' in raw && !('moveCleanupProperties' in raw)) {
-                this.settings.moveCleanupProperties = raw.archiveCleanupProperties;
+            if ('archiveCleanupProperties' in data && !('moveCleanupProperties' in data)) {
+                this.settings.moveCleanupProperties = String(data.archiveCleanupProperties);
             }
+        } else {
+            this.settings = Object.assign({}, DEFAULT_SETTINGS);
         }
     }
 
@@ -424,6 +420,6 @@ export default class SeamPlugin extends Plugin {
         this.startPeriodicReconciliation();
 
         // Re-seed tag suggestions when settings change
-        this.seedTagSuggestions();
+        void this.seedTagSuggestions();
     }
 }

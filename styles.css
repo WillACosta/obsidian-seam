@@ -101,6 +101,10 @@
     gap: 6px;
 }
 
+.seam-palette-chips-container.is-hidden {
+    display: none;
+}
+
 .prompt-input-container.seam-palette-input-container .prompt-input {
     flex: 1 1 140px;
     min-width: 80px;

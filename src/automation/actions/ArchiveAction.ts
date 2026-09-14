@@ -13,13 +13,15 @@ export function hasTag(file: TFile, app: App, targetTag: string): boolean {
     const normalizedTarget = targetTag.replace(/^#/, '').toLowerCase();
 
     // Check frontmatter tags
-    const fmTags = cache.frontmatter?.tags;
+    const frontmatter = cache.frontmatter as Record<string, unknown> | undefined;
+    const fmTags = frontmatter?.tags;
     if (fmTags) {
-        const tags: string[] = Array.isArray(fmTags)
-            ? fmTags
-            : typeof fmTags === 'string'
-                ? fmTags.split(',').map((t) => t.trim())
-                : [];
+        let tags: string[] = [];
+        if (Array.isArray(fmTags)) {
+            tags = (fmTags as unknown[]).map((t) => String(t));
+        } else if (typeof fmTags === 'string') {
+            tags = fmTags.split(',').map((t) => t.trim());
+        }
         if (tags.some((t) => t.replace(/^#/, '').toLowerCase() === normalizedTarget)) {
             return true;
         }
@@ -78,19 +80,20 @@ export async function updateNoteTagsAndProperties(
     );
 
     // 1. Process Frontmatter
-    await app.fileManager.processFrontMatter(file, (fm) => {
+    await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
         // Remove properties
         for (const prop of propsToRemove) {
             delete fm[prop];
         }
 
         // Handle frontmatter tags
-        if (fm.tags) {
+        const rawTags = fm.tags;
+        if (rawTags) {
             let existingTags: string[] = [];
-            if (Array.isArray(fm.tags)) {
-                existingTags = fm.tags.map((t) => String(t));
-            } else if (typeof fm.tags === 'string') {
-                existingTags = fm.tags.split(',').map((t) => t.trim());
+            if (Array.isArray(rawTags)) {
+                existingTags = (rawTags as unknown[]).map((t) => String(t));
+            } else if (typeof rawTags === 'string') {
+                existingTags = rawTags.split(',').map((t) => t.trim());
             }
 
             // Filter out tags to remove

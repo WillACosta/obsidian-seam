@@ -1,13 +1,26 @@
-import { App, Hotkey, Modifier } from 'obsidian';
+import { App, Hotkey, Modifier, Platform } from 'obsidian';
+
+/**
+ * Interface describing Obsidian's internal HotkeyManager API.
+ */
+interface HotkeyManager {
+    printHotkeyForCommand(id: string): string;
+    getHotkeys(id: string): Hotkey[] | undefined;
+    getDefaultHotkeys(id: string): Hotkey[] | undefined;
+    setHotkeys(id: string, hotkeys: Hotkey[]): void;
+    removeHotkeys(id: string): void;
+    save(): Promise<void>;
+}
+
+interface AppWithHotkeyManager extends App {
+    hotkeyManager?: HotkeyManager;
+}
 
 /**
  * Determines if the current environment is running on a Mac platform.
  */
 export function isMacPlatform(): boolean {
-    if (typeof navigator !== 'undefined') {
-        return /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-    }
-    return false;
+    return typeof Platform !== 'undefined' && Platform.isMacOS;
 }
 
 /**
@@ -88,8 +101,7 @@ export function getCommandHotkeyDisplay(
     fallbackString = 'Mod+K',
 ): string {
     const isMac = isMacPlatform();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hotkeyManager = (app as any).hotkeyManager;
+    const hotkeyManager = (app as unknown as AppWithHotkeyManager).hotkeyManager;
 
     if (hotkeyManager) {
         if (typeof hotkeyManager.printHotkeyForCommand === 'function') {
@@ -127,8 +139,7 @@ export async function setCommandHotkey(
     commandId: string,
     hotkey: Hotkey,
 ): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hotkeyManager = (app as any).hotkeyManager;
+    const hotkeyManager = (app as unknown as AppWithHotkeyManager).hotkeyManager;
     if (!hotkeyManager) return;
 
     if (typeof hotkeyManager.setHotkeys === 'function') {
@@ -147,8 +158,7 @@ export async function resetCommandHotkey(
     commandId: string,
     defaultHotkey: Hotkey,
 ): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hotkeyManager = (app as any).hotkeyManager;
+    const hotkeyManager = (app as unknown as AppWithHotkeyManager).hotkeyManager;
     if (!hotkeyManager) return;
 
     if (typeof hotkeyManager.setHotkeys === 'function') {

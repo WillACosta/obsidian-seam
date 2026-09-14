@@ -1,3 +1,4 @@
+import './mocks/obsidian';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHotkeyString, formatHotkey } from '../src/utils/hotkey';

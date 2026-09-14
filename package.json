@@ -1,6 +1,6 @@
 {
   "name": "obsidian-seam",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Tag-driven note organization with automatic archiving and a Universal Palette.",
   "packageManager": "pnpm@11.24.0",
   "scripts": {
@@ -15,7 +15,6 @@
   },
   "devDependencies": {
     "@types/node": "^16.11.6",
-    "builtin-modules": "^3.3.0",
     "esbuild": "^0.17.0",
     "obsidian": "latest",
     "tslib": "^2.4.0",

@@ -83,7 +83,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (item?.type === 'note' && item.file) {
                 this.close();
                 const leaf = this.app.workspace.getLeaf('tab');
-                leaf.openFile(item.file);
+                void leaf.openFile(item.file);
             } else if (item?.type === 'tag') {
                 this.selectSuggestion(item, evt);
             }
@@ -92,7 +92,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     onOpen(): void {
-        super.onOpen();
+        void super.onOpen();
         this.setupChipsContainer();
     }
 
@@ -109,8 +109,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         parent.addClass('seam-palette-input-container');
 
-        this.chipsContainerEl = createDiv({ cls: 'seam-palette-chips-container' });
-        this.chipsContainerEl.style.display = 'none';
+        this.chipsContainerEl = createDiv({ cls: 'seam-palette-chips-container is-hidden' });
         parent.insertBefore(this.chipsContainerEl, this.inputEl);
 
         // Click anywhere in container focuses the input
@@ -154,12 +153,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.chipsContainerEl.empty();
 
         if (this.selectedTags.length === 0) {
-            this.chipsContainerEl.style.display = 'none';
+            this.chipsContainerEl.addClass('is-hidden');
             this.setPlaceholder(t().palettePlaceholder);
             return;
         }
 
-        this.chipsContainerEl.style.display = 'flex';
+        this.chipsContainerEl.removeClass('is-hidden');
         this.setPlaceholder(t().paletteTagPlaceholder);
 
         for (const tag of this.selectedTags) {
@@ -573,12 +572,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (item.type === 'note' && item.file) {
             // Default Enter: open in current tab
             // Mod+Enter (new tab) is handled by the scope handler registered in the constructor
-            this.app.workspace.openLinkText(item.file.path, '', false);
+            void this.app.workspace.openLinkText(item.file.path, '', false);
         } else if (
             (item.type === 'command' || item.type === 'action' || item.type === 'create') &&
             item.action
         ) {
-            item.action();
+            void item.action();
         }
     }
 }

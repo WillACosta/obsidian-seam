@@ -5,6 +5,22 @@ All notable changes to Seam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-09-13
+
+### Changed
+
+- Replaced HTML heading elements in settings tab with native `Setting.setHeading()` API.
+- Migrated operating system detection to Obsidian's native `Platform.isMacOS` API.
+- Replaced inline style assignments with CSS classes for palette tag chips.
+- Removed default command hotkey to avoid conflicts with user hotkeys per Obsidian review guidelines.
+- Replaced third-party `builtin-modules` package with native Node.js built-in module resolution.
+
+### Fixed
+
+- Added popout window compatibility using `window.setTimeout` and `window.clearTimeout`.
+- Handled un-awaited promises and tightened TypeScript strictness across automation and UI services.
+- Removed unused Notice import in `AutomationService`.
+
 ## [1.0.1] - 2026-09-13
 
 ### Changed

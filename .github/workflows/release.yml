@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -44,6 +46,14 @@ jobs:
 
       - name: Extract release notes
         run: node scripts/changelog.mjs extract "${{ inputs.tag || github.ref_name }}" --out release_notes.md
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

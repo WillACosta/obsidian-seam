@@ -26,13 +26,13 @@ export function parseQuery(input: string): ParsedQuery {
     for (let i = 0; i < rawTokens.length; i++) {
         const t = rawTokens[i];
         if (t.startsWith('-#')) {
-            tokens.push({ type: 'negativeTag' as QueryTokenType, value: t.substring(2) });
+            tokens.push({ type: 'negativeTag', value: t.substring(2) });
         } else if (t.startsWith('#')) {
-            tokens.push({ type: 'tag' as QueryTokenType, value: t.substring(1) });
+            tokens.push({ type: 'tag', value: t.substring(1) });
         } else if (t === '||' || t === '|' || t.toLowerCase() === 'or') {
-            tokens.push({ type: 'or' as QueryTokenType, value: 'or' });
+            tokens.push({ type: 'or', value: 'or' });
         } else {
-            tokens.push({ type: 'text' as QueryTokenType, value: t });
+            tokens.push({ type: 'text', value: t });
         }
     }
 
