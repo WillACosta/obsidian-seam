@@ -201,9 +201,6 @@ export class SeamSettingsTab extends PluginSettingTab {
     override async setControlValue(key: string, value: unknown): Promise<void> {
         (this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
         await this.plugin.saveSettings();
-        if (key === 'enableMoveCleanup') {
-            this.refreshDomState?.();
-        }
     }
 
     /**

@@ -5,6 +5,17 @@ All notable changes to Seam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-09-15
+
+### Changed
+
+- Simplified the English and Brazilian Portuguese documentation for clearer onboarding, workflows, feature descriptions, settings, and commands.
+
+### Fixed
+
+- Removed a settings refresh call introduced after Seam's declared minimum Obsidian version while preserving automatic conditional-setting updates.
+- Removed redundant TypeScript assertions reported by Obsidian's source analysis.
+
 ## [1.0.3] - 2026-09-14
 
 ### Added

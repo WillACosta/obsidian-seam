@@ -4,32 +4,27 @@
 
 > Capture thoughts, tag naturally, and let Seam organize your vault quietly in the background.
 
-Seam is a lightweight, native-feeling Obsidian plugin designed to eliminate organization friction. Instead of manually dragging notes into deep folder trees or managing complex productivity systems, Seam lets you focus on writing.
-
-Use simple tags like `#permanent` and `#archive` to file notes automatically, search across your entire vault with live tag chips and in-content text search, and keep your workspace effortlessly decluttered.
+Seam is a lightweight Obsidian plugin that organizes notes through tags. Inspired by the [Zettelkasten](https://zettelkasten.de/introduction/) method and apps like Apple Notes and Bear, it uses a simple workflow built around `Fleeting`, `Permanent`, and `Archive`. Add `#permanent` or `#archive` to move a note, and use the Universal Palette to search your vault. Spend less time managing files and more time writing.
 
 !["Obsidian Seam Showcase"](docs/images/seam_showcase.gif)
 
 ## Why Seam?
 
-Most note-taking systems slow you down with organization overhead: *Where should this note live? Which folder? Did I remember to archive that old project?*
-
-Seam introduces a quiet, tag-driven philosophy:
+Seam keeps organization simple and stays out of your way:
 
 | Traditional Workflow | With Seam |
 |:---|:---|
-| ❌ Manually dragging files into folders | ✅ Just add `#permanent` — filed automatically |
-| ❌ Cluttered workspaces filled with stale notes | ✅ Just add `#archive` — safely archived and tagged `#archived` |
-| ❌ Switching between multiple search tools | ✅ One **Universal Palette** for notes, content, tags, and commands |
-| ❌ Rigid folder hierarchies | ✅ Flexible, tag-driven workflow with clean folder backing |
-| ❌ Desktop-only features or sluggish plugins | ✅ 100% native Obsidian APIs, instant and fully mobile-friendly |
+| ❌ Move files between folders by hand | ✅ Add `#permanent` to file a note automatically |
+| ❌ Leave completed notes mixed with active work | ✅ Add `#archive` to move them out of the way |
+| ❌ Switch between different search tools | ✅ Search notes, content, tags, and commands in one palette |
+| ❌ Maintain a deep folder hierarchy | ✅ Use a simple workflow guided by tags |
+| ❌ Depend on desktop-only features | ✅ Use Seam on desktop and mobile |
 
 ## How Seam Fits into Your Workflow
 
-Integrating Seam into your daily routine is simple and intuitive:
-
 ### 1. Capture Without Friction (Fleeting Notes)
-Whenever inspiration strikes, open the **Universal Palette** (`Cmd + K` on Mac, `Ctrl + K` on Win/Linux, or your configured shortcut) and type a note title. If the note doesn't exist yet, hit Enter to create it instantly in your `Fleeting/` folder. You can even configure a custom template with your preferred frontmatter or headings.
+
+Open the **Universal Palette** from the command palette or with your chosen shortcut, then type a note title. If the note does not exist, press `Enter` to create it in `Fleeting/`. You can also use a template for your preferred properties and headings.
 
 ```
 Universal Palette → "Meeting with Design Team" → [Create new note]
@@ -37,54 +32,62 @@ Universal Palette → "Meeting with Design Team" → [Create new note]
 !["Creating new note"](./docs/images/creating_new_note.png)
 
 ### 2. File Permanent Notes (`#permanent`)
-When a thought is developed and ready to be kept forever, simply add `#permanent` to the note (inline or in frontmatter).
+
+When a note is ready to keep, add `#permanent` in the note body or properties.
 
 Seam will:
+
 1. Move the note to your `Permanent/` folder.
-2. Remove the temporary `#permanent` tag.
-3. Automatically clean up scratch tags (like `#todo` or `status` properties) based on your preferences.
+2. Remove the `#permanent` action tag.
+3. Remove any additional tags or properties you chose in settings.
 
 ### 3. Archive Completed Work (`#archive`)
-Done with a project, task, or meeting note? Add `#archive`:
+
+When a project, task, or meeting note is complete, add `#archive`.
+
 1. The note moves to your `Archive/` folder.
-2. The `#archive` action tag is removed.
-3. A durable `#archived` state tag is added so you can still find it later.
+2. Seam removes the `#archive` action tag.
+3. Seam can add `#archived` so the note remains easy to find.
 
 !["Archiving a note"](./docs/images/archiving.png)
 
 ### 4. Search and Filter with Live Tag Chips
-Press your hotkey to open the **Universal Palette**:
-- **Search Notes & Content**: Type any word to search note titles and body text with highlighted snippets.
-- **Search by Tags**: Type `#` to view all vault tags. Type `#ai` to filter tags, and press Enter to select.
-- **Combine Filters**: Selected tags become chips (`#ai×` `#machine_learning×`). You can combine multiple tags, remove them with `Backspace` or clicking `×`, and filter notes across your entire vault.
-- **Open in New Tab**: Press `Cmd + Enter` (Mac) or `Ctrl + Enter` (Windows/Linux) to open any result in a new tab without losing your current view.
+
+Open the **Universal Palette**:
+
+- **Search notes and content**: Find matches in titles, paths, and note text.
+- **Filter by tag**: Type `#` to browse tags, then press `Enter` to add one.
+- **Combine filters**: Add multiple tag chips and remove them with `Backspace` or `×`.
+- **Open in a new tab**: Press `Cmd + Enter` on macOS or `Ctrl + Enter` on Windows and Linux.
 
 !["Tag searching"](./docs/images/tag_search.png)
 
 ## Key Features
 
 ### Hands-Off Tag Routing
-No need to drag and drop files. Seam watches for action tags and routes your notes safely:
-- `#permanent` → Moves to `Permanent/` and cleans up action tags.
-- `#archive` → Moves to `Archive/`, removes `#archive`, and marks durable state `#archived`.
-- **Conflict Safe**: If a note accidentally has both `#archive` and `#permanent`, Seam leaves it untouched to prevent mistakes.
+
+Seam reads action tags from the note body or properties. It creates destination folders when needed, avoids overwriting files, and removes action tags only after a successful move. If a note has both `#permanent` and `#archive`, Seam leaves it in place.
 
 ### Universal Palette
-A single floating search modal that does it all:
-- **In-Note Content Search**: Finds matches inside note body text and displays contextual preview snippets with highlighted terms.
-- **Interactive Tag Filtering**: Type `#` to browse tags, press Enter to add tag chips, and narrow down matching notes in real time.
-- **Instant Note Creation**: Quickly create a new fleeting note if no existing note matches your query.
-- **Open in New Tab**: Native shortcut support (`Cmd+Enter` / `Ctrl+Enter`).
-- **Seam Commands**: Type `>` to quickly run Seam automation commands.
+
+Search and act from one place:
+
+- Find notes by title, path, tag, or content.
+- Preview matching text before opening a note.
+- Create a fleeting note when no result matches.
+- Type `>` to run Seam commands.
 
 ### Automatic Cleanup on Move
-Keep notes clean when moving them between stages. You can customize which tags (e.g. `#todo`, `#review`) or frontmatter properties (e.g. `status`) are automatically cleared when a note is archived or made permanent.
+
+Choose which temporary tags and note properties Seam removes after a successful move. For example, you can clear `#todo`, `#review`, or a `status` property.
 
 ### Fleeting Note Templates
-Point Seam to any template note in your vault (e.g., `Templates/Fleeting Note`). New notes created via the palette will automatically start with your template's layout, checklists, or metadata.
+
+Choose a template note, such as `Templates/Fleeting Note`. New notes created from the palette will start with its content and properties.
 
 ### First-Class Mobile Support
-Seam is built exclusively with Obsidian's public native APIs. No external dependencies, no desktop-only code — everything works smoothly on iPhone, iPad, and Android.
+
+Seam uses Obsidian's public APIs and no desktop-only code. It works on desktop, iPhone, iPad, and Android.
 
 ## Settings
 
@@ -93,18 +96,19 @@ Seam is built exclusively with Obsidian's public native APIs. No external depend
 Customize Seam under **Settings → Community Plugins → Seam**:
 
 - **Folders**: Set your preferred paths for `Fleeting/`, `Permanent/`, and `Archive/` folders.
-- **Fleeting Template**: Set a path to a template note used when creating notes from the palette.
-- **Action Tags**: Customize the tag names for archiving (`archive`), filing (`permanent`), and archive state (`archived`).
-- **Automation**: Toggle background automation and configure periodic reconciliation intervals.
-- **Moving Notes Behavior**: Choose whether to strip scratch tags (`#todo`, `#permanent`) and frontmatter properties (`status`) when moving notes.
-- **Universal Palette**: Set your preferred keyboard shortcut (default: `Cmd + K` on Mac, `Ctrl + K` on Windows/Linux) and toggle icons in search results and commands.
+- **Fleeting template**: Choose a template for notes created from the palette.
+- **Automation**: Turn automatic processing on or off and choose when it runs.
+- **Archive behavior**: Choose whether archived notes receive the `#archived` tag.
+- **Move cleanup**: Choose which temporary tags and properties to remove after a move.
+- **Universal Palette**: Assign a keyboard shortcut and show or hide icons.
+- **Advanced**: Set how often Seam checks for notes it may have missed.
 
 ## Installation
 
 ### From Obsidian Community Plugins
 
 1. Open **Settings → Community plugins** in Obsidian.
-2. Turn off *Restricted mode*.
+2. Turn off **Restricted mode** if needed.
 3. Click **Browse** and search for **Seam**.
 4. Click **Install**, then **Enable**.
 
@@ -119,26 +123,26 @@ Customize Seam under **Settings → Community Plugins → Seam**:
 
 | Command | Shortcut / Action | Description |
 |:---|:---|:---|
-| **Open Universal Palette** | `Cmd + K` / `Ctrl + K` (configurable) | Universal search for notes, tags, content, and commands |
-| **Open in New Tab** | `Cmd + Enter` / `Ctrl + Enter` | Open the selected note suggestion in a new editor tab |
-| **Filter by Tag** | `#<tag>` | Search and filter notes by tag with interactive chips |
-| **Command Mode** | `>` | Browse and trigger Seam commands directly |
-| **Archive current note** | Command palette | Archives the currently open markdown note |
-| **Move to Permanent** | Command palette | Moves the currently open markdown note to Permanent |
-| **Archive all notes** | Command palette | Processes all notes in the vault tagged with `#archive` |
+| **Open Universal Palette** | Assigned shortcut or command palette | Search notes, tags, content, and commands |
+| **Open in new tab** | `Cmd + Enter` / `Ctrl + Enter` | Open the selected note in a new tab |
+| **Filter by tag** | `#<tag>` | Filter notes with interactive tag chips |
+| **Command mode** | `>` | Browse and run Seam commands |
+| **Archive current note** | Command palette | Archive the open Markdown note |
+| **Move to Permanent** | Command palette | Move the open Markdown note to `Permanent/` |
+| **Archive all notes** | Command palette | Process every note tagged with `#archive` |
 
-## Internationalization (i18n)
+## Languages
 
-Seam detects Obsidian's current language and automatically displays the corresponding localized interface:
+Seam follows Obsidian's language setting. It currently supports:
 
 - **English (US)**
 - **Portuguese (BR)**
 
-If an unsupported language is set as Obsidian's language, Seam falls back to English as default.
+Other languages use English by default.
 
 ### Contributing Translations
 
-Want to see Seam in your native language? Contributions are warmly welcome:
+Want to use Seam in another language? Contributions are welcome:
 
 1. Create a new locale file in `src/i18n/locales/<locale-code>.ts` (e.g., `es.ts`, `fr.ts`, `de.ts`) implementing the `Translations` type.
 2. Register the new locale in `src/i18n/index.ts`.
@@ -146,7 +150,7 @@ Want to see Seam in your native language? Contributions are warmly welcome:
 
 ## Support the Project
 
-Seam is free, open-source software built with passion. If Seam saves you time and makes your Obsidian vault a calmer place to think, consider supporting ongoing development and future iterations:
+Seam is free and open source. If it saves you time, consider supporting its development:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willac)
 
@@ -164,7 +168,6 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ## Built with
 
-Seam was built with the help of AI agents. Every iteration (phase-by-phase build) was tracked as plain spec files, written by me.
+Seam was built with the help of AI agents. Each iteration was guided and documented with plain-text specifications written by me.
 
 Crafted with care by **William A. Costa** ([@WillACosta](https://github.com/WillACosta)).
-

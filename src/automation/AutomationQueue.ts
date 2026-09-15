@@ -53,7 +53,7 @@ export class AutomationQueue {
 
         const timer = window.setTimeout(() => {
             void this.processFile(path);
-        }, delayMs) as unknown as number;
+        }, delayMs);
 
         this.timers.set(path, timer);
     }

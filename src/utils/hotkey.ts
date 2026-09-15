@@ -177,7 +177,7 @@ export function openHotkeyAssignment(app: App, searchQuery: string): void {
 
         const input =
             tab.searchInputEl ??
-            (tab.searchComponent?.inputEl as { value: string } | undefined);
+            tab.searchComponent?.inputEl;
         if (input) {
             input.value = searchQuery;
             if (typeof tab.updateHotkeyVisibility === 'function') {
