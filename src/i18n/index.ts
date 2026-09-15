@@ -17,22 +17,28 @@ export function setTestLocale(locale: Locale | null): void {
  * Detects the currently configured Obsidian language.
  * Falls back to 'en' for any unsupported languages.
  */
+interface GlobalWithMoment {
+    moment?: {
+        locale?: () => string;
+    };
+}
+
 export function detectLocale(): Locale {
     if (testLocale) return testLocale;
 
     let lang = 'en';
     try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const obsidian = require('obsidian');
         if (typeof obsidian.getLanguage === 'function') {
             lang = obsidian.getLanguage();
         } else if (typeof window !== 'undefined' && window.localStorage) {
             lang = window.localStorage.getItem('language') || 'en';
-        } else if (
-            typeof (globalThis as any).moment !== 'undefined' &&
-            typeof (globalThis as any).moment.locale === 'function'
-        ) {
-            lang = (globalThis as any).moment.locale();
+        } else {
+            const globalWithMoment = globalThis as unknown as GlobalWithMoment;
+            if (typeof globalWithMoment.moment?.locale === 'function') {
+                lang = globalWithMoment.moment.locale();
+            }
         }
     } catch {
         try {
@@ -60,4 +66,5 @@ export function t(): Translations {
     return locale === 'pt-br' ? ptBr : en;
 }
 
-export { en, ptBr, Translations };
+export { en, ptBr };
+export type { Translations };

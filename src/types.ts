@@ -1,5 +1,7 @@
 import { TFile } from 'obsidian';
 
+export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000';
+
 export interface SeamSettings {
     permanentFolder: string;
     archiveFolder: string;
@@ -9,12 +11,12 @@ export interface SeamSettings {
     permanentTag: string;
     archivedTag: string;
     automaticProcessing: boolean;
+    automationDelay: AutomationDelayMode;
     addArchivedState: boolean;
     enableMoveCleanup: boolean;
     moveCleanupTags: string;
     moveCleanupProperties: string;
     showIcons: boolean;
-    paletteHotkey: string;
     reconciliationIntervalMinutes: number;
 }
 
@@ -27,12 +29,12 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     permanentTag: 'permanent',
     archivedTag: 'archived',
     automaticProcessing: true,
+    automationDelay: 'on-switch',
     addArchivedState: true,
     enableMoveCleanup: true,
     moveCleanupTags: '#permanent, #todo',
     moveCleanupProperties: 'status',
     showIcons: true,
-    paletteHotkey: 'Mod+K',
     reconciliationIntervalMinutes: 15,
 };
 

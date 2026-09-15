@@ -1,32 +1,11 @@
-import { App, PluginSettingTab, Setting, Notice, Hotkey } from 'obsidian';
+import { App, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
 import type SeamPlugin from '../main';
+import { AutomationDelayMode, DEFAULT_SETTINGS } from '../types';
 import { t } from '../i18n';
 import {
-    parseHotkeyString,
-    formatHotkey,
     getCommandHotkeyDisplay,
-    setCommandHotkey,
-    resetCommandHotkey,
-    isMacPlatform,
+    openHotkeyAssignment,
 } from '../utils/hotkey';
-
-interface SearchComponentLike {
-    setValue(value: string): void;
-    inputEl: HTMLInputElement;
-}
-
-interface HotkeysSettingTabLike {
-    searchComponent?: SearchComponentLike;
-}
-
-interface SettingDialogLike {
-    open(): void;
-    openTabById(id: string): HotkeysSettingTabLike | null | undefined;
-}
-
-interface AppWithSettingDialog extends App {
-    setting?: SettingDialogLike;
-}
 
 export class SeamSettingsTab extends PluginSettingTab {
     plugin: SeamPlugin;
@@ -36,6 +15,200 @@ export class SeamSettingsTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    /**
+     * Declarative settings definitions for Obsidian 1.13.0+ and settings search indexing.
+     */
+    override getSettingDefinitions(): SettingDefinitionItem[] {
+        const strings = t();
+        const paletteCommandId = `${this.plugin.manifest.id}:open-palette`;
+
+        return [
+            {
+                type: 'group',
+                heading: strings.settingsFolderHeading,
+                items: [
+                    {
+                        name: strings.settingsPermanentFolder,
+                        desc: strings.settingsPermanentFolderDesc,
+                        control: {
+                            type: 'text',
+                            key: 'permanentFolder',
+                            placeholder: 'Permanent',
+                            defaultValue: DEFAULT_SETTINGS.permanentFolder,
+                        },
+                    },
+                    {
+                        name: strings.settingsArchiveFolder,
+                        desc: strings.settingsArchiveFolderDesc,
+                        control: {
+                            type: 'text',
+                            key: 'archiveFolder',
+                            placeholder: 'Archive',
+                            defaultValue: DEFAULT_SETTINGS.archiveFolder,
+                        },
+                    },
+                    {
+                        name: strings.settingsFleetingFolder,
+                        desc: strings.settingsFleetingFolderDesc,
+                        control: {
+                            type: 'text',
+                            key: 'fleetingFolder',
+                            placeholder: 'Fleeting',
+                            defaultValue: DEFAULT_SETTINGS.fleetingFolder,
+                        },
+                    },
+                    {
+                        name: strings.settingsFleetingTemplate,
+                        desc: strings.settingsFleetingTemplateDesc,
+                        control: {
+                            type: 'text',
+                            key: 'fleetingNoteTemplate',
+                            placeholder: 'Templates/Fleeting',
+                            defaultValue: DEFAULT_SETTINGS.fleetingNoteTemplate,
+                        },
+                    },
+                ],
+            },
+            {
+                type: 'group',
+                heading: strings.settingsAutomationHeading,
+                items: [
+                    {
+                        name: strings.settingsAutoProcessing,
+                        desc: strings.settingsAutoProcessingDesc,
+                        control: {
+                            type: 'toggle',
+                            key: 'automaticProcessing',
+                            defaultValue: DEFAULT_SETTINGS.automaticProcessing,
+                        },
+                    },
+                    {
+                        name: strings.settingsAutomationDelay,
+                        desc: strings.settingsAutomationDelayDesc,
+                        control: {
+                            type: 'dropdown',
+                            key: 'automationDelay',
+                            options: {
+                                'on-switch': strings.settingsAutomationDelayOnSwitch,
+                                '2000': strings.settingsAutomationDelay2s,
+                                '5000': strings.settingsAutomationDelay5s,
+                                '1000': strings.settingsAutomationDelay1s,
+                            },
+                            defaultValue: DEFAULT_SETTINGS.automationDelay,
+                        },
+                    },
+                ],
+            },
+            {
+                type: 'group',
+                heading: strings.settingsArchiveBehaviorHeading,
+                items: [
+                    {
+                        name: strings.settingsAddArchivedState,
+                        desc: strings.settingsAddArchivedStateDesc,
+                        control: {
+                            type: 'toggle',
+                            key: 'addArchivedState',
+                            defaultValue: DEFAULT_SETTINGS.addArchivedState,
+                        },
+                    },
+                ],
+            },
+            {
+                type: 'group',
+                heading: strings.settingsMovingHeading,
+                items: [
+                    {
+                        name: strings.settingsEnableMoveCleanup,
+                        desc: strings.settingsEnableMoveCleanupDesc,
+                        control: {
+                            type: 'toggle',
+                            key: 'enableMoveCleanup',
+                            defaultValue: DEFAULT_SETTINGS.enableMoveCleanup,
+                        },
+                    },
+                    {
+                        name: strings.settingsMoveCleanupTags,
+                        desc: strings.settingsMoveCleanupTagsDesc,
+                        visible: () => this.plugin.settings.enableMoveCleanup,
+                        control: {
+                            type: 'text',
+                            key: 'moveCleanupTags',
+                            placeholder: '#permanent, #todo',
+                            defaultValue: DEFAULT_SETTINGS.moveCleanupTags,
+                        },
+                    },
+                    {
+                        name: strings.settingsMoveCleanupProps,
+                        desc: strings.settingsMoveCleanupPropsDesc,
+                        visible: () => this.plugin.settings.enableMoveCleanup,
+                        control: {
+                            type: 'text',
+                            key: 'moveCleanupProperties',
+                            placeholder: 'status',
+                            defaultValue: DEFAULT_SETTINGS.moveCleanupProperties,
+                        },
+                    },
+                ],
+            },
+            {
+                type: 'group',
+                heading: strings.settingsInterfaceHeading,
+                items: [
+                    {
+                        name: strings.settingsShowIcons,
+                        desc: strings.settingsShowIconsDesc,
+                        control: {
+                            type: 'toggle',
+                            key: 'showIcons',
+                            defaultValue: DEFAULT_SETTINGS.showIcons,
+                        },
+                    },
+                    {
+                        name: strings.settingsPaletteHotkey,
+                        desc: strings.settingsPaletteHotkeyDesc,
+                        render: (setting: Setting) => {
+                            this.renderHotkeySetting(setting, paletteCommandId);
+                        },
+                    },
+                ],
+            },
+            {
+                type: 'group',
+                heading: strings.settingsAdvancedHeading,
+                items: [
+                    {
+                        name: strings.settingsReconInterval,
+                        desc: strings.settingsReconIntervalDesc,
+                        control: {
+                            type: 'slider',
+                            key: 'reconciliationIntervalMinutes',
+                            min: 5,
+                            max: 60,
+                            step: 5,
+                            defaultValue: DEFAULT_SETTINGS.reconciliationIntervalMinutes,
+                        },
+                    },
+                ],
+            },
+        ];
+    }
+
+    override getControlValue(key: string): unknown {
+        return (this.plugin.settings as unknown as Record<string, unknown>)[key];
+    }
+
+    override async setControlValue(key: string, value: unknown): Promise<void> {
+        (this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+        await this.plugin.saveSettings();
+        if (key === 'enableMoveCleanup') {
+            this.refreshDomState?.();
+        }
+    }
+
+    /**
+     * Fallback imperative rendering for Obsidian versions older than 1.13.0.
+     */
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
@@ -114,6 +287,22 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
+        new Setting(containerEl)
+            .setName(strings.settingsAutomationDelay)
+            .setDesc(strings.settingsAutomationDelayDesc)
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption('on-switch', strings.settingsAutomationDelayOnSwitch)
+                    .addOption('2000', strings.settingsAutomationDelay2s)
+                    .addOption('5000', strings.settingsAutomationDelay5s)
+                    .addOption('1000', strings.settingsAutomationDelay1s)
+                    .setValue(this.plugin.settings.automationDelay)
+                    .onChange(async (value) => {
+                        this.plugin.settings.automationDelay = value as AutomationDelayMode;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
         // --- Archive behavior ---
         new Setting(containerEl).setName(strings.settingsArchiveBehaviorHeading).setHeading();
 
@@ -132,6 +321,9 @@ export class SeamSettingsTab extends PluginSettingTab {
         // --- Moving Notes Behavior ---
         new Setting(containerEl).setName(strings.settingsMovingHeading).setHeading();
 
+        let tagsSetting: Setting | null = null;
+        let propsSetting: Setting | null = null;
+
         new Setting(containerEl)
             .setName(strings.settingsEnableMoveCleanup)
             .setDesc(strings.settingsEnableMoveCleanupDesc)
@@ -141,37 +333,38 @@ export class SeamSettingsTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         this.plugin.settings.enableMoveCleanup = value;
                         await this.plugin.saveSettings();
-                        this.display(); // Refresh to show/hide sub-settings
+                        if (tagsSetting) tagsSetting.settingEl.toggle(value);
+                        if (propsSetting) propsSetting.settingEl.toggle(value);
                     }),
             );
 
-        if (this.plugin.settings.enableMoveCleanup) {
-            new Setting(containerEl)
-                .setName(strings.settingsMoveCleanupTags)
-                .setDesc(strings.settingsMoveCleanupTagsDesc)
-                .addText((text) =>
-                    text
-                        .setPlaceholder('#permanent, #todo')
-                        .setValue(this.plugin.settings.moveCleanupTags)
-                        .onChange(async (value) => {
-                            this.plugin.settings.moveCleanupTags = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
+        tagsSetting = new Setting(containerEl)
+            .setName(strings.settingsMoveCleanupTags)
+            .setDesc(strings.settingsMoveCleanupTagsDesc)
+            .addText((text) =>
+                text
+                    .setPlaceholder('#permanent, #todo')
+                    .setValue(this.plugin.settings.moveCleanupTags)
+                    .onChange(async (value) => {
+                        this.plugin.settings.moveCleanupTags = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        tagsSetting.settingEl.toggle(this.plugin.settings.enableMoveCleanup);
 
-            new Setting(containerEl)
-                .setName(strings.settingsMoveCleanupProps)
-                .setDesc(strings.settingsMoveCleanupPropsDesc)
-                .addText((text) =>
-                    text
-                        .setPlaceholder('status')
-                        .setValue(this.plugin.settings.moveCleanupProperties)
-                        .onChange(async (value) => {
-                            this.plugin.settings.moveCleanupProperties = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-        }
+        propsSetting = new Setting(containerEl)
+            .setName(strings.settingsMoveCleanupProps)
+            .setDesc(strings.settingsMoveCleanupPropsDesc)
+            .addText((text) =>
+                text
+                    .setPlaceholder('status')
+                    .setValue(this.plugin.settings.moveCleanupProperties)
+                    .onChange(async (value) => {
+                        this.plugin.settings.moveCleanupProperties = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        propsSetting.settingEl.toggle(this.plugin.settings.enableMoveCleanup);
 
         // --- Interface ---
         new Setting(containerEl).setName(strings.settingsInterfaceHeading).setHeading();
@@ -189,109 +382,8 @@ export class SeamSettingsTab extends PluginSettingTab {
             );
 
         const paletteCommandId = `${this.plugin.manifest.id}:open-palette`;
-        const currentDisplay = getCommandHotkeyDisplay(
-            this.app,
-            paletteCommandId,
-            this.plugin.settings.paletteHotkey || 'Mod+K',
-        );
-
-        const hotkeySetting = new Setting(containerEl)
-            .setName(strings.settingsPaletteHotkey)
-            .setDesc(strings.settingsPaletteHotkeyDesc);
-
-        // Append current shortcut badge next to setting name
-        hotkeySetting.nameEl.createEl('kbd', {
-            cls: 'seam-hotkey-badge',
-            text: currentDisplay,
-        });
-
-        // Text input with live key capture
-        hotkeySetting.addText((text) => {
-            text.setPlaceholder('Mod+K')
-                .setValue(this.plugin.settings.paletteHotkey || 'Mod+K')
-                .onChange(async (value) => {
-                    const trimmed = value.trim();
-                    if (!trimmed) return;
-                    const parsed = parseHotkeyString(trimmed);
-                    if (parsed) {
-                        this.plugin.settings.paletteHotkey = trimmed;
-                        await this.plugin.saveSettings();
-                        await setCommandHotkey(this.app, paletteCommandId, parsed);
-                        new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
-                        this.display();
-                    }
-                });
-
-            // Listen for key combinations directly in the input box
-            text.inputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
-                if (evt.key === 'Tab' || evt.key === 'Escape') return;
-                if (['Control', 'Shift', 'Alt', 'Meta'].includes(evt.key)) return;
-
-                evt.preventDefault();
-                evt.stopPropagation();
-
-                const isMac = isMacPlatform();
-                const modifiers: string[] = [];
-                if (evt.metaKey) modifiers.push(isMac ? 'Cmd' : 'Win');
-                if (evt.ctrlKey) modifiers.push('Ctrl');
-                if (evt.altKey) modifiers.push('Alt');
-                if (evt.shiftKey) modifiers.push('Shift');
-
-                if (modifiers.length === 0) {
-                    modifiers.push('Mod');
-                }
-
-                const keyName = evt.key.length === 1 ? evt.key.toUpperCase() : evt.key;
-                const shortcutString = `${modifiers.join('+')}+${keyName}`;
-
-                const parsed = parseHotkeyString(shortcutString);
-                if (parsed) {
-                    text.setValue(shortcutString);
-                    this.plugin.settings.paletteHotkey = shortcutString;
-                    void (async () => {
-                        await this.plugin.saveSettings();
-                        await setCommandHotkey(this.app, paletteCommandId, parsed);
-                        new Notice(strings.noticeHotkeyUpdated(formatHotkey(parsed)));
-                        this.display();
-                    })();
-                }
-            });
-        });
-
-        // Reset to default button (Mod+K)
-        hotkeySetting.addButton((btn) => {
-            btn.setButtonText(strings.settingsPaletteHotkeyReset)
-                .setTooltip('Reset to Mod+K (Cmd+K / Ctrl+K)')
-                .onClick(async () => {
-                    const defaultHotkey: Hotkey = { modifiers: ['Mod'], key: 'K' };
-                    this.plugin.settings.paletteHotkey = 'Mod+K';
-                    await this.plugin.saveSettings();
-                    await resetCommandHotkey(
-                        this.app,
-                        paletteCommandId,
-                        defaultHotkey,
-                    );
-                    new Notice(strings.noticeHotkeyUpdated(formatHotkey(defaultHotkey)));
-                    this.display();
-                });
-        });
-
-        // Button to open Obsidian's native Hotkeys settings tab filtered to Seam
-        hotkeySetting.addExtraButton((btn) => {
-            btn.setIcon('external-link')
-                .setTooltip(strings.settingsPaletteHotkeyOpenObsidian)
-                .onClick(() => {
-                    const settingApp = this.app as unknown as AppWithSettingDialog;
-                    if (settingApp.setting?.openTabById) {
-                        settingApp.setting.open();
-                        const tab = settingApp.setting.openTabById('hotkeys');
-                        if (tab?.searchComponent) {
-                            tab.searchComponent.setValue('Seam');
-                            tab.searchComponent.inputEl.dispatchEvent(new Event('input'));
-                        }
-                    }
-                });
-        });
+        const hotkeySetting = new Setting(containerEl);
+        this.renderHotkeySetting(hotkeySetting, paletteCommandId);
 
         // --- Advanced ---
         new Setting(containerEl).setName(strings.settingsAdvancedHeading).setHeading();
@@ -308,5 +400,41 @@ export class SeamSettingsTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+    }
+
+    /**
+     * Renders the Universal Palette hotkey display and button to Obsidian's native hotkeys tab.
+     * Inspired by Hilo's pattern: non-intrusive badge showing current hotkey (or '—')
+     * with a keyboard button to jump directly to Obsidian's built-in Hotkeys configuration.
+     */
+    private renderHotkeySetting(setting: Setting, paletteCommandId: string): void {
+        const strings = t();
+        setting
+            .setName(strings.settingsPaletteHotkey)
+            .setDesc(strings.settingsPaletteHotkeyDesc);
+
+        const hotkey = getCommandHotkeyDisplay(this.app, paletteCommandId);
+        const isAssigned = hotkey !== null;
+        const displayLabel = isAssigned ? hotkey : '—';
+        const tooltipLabel = isAssigned
+            ? strings.settingsPaletteHotkeyAssigned(hotkey)
+            : strings.settingsPaletteHotkeyNone;
+
+        const badgeEl = setting.controlEl.createSpan({
+            cls: isAssigned ? 'seam-hotkey-badge' : 'seam-hotkey-badge seam-hotkey-empty',
+            text: displayLabel,
+        });
+        badgeEl.title = tooltipLabel;
+
+        setting.addExtraButton((btn) => {
+            btn.setIcon('keyboard')
+                .setTooltip(strings.settingsPaletteHotkeyConfigure)
+                .onClick(() => {
+                    openHotkeyAssignment(
+                        this.app,
+                        `${this.plugin.manifest.name}: ${strings.cmdOpenPalette}`,
+                    );
+                });
+        });
     }
 }

@@ -39,6 +39,7 @@ describe('i18n / Localization', () => {
         assert.equal(t().noticeArchivedCountWithErrors(2, 1), 'Archived 2 notes. 1 error.');
         assert.equal(t().paletteFilterByTag('ai'), 'Filter by tag: #ai');
         assert.equal(t().msgArchivedTo('Archive/Note.md'), 'Archived to Archive/Note.md');
+        assert.equal(t().settingsPaletteHotkeyAssigned('⌘ K'), 'Assigned hotkey: ⌘ K');
     });
 
     it('formats parameterized strings correctly in Portuguese', () => {
@@ -51,6 +52,7 @@ describe('i18n / Localization', () => {
         assert.equal(t().noticeArchivedCountWithErrors(2, 1), 'Arquivada(s) 2 notas. 1 erro.');
         assert.equal(t().paletteFilterByTag('ia'), 'Filtrar por tag: #ia');
         assert.equal(t().msgArchivedTo('Archive/Nota.md'), 'Arquivado em Archive/Nota.md');
+        assert.equal(t().settingsPaletteHotkeyAssigned('⌘ K'), 'Atalho atribuído: ⌘ K');
     });
 
     it('detects Portuguese language prefix', () => {

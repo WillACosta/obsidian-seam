@@ -18,12 +18,12 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.permanentTag, 'permanent');
         assert.equal(DEFAULT_SETTINGS.archivedTag, 'archived');
         assert.equal(DEFAULT_SETTINGS.automaticProcessing, true);
+        assert.equal(DEFAULT_SETTINGS.automationDelay, 'on-switch');
         assert.equal(DEFAULT_SETTINGS.addArchivedState, true);
         assert.equal(DEFAULT_SETTINGS.enableMoveCleanup, true);
         assert.equal(DEFAULT_SETTINGS.moveCleanupTags, '#permanent, #todo');
         assert.equal(DEFAULT_SETTINGS.moveCleanupProperties, 'status');
         assert.equal(DEFAULT_SETTINGS.showIcons, true);
-        assert.equal(DEFAULT_SETTINGS.paletteHotkey, 'Mod+K');
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
     });
 });

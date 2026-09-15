@@ -1,4 +1,4 @@
-import { Hotkey, Notice, Plugin, TAbstractFile, TFile } from 'obsidian';
+import { Notice, Plugin, TAbstractFile, TFile } from 'obsidian';
 import { DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
@@ -8,7 +8,6 @@ import { SearchService } from './search/SearchService';
 import { UniversalPalette } from './ui/UniversalPalette';
 import { SeamSettingsTab } from './settings/SettingsTab';
 import { t } from './i18n';
-import { parseHotkeyString } from './utils/hotkey';
 
 /**
  * Tags and properties that Seam uses as action triggers.
@@ -48,6 +47,7 @@ export default class SeamPlugin extends Plugin {
                 if (!this.settings.automaticProcessing) return;
                 await this.automationService.processFile(file);
             },
+            this.settings.automationDelay,
         );
         this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue);
         this.searchService = new SearchService(this.app, this.settings);
@@ -147,6 +147,12 @@ export default class SeamPlugin extends Plugin {
                 if (file instanceof TFile && file.extension === 'md') {
                     this.automationQueue.enqueue(file);
                 }
+            }),
+        );
+
+        this.registerEvent(
+            this.app.workspace.on('active-leaf-change', () => {
+                this.automationQueue.onActiveFileChange(this.app.workspace.getActiveFile());
             }),
         );
 
@@ -415,6 +421,7 @@ export default class SeamPlugin extends Plugin {
      */
     onSettingsChange(): void {
         this.automationService?.updateSettings(this.settings);
+        this.automationQueue?.setDelayMode(this.settings.automationDelay);
         this.reconciler?.updateSettings(this.settings);
         this.searchService?.updateSettings(this.settings);
         this.startPeriodicReconciliation();

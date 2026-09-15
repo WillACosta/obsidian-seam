@@ -5,6 +5,25 @@ All notable changes to Seam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-09-14
+
+### Added
+
+- **Configurable Automation Delay**:
+  - Added an **Automation Delay** setting allowing users to configure note organization timing:
+    - **When switching notes** (default): Keeps notes undisturbed while writing or reading, and quietly moves them in the background as soon as you switch to another note or leaf.
+    - **Timed delays** (1s, 2s, 5s): Debounced delays that also trigger immediately upon note switch for seamless transitions.
+- **Universal Palette Hotkey Display**:
+  - Added a shortcut badge in plugin settings displaying the current hotkey assigned to the Universal Palette (e.g. `⌘ K` on macOS, `Ctrl + K` on Windows/Linux) with a direct link to Obsidian's native Hotkeys manager to customize it without conflicts.
+- **Showcase & Visual Walkthrough**:
+  - Added an interactive visual preview in documentation showcasing note organization and Universal Palette capabilities.
+- **Project Sponsorship**:
+  - Added GitHub Sponsors and Buy Me a Coffee funding options (`FUNDING.yml`).
+
+### Changed
+
+- Updated project license to GNU General Public License v3.0 (GPL-3.0-or-later).
+
 ## [1.0.2] - 2026-09-13
 
 ### Changed

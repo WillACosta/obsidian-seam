@@ -1,7 +1,12 @@
 import './mocks/obsidian';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseHotkeyString, formatHotkey } from '../src/utils/hotkey';
+import {
+    parseHotkeyString,
+    formatHotkey,
+    getCommandHotkeyDisplay,
+    openHotkeyAssignment,
+} from '../src/utils/hotkey';
 
 describe('Hotkey Parsing & Formatting', () => {
     it('parses Mod+K correctly', () => {
@@ -60,5 +65,69 @@ describe('Hotkey Parsing & Formatting', () => {
 
         const winFormatted = formatHotkey({ modifiers: ['Mod', 'Shift'], key: 'P' }, false);
         assert.equal(winFormatted, 'Ctrl + Shift + P');
+    });
+});
+
+describe('getCommandHotkeyDisplay', () => {
+    it('returns formatted hotkey string when printHotkeyForCommand is present', () => {
+        const mockApp = {
+            hotkeyManager: {
+                printHotkeyForCommand: (id: string) => (id === 'seam:open-palette' ? '⌘ K' : ''),
+            },
+        } as unknown as import('obsidian').App;
+
+        assert.equal(getCommandHotkeyDisplay(mockApp, 'seam:open-palette'), '⌘ K');
+    });
+
+    it('falls back to getHotkeys when printHotkeyForCommand is absent', () => {
+        const mockApp = {
+            hotkeyManager: {
+                getHotkeys: (id: string) =>
+                    id === 'seam:open-palette' ? [{ modifiers: ['Mod'], key: 'K' }] : [],
+            },
+        } as unknown as import('obsidian').App;
+
+        assert.ok(getCommandHotkeyDisplay(mockApp, 'seam:open-palette'));
+    });
+
+    it('returns null when no hotkey is assigned', () => {
+        const mockApp = {
+            hotkeyManager: {
+                printHotkeyForCommand: () => '',
+                getHotkeys: () => [],
+                getDefaultHotkeys: () => [],
+            },
+        } as unknown as import('obsidian').App;
+
+        assert.equal(getCommandHotkeyDisplay(mockApp, 'seam:open-palette'), null);
+    });
+
+    it('returns null when hotkeyManager is missing', () => {
+        const mockApp = {} as unknown as import('obsidian').App;
+        assert.equal(getCommandHotkeyDisplay(mockApp, 'seam:open-palette'), null);
+    });
+});
+
+describe('openHotkeyAssignment', () => {
+    it('opens hotkeys tab and sets search query', () => {
+        let openedTab: string | null = null;
+        let searchSet: string | null = null;
+        const mockApp = {
+            setting: {
+                open: () => {},
+                openTabById: (id: string) => {
+                    openedTab = id;
+                    return {
+                        setQuery: (q: string) => {
+                            searchSet = q;
+                        },
+                    };
+                },
+            },
+        } as unknown as import('obsidian').App;
+
+        openHotkeyAssignment(mockApp, 'Seam: Open Universal Palette');
+        assert.equal(openedTab, 'hotkeys');
+        assert.equal(searchSet, 'Seam: Open Universal Palette');
     });
 });

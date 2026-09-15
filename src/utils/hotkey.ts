@@ -92,14 +92,35 @@ export function formatHotkey(hotkey: Hotkey, isMac = isMacPlatform()): string {
     return isMac ? parts.join(' ') : parts.join(' + ');
 }
 
+interface HotkeySettingTab {
+    setQuery?: (q: string) => void;
+    searchInputEl?: { value: string };
+    searchComponent?: {
+        inputEl?: { value: string; dispatchEvent: (e: Event) => boolean };
+        setValue?: (val: string) => void;
+    };
+    updateHotkeyVisibility?: () => void;
+    renderHotkeyList?: () => void;
+}
+
+interface SettingDialogLike {
+    open(): void;
+    openTabById(id: string): HotkeySettingTab | null | undefined;
+    activeTab?: HotkeySettingTab;
+}
+
+interface AppWithSettingDialog extends App {
+    setting?: SettingDialogLike;
+}
+
 /**
- * Retrieves the currently active hotkey representation for a command from Obsidian's HotkeyManager.
+ * Retrieves the currently active hotkey representation for a command from Obsidian's HotkeyManager,
+ * or null if no hotkey is assigned.
  */
 export function getCommandHotkeyDisplay(
     app: App,
     commandId: string,
-    fallbackString = 'Mod+K',
-): string {
+): string | null {
     const isMac = isMacPlatform();
     const hotkeyManager = (app as unknown as AppWithHotkeyManager).hotkeyManager;
 
@@ -127,47 +148,45 @@ export function getCommandHotkeyDisplay(
         }
     }
 
-    const parsed = parseHotkeyString(fallbackString);
-    return parsed ? formatHotkey(parsed, isMac) : isMac ? '⌘ K' : 'Ctrl + K';
+    return null;
 }
 
 /**
- * Assigns a custom hotkey to a command in Obsidian and persists it to hotkeys.json.
+ * Opens Obsidian's native Hotkeys settings tab and filters to the specified command.
  */
-export async function setCommandHotkey(
-    app: App,
-    commandId: string,
-    hotkey: Hotkey,
-): Promise<void> {
-    const hotkeyManager = (app as unknown as AppWithHotkeyManager).hotkeyManager;
-    if (!hotkeyManager) return;
+export function openHotkeyAssignment(app: App, searchQuery: string): void {
+    try {
+        const appWithSetting = app as unknown as AppWithSettingDialog;
+        const setting = appWithSetting.setting;
+        if (!setting) return;
 
-    if (typeof hotkeyManager.setHotkeys === 'function') {
-        hotkeyManager.setHotkeys(commandId, [hotkey]);
-    }
-    if (typeof hotkeyManager.save === 'function') {
-        await hotkeyManager.save();
-    }
-}
+        setting.open();
+        const tab = setting.openTabById('hotkeys') ?? setting.activeTab;
+        if (!tab) return;
 
-/**
- * Resets a command's hotkey back to its default or specified fallback.
- */
-export async function resetCommandHotkey(
-    app: App,
-    commandId: string,
-    defaultHotkey: Hotkey,
-): Promise<void> {
-    const hotkeyManager = (app as unknown as AppWithHotkeyManager).hotkeyManager;
-    if (!hotkeyManager) return;
+        if (typeof tab.setQuery === 'function') {
+            tab.setQuery(searchQuery);
+            return;
+        }
 
-    if (typeof hotkeyManager.setHotkeys === 'function') {
-        hotkeyManager.setHotkeys(commandId, [defaultHotkey]);
-    } else if (typeof hotkeyManager.removeHotkeys === 'function') {
-        hotkeyManager.removeHotkeys(commandId);
-    }
+        if (tab.searchComponent && typeof tab.searchComponent.setValue === 'function') {
+            tab.searchComponent.setValue(searchQuery);
+            tab.searchComponent.inputEl?.dispatchEvent(new Event('input'));
+            return;
+        }
 
-    if (typeof hotkeyManager.save === 'function') {
-        await hotkeyManager.save();
+        const input =
+            tab.searchInputEl ??
+            (tab.searchComponent?.inputEl as { value: string } | undefined);
+        if (input) {
+            input.value = searchQuery;
+            if (typeof tab.updateHotkeyVisibility === 'function') {
+                tab.updateHotkeyVisibility();
+            } else if (typeof tab.renderHotkeyList === 'function') {
+                tab.renderHotkeyList();
+            }
+        }
+    } catch {
+        /* best-effort fallback */
     }
 }

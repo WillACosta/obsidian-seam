@@ -13,12 +13,11 @@ export function hasTag(file: TFile, app: App, targetTag: string): boolean {
     const normalizedTarget = targetTag.replace(/^#/, '').toLowerCase();
 
     // Check frontmatter tags
-    const frontmatter = cache.frontmatter as Record<string, unknown> | undefined;
-    const fmTags = frontmatter?.tags;
+    const fmTags: unknown = cache.frontmatter?.tags;
     if (fmTags) {
         let tags: string[] = [];
         if (Array.isArray(fmTags)) {
-            tags = (fmTags as unknown[]).map((t) => String(t));
+            tags = fmTags.map((t) => String(t));
         } else if (typeof fmTags === 'string') {
             tags = fmTags.split(',').map((t) => t.trim());
         }

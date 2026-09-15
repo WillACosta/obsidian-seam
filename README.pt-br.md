@@ -1,6 +1,6 @@
 # Seam — Organização de Notas sem Fricção para o Obsidian
 
-> [English](https://github.com/wilACosta/seam/blob/main/README.md) · **Português**
+> [English](README.md) · **Português**
 
 > Capture pensamentos, adicione tags naturalmente e deixe o Seam organizar suas notas silenciosamente em segundo plano.
 
@@ -8,7 +8,7 @@ Seam é um plugin leve e com comportamento nativo para o Obsidian, pensado para 
 
 Use tags simples como `#permanent` e `#archive` para arquivar notas automaticamente, faça pesquisas completas por todo o Vault com busca por tags e pesquisa interna nas notas, mantendo seu espaço de trabalho extremamente organizado.
 
-!["Obsidian Seam Showcase"](docs/images/seam_showcase.png)
+!["Apresentação do Obsidian Seam"](docs/images/seam_showcase.gif)
 
 ## Por que o Seam?
 
@@ -162,7 +162,7 @@ O Seam é um software gratuito e de código aberto desenvolvido com dedicação.
 
 Apoie o desenvolvimento e futuras iterações:
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willacosta)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willac)
 
 **Pix**<br>
 
@@ -170,7 +170,7 @@ Apoie o desenvolvimento e futuras iterações:
 
 ## Licença
 
-Este projeto está sob a licença [MIT](LICENSE).
+Este projeto está sob a licença [GNU General Public License v3.0](LICENSE).
 
 ## Como foi construído
 

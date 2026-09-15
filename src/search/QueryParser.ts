@@ -1,4 +1,4 @@
-import { ParsedQuery, QueryToken, QueryTokenType } from '../types';
+import { ParsedQuery, QueryToken } from '../types';
 
 /**
  * Parses simplified search query expressions.

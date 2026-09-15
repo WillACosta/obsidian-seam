@@ -8,7 +8,7 @@ Seam is a lightweight, native-feeling Obsidian plugin designed to eliminate orga
 
 Use simple tags like `#permanent` and `#archive` to file notes automatically, search across your entire vault with live tag chips and in-content text search, and keep your workspace effortlessly decluttered.
 
-!["Obsidian Seam Showcase"](docs/images/seam_showcase.png)
+!["Obsidian Seam Showcase"](docs/images/seam_showcase.gif)
 
 ## Why Seam?
 
@@ -148,7 +148,7 @@ Want to see Seam in your native language? Contributions are warmly welcome:
 
 Seam is free, open-source software built with passion. If Seam saves you time and makes your Obsidian vault a calmer place to think, consider supporting ongoing development and future iterations:
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willacosta)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willac)
 
 **Pix**<br>
 
@@ -160,7 +160,7 @@ For developer instructions, Spec-Driven Development (SDD) guidelines, and releas
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ## Built with
 
