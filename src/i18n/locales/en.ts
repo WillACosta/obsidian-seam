@@ -6,6 +6,7 @@ export const en = {
     cmdMoveToPermanent: 'Move to Permanent',
     cmdProcessPending: 'Process pending automations',
     cmdShowStatus: 'Show automation status',
+    cmdShowRecentFiles: 'Show recent files',
 
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Create new note: "${title}"`,
@@ -19,12 +20,25 @@ export const en = {
     paletteFilterByTag: (tag: string) => `Filter by tag: #${tag}`,
     paletteNotesMatchingTag: (tag: string) => `Notes matching #${tag}`,
     paletteAllTags: 'All tags',
+    paletteQuickAddTitle: 'Create a new note',
+    paletteQuickAddDesc: 'Create a note from a Seam choice',
+    paletteSelectChoice: 'Select a choice',
+    paletteAddFleeting: 'Add Fleeting',
+    paletteRecentFilesTitle: 'Show recent files',
+    paletteRecentFilesDesc: 'Show the 10 most recently modified notes',
 
     // Universal Palette UI
-    palettePlaceholder: 'Type a note name or #tag...',
-    paletteTagPlaceholder: 'Search tags to add filter (e.g. #ai)...',
-    paletteHelpText: (isMac: boolean) =>
-        `↑↓ navigate · ↵ open · ${isMac ? '⌘↵' : 'Ctrl↵'} new tab · esc close`,
+    palettePlaceholder: 'Search notes, #tags or run Seam commands...',
+    paletteTagPlaceholder: 'Search tags to add filter (e.g. #tag)...',
+    paletteHelpText: () => '↑↓ navigate · ↵ select · esc dismiss · > commands',
+    paletteHelpNavigate: 'navigate',
+    paletteHelpSelect: 'select',
+    paletteHelpDismiss: 'dismiss',
+    paletteHelpCommands: 'commands',
+    paletteHelpBack: 'back',
+    noticeQuickAddNoTemplate: "This option doesn't have a pre-defined template.",
+    noticeQuickAddCreated: (title: string) => `Created note: ${title}`,
+    noticeQuickAddFailed: (reason: string) => `Failed to create note: ${reason}`,
 
     // Notices & Status
     noticeArchived: (basename: string) => `Archived: ${basename}`,
@@ -62,6 +76,19 @@ export const en = {
     settingsFleetingFolderDesc: 'Vault-relative path for new fleeting notes created from the palette.',
     settingsFleetingTemplate: 'Fleeting note template',
     settingsFleetingTemplateDesc: 'Path to a template note (e.g. Templates/Fleeting). Leave empty for no template.',
+    settingsQuickAddHeading: 'Quick Add',
+    settingsQuickAddChoices: 'Choices',
+    settingsQuickAddChoicesDesc: 'Templates and locations available from Create a new note.',
+    settingsQuickAddNewChoice: 'New choice',
+    settingsQuickAddNoChoices: 'No choices configured. Create a note directly in Fleeting/.',
+    settingsQuickAddFilter: 'Filter choices...',
+    settingsQuickAddNoMatches: 'No choices match your filter.',
+    settingsQuickAddEdit: 'Edit',
+    settingsQuickAddDuplicate: 'Duplicate',
+    settingsQuickAddDelete: 'Delete',
+    settingsQuickAddReorder: 'Reorder',
+    settingsQuickAddPersistDrafts: 'Persist input prompt drafts',
+    settingsQuickAddPersistDraftsDesc: 'Keep unfinished note titles while Obsidian remains open.',
 
     settingsAutomationHeading: 'Automation',
     settingsAutoProcessing: 'Enable automatic processing',

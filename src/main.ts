@@ -77,6 +77,12 @@ export default class SeamPlugin extends Plugin {
             callback: () => this.showStatus(),
         });
 
+        this.addCommand({
+            id: 'show-recent-files',
+            name: t().cmdShowRecentFiles,
+            callback: () => this.openRecentFiles(),
+        });
+
         // Commands that operate on the current open note
         this.addCommand({
             id: 'archive-current-note',
@@ -261,6 +267,12 @@ export default class SeamPlugin extends Plugin {
         palette.open();
     }
 
+    private openRecentFiles(): void {
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, this.getPaletteCommands());
+        palette.open();
+        window.setTimeout(() => palette.showRecentFiles(), 0);
+    }
+
     private async archiveAll(): Promise<void> {
         const files = this.app.vault.getMarkdownFiles();
         let archivedCount = 0;
@@ -336,6 +348,20 @@ export default class SeamPlugin extends Plugin {
     private getPaletteCommands(): PaletteItem[] {
         const commands: PaletteItem[] = [
             {
+                id: 'cmd-quick-add',
+                title: t().paletteQuickAddTitle,
+                description: t().paletteQuickAddDesc,
+                type: 'command',
+                icon: 'file-plus',
+            },
+            {
+                id: 'cmd-recent-files',
+                title: t().paletteRecentFilesTitle,
+                description: t().paletteRecentFilesDesc,
+                type: 'command',
+                icon: 'clock-3',
+            },
+            {
                 id: 'cmd-archive-all',
                 title: t().paletteArchiveAllTitle,
                 description: t().paletteArchiveAllDesc,
@@ -395,6 +421,16 @@ export default class SeamPlugin extends Plugin {
         if (typeof raw === 'object' && raw !== null) {
             const data = raw as Record<string, unknown>;
             this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+
+            // Migration: the public Workspace API cannot place a split explicitly on the left.
+            this.settings.quickAddChoices = Array.isArray(this.settings.quickAddChoices) ? this.settings.quickAddChoices.map((choice) => {
+                const storedBehavior = (choice as { openBehavior: string }).openBehavior;
+                return {
+                    ...choice,
+                    openBehavior: storedBehavior === 'split-left' ? 'split' : (choice.openBehavior || 'tab'),
+                    conflictBehavior: choice.conflictBehavior || 'ask',
+                };
+            }) : [];
 
             // Migration: rename old archive cleanup settings to move cleanup
             if ('enableArchiveCleanup' in data && !('enableMoveCleanup' in data)) {

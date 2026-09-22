@@ -17,7 +17,26 @@ export interface SeamSettings {
     moveCleanupTags: string;
     moveCleanupProperties: string;
     showIcons: boolean;
+    quickAddChoices: QuickAddChoice[];
+    persistQuickAddDrafts: boolean;
     reconciliationIntervalMinutes: number;
+}
+
+export type QuickAddLocation = 'default' | 'specific';
+export type QuickAddOpenBehavior = 'tab' | 'current' | 'split';
+export type QuickAddConflictBehavior = 'ask' | 'replace' | 'create-new';
+
+export interface QuickAddChoice {
+    id: string;
+    name: string;
+    templatePath: string;
+    location: QuickAddLocation;
+    folderPath: string;
+    open: boolean;
+    openBehavior: QuickAddOpenBehavior;
+    focus: boolean;
+    icon: string;
+    conflictBehavior: QuickAddConflictBehavior;
 }
 
 export const DEFAULT_SETTINGS: SeamSettings = {
@@ -35,6 +54,8 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     moveCleanupTags: '#permanent, #todo',
     moveCleanupProperties: 'status',
     showIcons: true,
+    quickAddChoices: [],
+    persistQuickAddDrafts: false,
     reconciliationIntervalMinutes: 15,
 };
 

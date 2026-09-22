@@ -24,6 +24,8 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.moveCleanupTags, '#permanent, #todo');
         assert.equal(DEFAULT_SETTINGS.moveCleanupProperties, 'status');
         assert.equal(DEFAULT_SETTINGS.showIcons, true);
+        assert.deepEqual(DEFAULT_SETTINGS.quickAddChoices, []);
+        assert.equal(DEFAULT_SETTINGS.persistQuickAddDrafts, false);
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
     });
 });
@@ -258,4 +260,3 @@ describe('Post-Move Tag & Property Cleanup (Iteration 05)', () => {
         assert.deepEqual(remainingTags, ['electronics']);
     });
 });
-

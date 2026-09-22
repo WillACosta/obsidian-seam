@@ -8,6 +8,7 @@ export const ptBr: Translations = {
     cmdMoveToPermanent: 'Mover para Permanente',
     cmdProcessPending: 'Processar automações pendentes',
     cmdShowStatus: 'Mostrar status da automação',
+    cmdShowRecentFiles: 'Mostrar arquivos recentes',
 
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Criar nova nota: "${title}"`,
@@ -21,12 +22,25 @@ export const ptBr: Translations = {
     paletteFilterByTag: (tag: string) => `Filtrar por tag: #${tag}`,
     paletteNotesMatchingTag: (tag: string) => `Notas correspondentes a #${tag}`,
     paletteAllTags: 'Todas as tags',
+    paletteQuickAddTitle: 'Criar uma nova nota',
+    paletteQuickAddDesc: 'Criar uma nota a partir de uma escolha do Seam',
+    paletteSelectChoice: 'Selecione uma escolha',
+    paletteAddFleeting: 'Adicionar Fleeting',
+    paletteRecentFilesTitle: 'Mostrar arquivos recentes',
+    paletteRecentFilesDesc: 'Mostrar as 10 notas modificadas mais recentemente',
 
     // Universal Palette UI
-    palettePlaceholder: 'Digite o nome de uma nota ou #tag...',
-    paletteTagPlaceholder: 'Buscar tags para adicionar filtro (ex: #ia)...',
-    paletteHelpText: (isMac: boolean) =>
-        `↑↓ navegar · ↵ abrir · ${isMac ? '⌘↵' : 'Ctrl↵'} nova aba · esc fechar`,
+    palettePlaceholder: 'Busque notas, #tags ou execute comandos do Seam...',
+    paletteTagPlaceholder: 'Buscar tags para adicionar filtro (ex: #tag)...',
+    paletteHelpText: () => '↑↓ navegar · ↵ selecionar · esc fechar · > comandos',
+    paletteHelpNavigate: 'navegar',
+    paletteHelpSelect: 'selecionar',
+    paletteHelpDismiss: 'fechar',
+    paletteHelpCommands: 'comandos',
+    paletteHelpBack: 'voltar',
+    noticeQuickAddNoTemplate: 'Esta opção não possui um modelo pré-definido.',
+    noticeQuickAddCreated: (title: string) => `Nota criada: ${title}`,
+    noticeQuickAddFailed: (reason: string) => `Falha ao criar nota: ${reason}`,
 
     // Notices & Status
     noticeArchived: (basename: string) => `Arquivado: ${basename}`,
@@ -64,6 +78,19 @@ export const ptBr: Translations = {
     settingsFleetingFolderDesc: 'Caminho relativo no vault para novas notas efêmeras criadas pela paleta.',
     settingsFleetingTemplate: 'Modelo de nota efêmera',
     settingsFleetingTemplateDesc: 'Caminho para uma nota modelo (ex: Templates/Fleeting). Deixe vazio para não usar modelo.',
+    settingsQuickAddHeading: 'Adição rápida',
+    settingsQuickAddChoices: 'Escolhas',
+    settingsQuickAddChoicesDesc: 'Modelos e locais disponíveis em Criar uma nova nota.',
+    settingsQuickAddNewChoice: 'Nova escolha',
+    settingsQuickAddNoChoices: 'Nenhuma escolha configurada. Crie uma nota diretamente em Fleeting/.',
+    settingsQuickAddFilter: 'Filtrar escolhas...',
+    settingsQuickAddNoMatches: 'Nenhuma escolha corresponde ao filtro.',
+    settingsQuickAddEdit: 'Editar',
+    settingsQuickAddDuplicate: 'Duplicar',
+    settingsQuickAddDelete: 'Excluir',
+    settingsQuickAddReorder: 'Reordenar',
+    settingsQuickAddPersistDrafts: 'Persistir rascunhos do prompt',
+    settingsQuickAddPersistDraftsDesc: 'Manter títulos de notas inacabados enquanto o Obsidian permanecer aberto.',
 
     settingsAutomationHeading: 'Automação',
     settingsAutoProcessing: 'Habilitar processamento automático',

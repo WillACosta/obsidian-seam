@@ -1,7 +1,9 @@
 import { App, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
-import { PaletteItem, SeamSettings } from '../types';
+import { PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings } from '../types';
 import { SearchService } from '../search/SearchService';
 import { t } from '../i18n';
+import { NoteTitleModal } from './NoteTitleModal';
+import { NoteConflictModal } from './NoteConflictModal';
 
 /**
  * Internal interface for the SuggestModal's chooser.
@@ -63,6 +65,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private lastQuery = '';
     private selectedTags: string[] = [];
     private chipsContainerEl: HTMLElement | null = null;
+    private mode: 'search' | 'quick-add' | 'recent' = 'search';
+    private quickAddDraft = '';
 
     constructor(
         app: App,
@@ -72,6 +76,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     ) {
         super(app);
         this.setPlaceholder(t().palettePlaceholder);
+        this.updateInstructions('');
         this.emptyStateText = 'No results found.';
 
         // Register Mod+Enter (Cmd on Mac, Ctrl on Win/Linux) to open in new tab.
@@ -87,6 +92,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             } else if (item?.type === 'tag') {
                 this.selectSuggestion(item, evt);
             }
+            return false;
+        });
+        this.scope.register([], 'Escape', (evt: KeyboardEvent) => {
+            if (this.mode === 'search') return true;
+            evt.preventDefault();
+            this.returnToSearch();
+            return false;
+        });
+        this.scope.register([], 'Backspace', (evt: KeyboardEvent) => {
+            if (this.mode === 'search' || this.inputEl.value.length > 0) return true;
+            evt.preventDefault();
+            this.returnToSearch();
             return false;
         });
     }
@@ -220,6 +237,23 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.addSelectedTag(tag);
             return;
         }
+        if (value.id === 'cmd-quick-add') {
+            this.showQuickAdd();
+            return;
+        }
+        if (value.id === 'cmd-recent-files') {
+            this.showRecentFiles();
+            return;
+        }
+        if (value.id.startsWith('quick-add-choice-')) {
+            const choice = this.settings.quickAddChoices.find((item) => item.id === value.id.slice('quick-add-choice-'.length));
+            if (choice) this.promptQuickAdd(choice);
+            return;
+        }
+        if (value.id === 'quick-add-fleeting') {
+            this.promptQuickAdd(null);
+            return;
+        }
         super.selectSuggestion(value, evt);
     }
 
@@ -241,6 +275,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     getSuggestions(query: string): PaletteItem[] | Promise<PaletteItem[]> {
         const trimmed = query.trim();
         this.lastQuery = trimmed;
+        this.updateInstructions(trimmed);
+
+        if (this.mode === 'quick-add') return this.getQuickAddChoices(trimmed);
+        if (this.mode === 'recent') return this.getRecentFiles(trimmed);
 
         // Command mode: > prefix
         if (trimmed.startsWith('>')) {
@@ -269,9 +307,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return this.getAsyncSelectedTagsSuggestions(this.selectedTags, trimmed);
         }
 
-        // No tags selected and empty query: show available commands
+        // Keep the default palette quiet; commands are deliberately opt-in via `>`.
         if (!trimmed) {
-            return this.commands;
+            return [];
         }
 
         // Plain text queries without tags: async (in-note content search)
@@ -395,7 +433,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      * If a template is configured, uses its content as the initial note body.
      */
     private async createNote(title: string): Promise<void> {
-        const folderPath = normalizePath(this.settings.fleetingFolder);
+        await this.createQuickAddNote(title, null);
+    }
+
+    private async createQuickAddNote(title: string, choice: QuickAddChoice | null, forcedConflictBehavior?: QuickAddConflictBehavior): Promise<boolean> {
+        const selectedFolder = choice?.location === 'specific' ? choice.folderPath : this.settings.fleetingFolder;
+        const folderPath = normalizePath(selectedFolder);
 
         // Ensure fleeting folder exists
         if (!this.app.vault.getAbstractFileByPath(folderPath)) {
@@ -406,32 +449,135 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             }
         }
 
-        const filePath = normalizePath(`${folderPath}/${title}.md`);
-
-        // Check if file already exists
-        const existing = this.app.vault.getAbstractFileByPath(filePath);
+        let finalTitle = title;
+        let filePath = normalizePath(`${folderPath}/${finalTitle}.md`);
+        let existing = this.app.vault.getAbstractFileByPath(filePath);
         if (existing) {
-            new Notice(`Note "${title}" already exists in ${this.settings.fleetingFolder}.`);
-            if (existing instanceof TFile) {
-                await this.app.workspace.openLinkText(existing.path, '', false);
+            const behavior = forcedConflictBehavior || choice?.conflictBehavior || 'ask';
+            if (behavior === 'ask') {
+                return new Promise((resolve) => {
+                    new NoteConflictModal(this.app, (selectedBehavior) => {
+                        void this.createQuickAddNote(title, choice, selectedBehavior)
+                            .then(resolve);
+                    }).open();
+                });
             }
-            return;
+            if (behavior === 'create-new') {
+                let suffix = 1;
+                do {
+                    finalTitle = `${title} ${suffix++}`;
+                    filePath = normalizePath(`${folderPath}/${finalTitle}.md`);
+                    existing = this.app.vault.getAbstractFileByPath(filePath);
+                } while (existing);
+            } else if (!(existing instanceof TFile)) {
+                new Notice(`Cannot replace "${title}" because it is not a note.`);
+                return false;
+            }
         }
 
         // Read template content if configured
         let initialContent = '';
-        if (this.settings.fleetingNoteTemplate) {
-            initialContent = await this.readTemplate(this.settings.fleetingNoteTemplate);
+        const templatePath = choice ? choice.templatePath : this.settings.fleetingNoteTemplate;
+        if (choice && !templatePath) new Notice(t().noticeQuickAddNoTemplate);
+        if (templatePath) {
+            initialContent = await this.readTemplate(templatePath);
         }
 
         try {
-            const file = await this.app.vault.create(filePath, initialContent);
-            await this.app.workspace.openLinkText(file.path, '', false);
-            new Notice(`Created note: ${title}`);
+            const existingFile = existing instanceof TFile ? existing : null;
+            const file = existingFile
+                ? await this.app.vault.modify(existingFile, initialContent).then(() => existingFile)
+                : await this.app.vault.create(filePath, initialContent);
+            if (!choice || choice.open) {
+                const leaf = choice?.openBehavior === 'split' ? this.app.workspace.getLeaf('split', 'vertical')
+                    : this.app.workspace.getLeaf(choice?.openBehavior === 'tab' ? 'tab' : false);
+                await leaf.openFile(file);
+                if (choice && !choice.focus) this.app.workspace.setActiveLeaf(leaf, { focus: false });
+            }
+            new Notice(t().noticeQuickAddCreated(finalTitle));
+            return true;
         } catch (e) {
             const message = e instanceof Error ? e.message : 'Unknown error';
-            new Notice(`Failed to create note: ${message}`);
+            new Notice(t().noticeQuickAddFailed(message));
+            return false;
         }
+    }
+
+    showQuickAdd(): void {
+        this.mode = 'quick-add';
+        this.inputEl.value = '';
+        this.setPlaceholder(t().paletteSelectChoice);
+        this.updateInstructions('');
+        this.refreshSuggestions();
+    }
+
+    showRecentFiles(): void {
+        this.mode = 'recent';
+        this.inputEl.value = '';
+        this.setPlaceholder(t().paletteRecentFilesTitle);
+        this.updateInstructions('');
+        this.refreshSuggestions();
+    }
+
+    private returnToSearch(): void {
+        this.mode = 'search';
+        this.inputEl.value = '';
+        this.setPlaceholder(t().palettePlaceholder);
+        this.updateInstructions('');
+        this.refreshSuggestions();
+    }
+
+    private updateInstructions(query: string): void {
+        if (this.mode === 'search' && !query) {
+            this.setInstructions([
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+                { command: '>', purpose: t().paletteHelpCommands },
+            ]);
+            return;
+        }
+
+        const instructions = [
+            { command: '↑↓', purpose: t().paletteHelpNavigate },
+            { command: '↵', purpose: t().paletteHelpSelect },
+        ];
+        if (this.mode !== 'search' && !query) {
+            instructions.push({ command: '⌫', purpose: t().paletteHelpBack });
+        }
+        instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss });
+        this.setInstructions(instructions);
+    }
+
+    onNoSuggestion(): void {
+        if (this.mode === 'search' && !this.inputEl.value.trim()) {
+            this.resultContainerEl.empty();
+            return;
+        }
+        super.onNoSuggestion();
+    }
+
+    private getQuickAddChoices(query: string): PaletteItem[] {
+        const choices = this.settings.quickAddChoices;
+        if (choices.length === 0) return [{ id: 'quick-add-fleeting', title: t().paletteAddFleeting, description: this.settings.fleetingFolder, type: 'action', icon: 'file-plus' }];
+        return choices.filter((choice) => choice.name.toLowerCase().includes(query.toLowerCase())).map((choice) => ({
+            id: `quick-add-choice-${choice.id}`, title: choice.name, description: choice.location === 'specific' ? choice.folderPath : this.settings.fleetingFolder,
+            type: 'action' as const, icon: choice.icon || 'file-plus',
+        }));
+    }
+
+    private getRecentFiles(query: string): PaletteItem[] {
+        const needle = query.toLowerCase();
+        return this.app.vault.getMarkdownFiles().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 10)
+            .filter((file) => !needle || file.basename.toLowerCase().includes(needle) || file.path.toLowerCase().includes(needle))
+            .map((file) => ({ id: file.path, title: file.basename, description: file.parent?.path || '', type: 'note' as const, file }));
+    }
+
+    private promptQuickAdd(choice: QuickAddChoice | null): void {
+        const initial = this.settings.persistQuickAddDrafts ? this.quickAddDraft : '';
+        new NoteTitleModal(this.app, initial, choice?.name ?? 'New note', async (title) => {
+            this.quickAddDraft = this.settings.persistQuickAddDrafts ? title : '';
+            const created = await this.createQuickAddNote(title, choice);
+            if (created) this.close();
+        }, (draft) => { this.quickAddDraft = this.settings.persistQuickAddDrafts ? draft : ''; }).open();
     }
 
     /**
