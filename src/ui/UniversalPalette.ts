@@ -64,6 +64,7 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
 export class UniversalPalette extends SuggestModal<PaletteItem> {
     private lastQuery = '';
     private selectedTags: string[] = [];
+    private excludedTags: string[] = [];
     private chipsContainerEl: HTMLElement | null = null;
     private mode: 'search' | 'quick-add' | 'recent' = 'search';
     private quickAddDraft = '';
@@ -115,6 +116,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     onClose(): void {
         this.selectedTags = [];
+        this.excludedTags = [];
     }
 
     /**
@@ -143,9 +145,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 this.inputEl.selectionStart === 0 &&
                 this.inputEl.selectionEnd === 0
             ) {
-                if (this.selectedTags.length > 0) {
+                if (this.excludedTags.length > 0) {
                     evt.preventDefault();
-                    this.removeSelectedTag(this.selectedTags[this.selectedTags.length - 1]);
+                    this.removeSelectedTag(this.excludedTags[this.excludedTags.length - 1], true);
+                } else if (this.selectedTags.length > 0) {
+                    evt.preventDefault();
+                    this.removeSelectedTag(this.selectedTags[this.selectedTags.length - 1], false);
                 }
             }
         });
@@ -153,11 +158,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Also automatically convert a completed tag when user types space (e.g. "#ai ")
         this.inputEl.addEventListener('input', () => {
             const val = this.inputEl.value;
-            const match = val.match(/^#([^\s#]+)\s+$/);
+            const match = val.match(/^(!)?#([^\s#]+)\s+$/);
             if (match) {
-                const tag = match[1];
+                const tag = match[2];
                 this.inputEl.value = '';
-                this.addSelectedTag(tag);
+                this.addSelectedTag(tag, Boolean(match[1]));
             }
         });
     }
@@ -178,18 +183,23 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.chipsContainerEl.removeClass('is-hidden');
         this.setPlaceholder(t().paletteTagPlaceholder);
 
-        for (const tag of this.selectedTags) {
+        const chips = [
+            ...this.selectedTags.map((tag) => ({ tag, excluded: false })),
+            ...this.excludedTags.map((tag) => ({ tag, excluded: true })),
+        ];
+        for (const { tag, excluded } of chips) {
             const chipEl = this.chipsContainerEl.createSpan({ cls: 'seam-palette-chip' });
+            if (excluded) chipEl.addClass('seam-palette-chip-negative');
 
             const textEl = chipEl.createSpan({ cls: 'seam-palette-chip-text' });
-            textEl.setText(`#${tag}`);
+            textEl.setText(`${excluded ? '!' : ''}#${tag}`);
 
             const removeEl = chipEl.createSpan({ cls: 'seam-palette-chip-remove' });
             setIcon(removeEl, 'x');
-            removeEl.setAttribute('aria-label', `Remove #${tag}`);
+            removeEl.setAttribute('aria-label', `Remove ${excluded ? '!' : ''}#${tag}`);
             removeEl.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.removeSelectedTag(tag);
+                this.removeSelectedTag(tag, excluded);
                 this.inputEl.focus();
             });
         }
@@ -198,12 +208,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     /**
      * Appends a tag to the active filter conditions and refreshes suggestions.
      */
-    private addSelectedTag(tag: string): void {
+    private addSelectedTag(tag: string, excluded = false): void {
         const normTag = tag.replace(/^#/, '').trim().toLowerCase();
         if (!normTag) return;
 
-        if (!this.selectedTags.includes(normTag)) {
-            this.selectedTags.push(normTag);
+        const targetTags = excluded ? this.excludedTags : this.selectedTags;
+        if (!targetTags.includes(normTag)) {
+            targetTags.push(normTag);
         }
 
         this.inputEl.value = '';
@@ -214,9 +225,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     /**
      * Removes a tag from the active filter conditions and refreshes suggestions.
      */
-    private removeSelectedTag(tag: string): void {
+    private removeSelectedTag(tag: string, excluded = false): void {
         const normTag = tag.replace(/^#/, '').trim().toLowerCase();
-        this.selectedTags = this.selectedTags.filter((t) => t !== normTag);
+        if (excluded) {
+            this.excludedTags = this.excludedTags.filter((t) => t !== normTag);
+        } else {
+            this.selectedTags = this.selectedTags.filter((t) => t !== normTag);
+        }
         this.renderChips();
         this.refreshSuggestions();
     }
@@ -234,7 +249,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     selectSuggestion(value: PaletteItem, evt: MouseEvent | KeyboardEvent): void {
         if (value.type === 'tag') {
             const tag = value.title.replace(/^#/, '');
-            this.addSelectedTag(tag);
+            this.addSelectedTag(tag, value.tagMode === 'exclude');
             return;
         }
         if (value.id === 'cmd-quick-add') {
@@ -297,14 +312,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
 
         // Notes search mode when tags are selected
-        if (this.selectedTags.length > 0) {
+        if (this.selectedTags.length > 0 || this.excludedTags.length > 0) {
             if (!trimmed) {
                 // Return all notes matching selected tags synchronously
-                const results = this.searchService.searchBySelectedTags(this.selectedTags);
+                const results = this.searchService.searchBySelectedTags(this.selectedTags, this.excludedTags);
                 return this.mapSearchResults(results, '');
             }
             // Additional text filter with selected tags: async with content
-            return this.getAsyncSelectedTagsSuggestions(this.selectedTags, trimmed);
+            return this.getAsyncSelectedTagsSuggestions(this.selectedTags, this.excludedTags, trimmed);
         }
 
         // Keep the default palette quiet; commands are deliberately opt-in via `>`.
@@ -323,10 +338,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private handleTagQuery(query: string): PaletteItem[] {
         // Extract the search prefix from the current token after '#'
         const lastToken = query.split(/\s+/).pop() || '';
-        const prefix = lastToken.replace(/^#/, '');
+        const excluded = lastToken.startsWith('!#');
+        const prefix = excluded ? lastToken.substring(2) : lastToken.replace(/^#/, '');
 
         // Get matching tags, excluding already-selected tags
-        const matchingTags = this.searchService.getTagsMatchingPrefix(prefix, this.selectedTags);
+        const matchingTags = this.searchService.getTagsMatchingPrefix(prefix, [...this.selectedTags, ...this.excludedTags]);
 
         if (matchingTags.length > 0) {
             return matchingTags.map((tag) => ({
@@ -335,6 +351,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 description: '',
                 type: 'tag' as const,
                 icon: 'hash',
+                tagMode: excluded ? 'exclude' : 'include',
             }));
         }
 
@@ -347,6 +364,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                     description: t().paletteFilterByTag(prefix),
                     type: 'tag' as const,
                     icon: 'hash',
+                    tagMode: excluded ? 'exclude' : 'include',
                 },
             ];
         }
@@ -359,9 +377,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      */
     private async getAsyncSelectedTagsSuggestions(
         tags: string[],
+        excludedTags: string[],
         textQuery: string,
     ): Promise<PaletteItem[]> {
-        const results = await this.searchService.searchBySelectedTagsWithContent(tags, textQuery);
+        const results = await this.searchService.searchBySelectedTagsWithContent(tags, excludedTags, textQuery);
 
         if (this.lastQuery !== textQuery) {
             return [];
@@ -413,7 +432,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             query.length > 0 &&
             !query.includes('#') &&
             !query.startsWith('>') &&
-            this.selectedTags.length === 0
+            this.selectedTags.length === 0 &&
+            this.excludedTags.length === 0
         ) {
             items.push({
                 id: 'create-note',
@@ -528,6 +548,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private updateInstructions(query: string): void {
+        if (this.mode === 'search' && query.includes('#')) {
+            this.setInstructions([
+                { command: '↑↓', purpose: t().paletteHelpNavigate },
+                { command: '↵', purpose: t().paletteHelpSelect },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+                { command: '!', purpose: t().paletteHelpExcludeTag },
+            ]);
+            return;
+        }
+
         if (this.mode === 'search' && !query) {
             this.setInstructions([
                 { command: 'esc', purpose: t().paletteHelpDismiss },
@@ -559,7 +589,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         const choices = this.settings.quickAddChoices;
         if (choices.length === 0) return [{ id: 'quick-add-fleeting', title: t().paletteAddFleeting, description: this.settings.fleetingFolder, type: 'action', icon: 'file-plus' }];
         return choices.filter((choice) => choice.name.toLowerCase().includes(query.toLowerCase())).map((choice) => ({
-            id: `quick-add-choice-${choice.id}`, title: choice.name, description: choice.location === 'specific' ? choice.folderPath : this.settings.fleetingFolder,
+            id: `quick-add-choice-${choice.id}`, title: choice.name, description: '',
             type: 'action' as const, icon: choice.icon || 'file-plus',
         }));
     }
@@ -671,7 +701,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (item.tags && item.tags.length > 0) {
                 const tagsEl = el.createDiv({ cls: 'seam-palette-tags' });
                 const lowerHighlight = highlightQuery.toLowerCase();
-                const selectedTagSet = new Set(this.selectedTags.map((t) => t.toLowerCase()));
+                const selectedTagSet = new Set([
+                    ...this.selectedTags,
+                    ...this.excludedTags,
+                ].map((t) => t.toLowerCase()));
 
                 item.tags.forEach((tag, idx) => {
                     if (idx > 0) tagsEl.appendText(' ');
@@ -708,7 +741,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Tag query: extract tag value for highlighting
         if (query.includes('#')) {
             const lastToken = query.split(/\s+/).pop() || '';
-            return lastToken.replace(/^#/, '');
+            return lastToken.replace(/^!?#/, '');
         }
 
         return query;

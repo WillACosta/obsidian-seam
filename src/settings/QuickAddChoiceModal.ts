@@ -1,6 +1,7 @@
 import { App, getIcon, Modal, Setting, normalizePath } from 'obsidian';
 import { QuickAddChoice } from '../types';
 import { VaultPathSuggest } from '../ui/VaultPathSuggest';
+import { registerModalShortcut } from '../utils/modalShortcuts';
 
 type SaveChoice = (choice: QuickAddChoice) => Promise<void>;
 
@@ -62,18 +63,20 @@ export class QuickAddChoiceModal extends Modal {
             });
             this.renderIconPreview(iconSetting.controlEl, this.choice.icon, text.inputEl);
         });
-        new Setting(this.contentEl).addButton((button) => button.setButtonText('Save').setCta().onClick(() => {
+        const save = (): void => {
             if (!this.choice.name.trim()) return;
             this.choice.name = this.choice.name.trim();
             this.choice.templatePath = normalizePath(this.choice.templatePath.trim());
             this.choice.folderPath = normalizePath(this.choice.folderPath.trim());
             void this.onSave(this.choice).then(() => this.close());
-        }));
+        };
+        new Setting(this.contentEl).addButton((button) => button.setButtonText('Save').setCta().onClick(save));
+        registerModalShortcut(this.modalEl, 's', save);
     }
 
     private pathInput(input: HTMLInputElement, kind: 'file' | 'folder', value: string, onChange: (value: string) => void): void {
         input.value = value;
-        new VaultPathSuggest(this.app, input, kind).onSelect((item) => onChange(item.path));
+        new VaultPathSuggest(this.app, input, kind, onChange);
         input.addEventListener('input', () => onChange(input.value));
     }
 

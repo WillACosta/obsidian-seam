@@ -176,10 +176,11 @@ export class SearchService {
      * Searches for notes matching all given tags (AND logic).
      * Optionally filters additionally by a text query.
      */
-    searchBySelectedTags(selectedTags: string[], textQuery: string = ''): SearchResult[] {
-        if (selectedTags.length === 0) return [];
+    searchBySelectedTags(selectedTags: string[], excludedTags: string[] = [], textQuery: string = ''): SearchResult[] {
+        if (selectedTags.length === 0 && excludedTags.length === 0) return [];
         const files = this.app.vault.getMarkdownFiles();
         const lowerTags = selectedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
+        const lowerExcludedTags = excludedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
         const lowerText = textQuery.trim().toLowerCase();
 
         const results: SearchResult[] = [];
@@ -192,6 +193,10 @@ export class SearchService {
                 fileTags.some((ft) => noteHasTag(ft, selTag)),
             );
             if (!matchesAll) continue;
+            const matchesExcluded = lowerExcludedTags.some((excludedTag) =>
+                fileTags.some((ft) => noteHasTag(ft, excludedTag)),
+            );
+            if (matchesExcluded) continue;
 
             if (lowerText) {
                 const titleMatch =
@@ -218,14 +223,16 @@ export class SearchService {
      */
     async searchBySelectedTagsWithContent(
         selectedTags: string[],
+        excludedTags: string[] = [],
         textQuery: string = '',
     ): Promise<SearchResult[]> {
-        if (selectedTags.length === 0) return [];
+        if (selectedTags.length === 0 && excludedTags.length === 0) return [];
         this.searchVersion++;
         const currentVersion = this.searchVersion;
 
         const files = this.app.vault.getMarkdownFiles();
         const lowerTags = selectedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
+        const lowerExcludedTags = excludedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
         const lowerText = textQuery.trim().toLowerCase();
 
         const results: SearchResult[] = [];
@@ -239,6 +246,10 @@ export class SearchService {
                 fileTags.some((ft) => noteHasTag(ft, selTag)),
             );
             if (!matchesAll) continue;
+            const matchesExcluded = lowerExcludedTags.some((excludedTag) =>
+                fileTags.some((ft) => noteHasTag(ft, excludedTag)),
+            );
+            if (matchesExcluded) continue;
 
             let matchSnippet: MatchSnippet | undefined;
 

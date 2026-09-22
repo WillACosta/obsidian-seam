@@ -170,6 +170,9 @@ export default class SeamPlugin extends Plugin {
 
         // Seed tag/property suggestions so Obsidian autocompletes them
         void this.seedTagSuggestions();
+
+        // Announce plugin updates after Obsidian's layout is ready.
+        void this.announceUpdateIfNeeded();
     }
 
     /**
@@ -450,6 +453,40 @@ export default class SeamPlugin extends Plugin {
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
         this.onSettingsChange();
+    }
+
+    private async announceUpdateIfNeeded(): Promise<void> {
+        const currentVersion = this.manifest.version;
+        const previousVersion = this.settings.lastAnnouncedVersion;
+
+        if (!previousVersion) {
+            this.settings.lastAnnouncedVersion = currentVersion;
+            await this.saveSettings();
+            return;
+        }
+
+        const versionChanged = previousVersion !== currentVersion;
+        const shouldAnnounce = this.settings.updateAnnouncementMode === 'all'
+            ? versionChanged
+            : this.settings.updateAnnouncementMode === 'major'
+                ? this.isMajorReleaseChange(previousVersion, currentVersion)
+                : false;
+
+        this.settings.lastAnnouncedVersion = currentVersion;
+        if (shouldAnnounce) {
+            new Notice(t().noticeUpdateAvailable(currentVersion));
+        }
+        if (versionChanged) await this.saveSettings();
+    }
+
+    private isMajorReleaseChange(previousVersion: string, currentVersion: string): boolean {
+        const previousParts = previousVersion.split('.').map(Number);
+        const currentParts = currentVersion.split('.').map(Number);
+        if (previousParts.some((part) => !Number.isFinite(part)) || currentParts.some((part) => !Number.isFinite(part))) return false;
+
+        const [previousMajor, previousMinor] = previousParts;
+        const [currentMajor, currentMinor] = currentParts;
+        return currentMajor > previousMajor || (currentMajor === previousMajor && currentMinor > previousMinor);
     }
 
     /**

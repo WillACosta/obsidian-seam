@@ -136,6 +136,11 @@
     background-color: var(--background-modifier-accent-hover, rgba(var(--accent-rgb, 120, 100, 255), 0.25));
 }
 
+.seam-palette-chip-negative {
+    border-style: dotted;
+    border-width: 2px;
+}
+
 .seam-palette-chip-text {
     font-weight: normal;
 }
@@ -150,6 +155,40 @@
 .seam-note-title-setting .setting-item-control,
 .seam-note-title-setting input {
     width: 100%;
+}
+
+.seam-note-conflict-modal .modal-content {
+    min-width: min(520px, 90vw);
+}
+
+.seam-note-conflict-description {
+    margin: 0 0 20px;
+}
+
+.seam-note-conflict-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.seam-note-conflict-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.seam-note-conflict-actions kbd {
+    min-width: 1.3em;
+    padding: 1px 4px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.seam-note-conflict-cancel {
+    margin-left: auto;
 }
 
 .seam-palette-chip-remove {

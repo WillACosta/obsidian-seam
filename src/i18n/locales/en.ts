@@ -36,9 +36,11 @@ export const en = {
     paletteHelpDismiss: 'dismiss',
     paletteHelpCommands: 'commands',
     paletteHelpBack: 'back',
+    paletteHelpExcludeTag: 'to exclude a tag (e.g. !#tag)',
     noticeQuickAddNoTemplate: "This option doesn't have a pre-defined template.",
     noticeQuickAddCreated: (title: string) => `Created note: ${title}`,
     noticeQuickAddFailed: (reason: string) => `Failed to create note: ${reason}`,
+    noticeUpdateAvailable: (version: string) => `Seam updated to version ${version}.`,
 
     // Notices & Status
     noticeArchived: (basename: string) => `Archived: ${basename}`,
@@ -115,6 +117,11 @@ export const en = {
     settingsInterfaceHeading: 'Universal Palette',
     settingsShowIcons: 'Show icons in Universal Palette',
     settingsShowIconsDesc: 'Display folder and command icons in search and command listings.',
+    settingsAnnounceUpdates: 'Announce updates',
+    settingsAnnounceUpdatesDesc: 'Choose when Seam announces updates.',
+    settingsAnnounceUpdatesMajor: 'Only on major releases (Recommended)',
+    settingsAnnounceUpdatesAll: 'On each release',
+    settingsAnnounceUpdatesNever: 'Never show updates',
     settingsPaletteHotkey: 'Universal Palette shortcut',
     settingsPaletteHotkeyDesc: 'Keyboard shortcut to open the Universal Palette. Configure or customize this in Obsidian\'s Hotkeys settings.',
     settingsPaletteHotkeyConfigure: 'Configure hotkey in Obsidian',
@@ -124,6 +131,7 @@ export const en = {
     settingsAdvancedHeading: 'Advanced',
     settingsReconInterval: 'Reconciliation interval (minutes)',
     settingsReconIntervalDesc: 'How often the plugin scans for missed action tags while Obsidian is running.',
+    settingsNotificationsHeading: 'Notifications',
 };
 
 export type Translations = typeof en;

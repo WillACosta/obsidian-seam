@@ -38,9 +38,11 @@ export const ptBr: Translations = {
     paletteHelpDismiss: 'fechar',
     paletteHelpCommands: 'comandos',
     paletteHelpBack: 'voltar',
+    paletteHelpExcludeTag: 'para excluir uma tag (ex.: !#tag)',
     noticeQuickAddNoTemplate: 'Esta opção não possui um modelo pré-definido.',
     noticeQuickAddCreated: (title: string) => `Nota criada: ${title}`,
     noticeQuickAddFailed: (reason: string) => `Falha ao criar nota: ${reason}`,
+    noticeUpdateAvailable: (version: string) => `Seam atualizado para a versão ${version}.`,
 
     // Notices & Status
     noticeArchived: (basename: string) => `Arquivado: ${basename}`,
@@ -117,6 +119,11 @@ export const ptBr: Translations = {
     settingsInterfaceHeading: 'Paleta Universal',
     settingsShowIcons: 'Mostrar ícones na Paleta Universal',
     settingsShowIconsDesc: 'Exibir ícones de pastas e comandos nas listagens de busca e comandos.',
+    settingsAnnounceUpdates: 'Anunciar atualizações',
+    settingsAnnounceUpdatesDesc: 'Escolha quando o Seam anuncia atualizações.',
+    settingsAnnounceUpdatesMajor: 'Somente em versões principais (Recomendado)',
+    settingsAnnounceUpdatesAll: 'Em cada versão',
+    settingsAnnounceUpdatesNever: 'Nunca mostrar atualizações',
     settingsPaletteHotkey: 'Atalho da Paleta Universal',
     settingsPaletteHotkeyDesc: 'Atalho do teclado para abrir a Paleta Universal. Configure ou personalize nas configurações de Atalhos do Obsidian.',
     settingsPaletteHotkeyConfigure: 'Configurar atalho no Obsidian',
@@ -126,4 +133,5 @@ export const ptBr: Translations = {
     settingsAdvancedHeading: 'Avançado',
     settingsReconInterval: 'Intervalo de reconciliação (minutos)',
     settingsReconIntervalDesc: 'Frequência com que o plugin verifica tags de ação perdidas enquanto o Obsidian está em execução.',
+    settingsNotificationsHeading: 'Notificações',
 };

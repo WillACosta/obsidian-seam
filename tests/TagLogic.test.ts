@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SETTINGS, SeamSettings } from '../src/types';
-import { tagMatches, noteHasTag, extractMatchSnippet } from '../src/search/SearchService';
+import { SearchService, tagMatches, noteHasTag, extractMatchSnippet } from '../src/search/SearchService';
 import {
     getPermanentCleanupTags,
     getArchiveCleanupTags,
@@ -27,6 +27,32 @@ describe('Settings & Defaults', () => {
         assert.deepEqual(DEFAULT_SETTINGS.quickAddChoices, []);
         assert.equal(DEFAULT_SETTINGS.persistQuickAddDrafts, false);
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
+        assert.equal(DEFAULT_SETTINGS.updateAnnouncementMode, 'major');
+        assert.equal(DEFAULT_SETTINGS.lastAnnouncedVersion, '');
+    });
+});
+
+describe('Selected tag exclusion', () => {
+    it('excludes matching notes while retaining required positive tags', () => {
+        const includedFile = { path: 'included.md', basename: 'included', parent: null };
+        const excludedFile = { path: 'excluded.md', basename: 'excluded', parent: null };
+        const app = {
+            vault: { getMarkdownFiles: () => [includedFile, excludedFile] },
+            metadataCache: {
+                getFileCache: (file: { path: string }) => ({
+                    tags: file.path === includedFile.path
+                        ? [{ tag: '#projects/seam' }, { tag: '#todo' }]
+                        : [{ tag: '#projects/seam' }, { tag: '#todo' }, { tag: '#archived' }],
+                }),
+            },
+        } as never;
+
+        const service = new SearchService(app, DEFAULT_SETTINGS);
+        const results = service.searchBySelectedTags(['projects/seam', 'todo'], ['archived']);
+        assert.deepEqual(results.map((result) => result.file.path), ['included.md']);
+
+        const queryResults = service.search('#projects/seam #todo !#archived');
+        assert.deepEqual(queryResults.map((result) => result.file.path), ['included.md']);
     });
 });
 

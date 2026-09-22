@@ -27,6 +27,16 @@ describe('QueryParser', () => {
         assert.deepEqual(result.tokens, [{ type: 'negativeTag', value: 'archived' }]);
     });
 
+    it('parses exclamation-prefixed negative tags', () => {
+        const result = parseQuery('#projects/seam #todo !#archived');
+        assert.equal(result.isValid, true);
+        assert.deepEqual(result.tokens, [
+            { type: 'tag', value: 'projects/seam' },
+            { type: 'tag', value: 'todo' },
+            { type: 'negativeTag', value: 'archived' },
+        ]);
+    });
+
     it('parses multiple tags (AND logic)', () => {
         const result = parseQuery('#electronics -#archived #kicad');
         assert.equal(result.isValid, true);

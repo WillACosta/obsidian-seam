@@ -1,6 +1,6 @@
 import { App, getIcon, PluginSettingTab, setIcon, Setting } from 'obsidian';
 import type SeamPlugin from '../main';
-import { AutomationDelayMode, QuickAddChoice } from '../types';
+import { AutomationDelayMode, QuickAddChoice, UpdateAnnouncementMode } from '../types';
 import { t } from '../i18n';
 import { QuickAddChoiceModal } from './QuickAddChoiceModal';
 import { VaultPathSuggest } from '../ui/VaultPathSuggest';
@@ -232,6 +232,23 @@ export class SeamSettingsTab extends PluginSettingTab {
                         this.plugin.settings.reconciliationIntervalMinutes = value;
                         await this.plugin.saveSettings();
                     }),
+            );
+
+        // --- Notifications ---
+        new Setting(containerEl).setName(strings.settingsNotificationsHeading).setHeading();
+
+        new Setting(containerEl)
+            .setName(strings.settingsAnnounceUpdates)
+            .setDesc(strings.settingsAnnounceUpdatesDesc)
+            .addDropdown((dropdown) => dropdown
+                .addOption('major', strings.settingsAnnounceUpdatesMajor)
+                .addOption('all', strings.settingsAnnounceUpdatesAll)
+                .addOption('never', strings.settingsAnnounceUpdatesNever)
+                .setValue(this.plugin.settings.updateAnnouncementMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.updateAnnouncementMode = value as UpdateAnnouncementMode;
+                    await this.plugin.saveSettings();
+                }),
             );
     }
 

@@ -1,6 +1,7 @@
 import { TFile } from 'obsidian';
 
 export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000';
+export type UpdateAnnouncementMode = 'major' | 'all' | 'never';
 
 export interface SeamSettings {
     permanentFolder: string;
@@ -20,6 +21,8 @@ export interface SeamSettings {
     quickAddChoices: QuickAddChoice[];
     persistQuickAddDrafts: boolean;
     reconciliationIntervalMinutes: number;
+    updateAnnouncementMode: UpdateAnnouncementMode;
+    lastAnnouncedVersion: string;
 }
 
 export type QuickAddLocation = 'default' | 'specific';
@@ -57,6 +60,8 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     quickAddChoices: [],
     persistQuickAddDrafts: false,
     reconciliationIntervalMinutes: 15,
+    updateAnnouncementMode: 'major',
+    lastAnnouncedVersion: '',
 };
 
 export type AutomationResultStatus = 'success' | 'conflict' | 'error' | 'skipped';
@@ -120,5 +125,6 @@ export interface PaletteItem {
     file?: TFile;
     tags?: string[];
     matchSnippet?: MatchSnippet;
+    tagMode?: 'include' | 'exclude';
     action?: () => void | Promise<void>;
 }

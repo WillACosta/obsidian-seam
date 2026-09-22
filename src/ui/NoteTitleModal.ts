@@ -1,4 +1,5 @@
 import { App, Modal, Setting } from 'obsidian';
+import { registerModalShortcut } from '../utils/modalShortcuts';
 
 /** Small title prompt used by Quick Add; drafts live only for this app session. */
 export class NoteTitleModal extends Modal {
@@ -37,6 +38,7 @@ export class NoteTitleModal extends Modal {
             submit();
         });
         new Setting(this.contentEl).addButton((button) => button.setButtonText('Create').setCta().onClick(submit));
+        registerModalShortcut(this.modalEl, 'c', submit);
         window.setTimeout(() => input.focus(), 0);
     }
 
