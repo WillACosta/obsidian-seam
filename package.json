@@ -1,6 +1,6 @@
 {
   "name": "obsidian-seam",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "Tag-driven note organization with automatic archiving and a Universal Palette.",
   "license": "GPL-3.0-or-later",
   "packageManager": "pnpm@11.24.0",
@@ -10,7 +10,7 @@
     "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
-    "symlink": "node scripts/symlink.mjs",
+    "symlink": "node scripts/symlink.mjs --dir=seam_test_vault",
     "changelog:extract": "node scripts/changelog.mjs extract",
     "changelog:generate": "node scripts/changelog.mjs generate",
     "changelog:validate": "node scripts/changelog.mjs validate",

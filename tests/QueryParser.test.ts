@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import './mocks/obsidian';
 import { parseQuery } from '../src/search/QueryParser';
+import { normalizeTextQuery, parseSpecialSearch } from '../src/search/SearchService';
 
 describe('QueryParser', () => {
     it('parses empty query', () => {
@@ -119,5 +121,19 @@ describe('QueryParser', () => {
             { type: 'text', value: 'Dormin' },
             { type: 'text', value: 'Note' },
         ]);
+    });
+
+    it('normalizes a quoted exact phrase without changing unquoted text', () => {
+        assert.equal(normalizeTextQuery('"KiCad is a PCB editor app"'), 'KiCad is a PCB editor app');
+        assert.equal(normalizeTextQuery('KiCad is a PCB editor app'), 'KiCad is a PCB editor app');
+    });
+
+    it('parses supported special searches and their optional text query', () => {
+        assert.deepEqual(parseSpecialSearch('@todo'), { search: 'todo', textQuery: '' });
+        assert.deepEqual(parseSpecialSearch('@docs "project brief"'), {
+            search: 'docs',
+            textQuery: 'project brief',
+        });
+        assert.deepEqual(parseSpecialSearch('@unknown'), { search: null, textQuery: '@unknown' });
     });
 });

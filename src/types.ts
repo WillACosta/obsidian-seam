@@ -91,6 +91,8 @@ export interface MatchSnippet {
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'or' | 'text';
 
+export type SpecialSearch = 'untagged' | 'docs' | 'images' | 'ocr' | 'task' | 'todo' | 'done' | 'code';
+
 export interface QueryToken {
     type: QueryTokenType;
     value: string;
@@ -100,6 +102,12 @@ export interface ParsedQuery {
     tokens: QueryToken[];
     isValid: boolean;
     error?: string;
+}
+
+export interface SpecialSearchOption {
+    search: SpecialSearch;
+    label: string;
+    description: string;
 }
 
 export interface AutomationStatus {
@@ -120,11 +128,12 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action' | 'create' | 'tag';
+    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special';
     icon?: string;
     file?: TFile;
     tags?: string[];
     matchSnippet?: MatchSnippet;
     tagMode?: 'include' | 'exclude';
+    specialSearch?: SpecialSearch;
     action?: () => void | Promise<void>;
 }

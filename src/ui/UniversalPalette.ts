@@ -1,6 +1,6 @@
 import { App, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
-import { PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings } from '../types';
-import { SearchService } from '../search/SearchService';
+import { PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption } from '../types';
+import { normalizeTextQuery, parseSpecialSearch, SearchService } from '../search/SearchService';
 import { t } from '../i18n';
 import { NoteTitleModal } from './NoteTitleModal';
 import { NoteConflictModal } from './NoteConflictModal';
@@ -252,6 +252,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.addSelectedTag(tag, value.tagMode === 'exclude');
             return;
         }
+        if (value.type === 'special') {
+            this.inputEl.value = value.title;
+            this.refreshSuggestions();
+            return;
+        }
         if (value.id === 'cmd-quick-add') {
             this.showQuickAdd();
             return;
@@ -294,6 +299,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         if (this.mode === 'quick-add') return this.getQuickAddChoices(trimmed);
         if (this.mode === 'recent') return this.getRecentFiles(trimmed);
+
+        // Special search mode: typing @ lists supported filters; selecting one applies it.
+        if (trimmed.startsWith('@')) {
+            const parsed = parseSpecialSearch(trimmed);
+            if (!parsed.search) return this.getSpecialSearchChoices(trimmed);
+            return this.getAsyncSuggestions(trimmed);
+        }
 
         // Command mode: > prefix
         if (trimmed.startsWith('>')) {
@@ -432,16 +444,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             query.length > 0 &&
             !query.includes('#') &&
             !query.startsWith('>') &&
+            !query.startsWith('@') &&
             this.selectedTags.length === 0 &&
             this.excludedTags.length === 0
         ) {
+            const createTitle = normalizeTextQuery(query);
             items.push({
                 id: 'create-note',
-                title: t().paletteCreateNoteTitle(query),
+                title: t().paletteCreateNoteTitle(createTitle),
                 description: t().paletteCreateNoteDesc(this.settings.fleetingFolder),
                 type: 'create',
                 icon: 'file-plus',
-                action: () => this.createNote(query),
+                action: () => this.createNote(createTitle),
             });
         }
 
@@ -548,6 +562,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private updateInstructions(query: string): void {
+        if (this.mode === 'search' && query.startsWith('@')) {
+            this.setInstructions([
+                { command: '↑↓', purpose: t().paletteHelpNavigate },
+                { command: '↵', purpose: t().paletteHelpSelect },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+                { command: '@', purpose: t().paletteHelpSpecialSearch },
+            ]);
+            return;
+        }
+
         if (this.mode === 'search' && query.includes('#')) {
             this.setInstructions([
                 { command: '↑↓', purpose: t().paletteHelpNavigate },
@@ -558,10 +582,21 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return;
         }
 
+        if (this.mode === 'search' && query.includes('"')) {
+            this.setInstructions([
+                { command: '↑↓', purpose: t().paletteHelpNavigate },
+                { command: '↵', purpose: t().paletteHelpSelect },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+                { command: '""', purpose: t().paletteHelpExactMatch },
+            ]);
+            return;
+        }
+
         if (this.mode === 'search' && !query) {
             this.setInstructions([
                 { command: 'esc', purpose: t().paletteHelpDismiss },
                 { command: '>', purpose: t().paletteHelpCommands },
+                { command: '@', purpose: t().paletteHelpSpecialSearch },
             ]);
             return;
         }
@@ -592,6 +627,29 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             id: `quick-add-choice-${choice.id}`, title: choice.name, description: '',
             type: 'action' as const, icon: choice.icon || 'file-plus',
         }));
+    }
+
+    private getSpecialSearchChoices(query: string): PaletteItem[] {
+        const options: SpecialSearchOption[] = [
+            { search: 'untagged', label: '@untagged', description: t().paletteSpecialUntagged },
+            { search: 'docs', label: '@docs', description: t().paletteSpecialDocs },
+            { search: 'images', label: '@images', description: t().paletteSpecialImages },
+            { search: 'task', label: '@task', description: t().paletteSpecialTask },
+            { search: 'todo', label: '@todo', description: t().paletteSpecialTodo },
+            { search: 'done', label: '@done', description: t().paletteSpecialDone },
+            { search: 'code', label: '@code', description: t().paletteSpecialCode },
+        ];
+        const needle = query.toLowerCase();
+        return options
+            .filter((option) => option.label.startsWith(needle))
+            .map((option) => ({
+                id: `special-search-${option.search}`,
+                title: option.label,
+                description: option.description,
+                type: 'special' as const,
+                specialSearch: option.search,
+                icon: 'search',
+            }));
     }
 
     private getRecentFiles(query: string): PaletteItem[] {
@@ -631,7 +689,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Derive the plain search query for highlighting
         const highlightQuery = this.getHighlightQuery();
 
-        if (item.type === 'command' || item.type === 'action' || item.type === 'create') {
+        if (item.type === 'command' || item.type === 'action' || item.type === 'create' || item.type === 'special') {
             el.addClass('seam-palette-command-item');
             const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
 
@@ -738,13 +796,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Command mode: no highlighting
         if (query.startsWith('>')) return '';
 
+        if (query.startsWith('@')) {
+            return parseSpecialSearch(query).textQuery;
+        }
+
         // Tag query: extract tag value for highlighting
         if (query.includes('#')) {
             const lastToken = query.split(/\s+/).pop() || '';
             return lastToken.replace(/^!?#/, '');
         }
 
-        return query;
+        return normalizeTextQuery(query);
     }
 
     onChooseSuggestion(item: PaletteItem, _evt: MouseEvent | KeyboardEvent): void {

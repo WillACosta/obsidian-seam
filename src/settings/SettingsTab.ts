@@ -234,8 +234,8 @@ export class SeamSettingsTab extends PluginSettingTab {
                     }),
             );
 
-        // --- Notifications ---
-        new Setting(containerEl).setName(strings.settingsNotificationsHeading).setHeading();
+        // --- Updates ---
+        new Setting(containerEl).setName(strings.settingsUpdatesHeading).setHeading();
 
         new Setting(containerEl)
             .setName(strings.settingsAnnounceUpdates)
@@ -248,8 +248,19 @@ export class SeamSettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.updateAnnouncementMode = value as UpdateAnnouncementMode;
                     await this.plugin.saveSettings();
+                    latestNotesSetting?.settingEl.toggle(value !== 'never');
                 }),
             );
+
+        let latestNotesSetting: Setting;
+        latestNotesSetting = new Setting(containerEl)
+            .setName(strings.settingsCurrentReleaseNotes)
+            .setDesc(strings.settingsCurrentReleaseNotesDesc)
+            .addButton((button) => button
+                .setButtonText(strings.settingsCurrentReleaseNotesButton)
+                .onClick(() => { void this.plugin.openCurrentReleaseNotes(); }),
+            );
+        latestNotesSetting.settingEl.toggle(this.plugin.settings.updateAnnouncementMode !== 'never');
     }
 
     private renderQuickAddChoices(parent: HTMLElement): void {

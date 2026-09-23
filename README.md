@@ -152,7 +152,7 @@ Want to use Seam in another language? Contributions are welcome:
 
 Seam is free and open source. If it saves you time, consider supporting its development:
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willac)
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-8A2BE2?logo=ko-fi&logoColor=white&style=for-the-badge)](https://ko-fi.com/acostawill)
 
 **Pix**<br>
 

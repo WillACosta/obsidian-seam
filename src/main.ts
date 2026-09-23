@@ -8,6 +8,7 @@ import { SearchService } from './search/SearchService';
 import { UniversalPalette } from './ui/UniversalPalette';
 import { SeamSettingsTab } from './settings/SettingsTab';
 import { t } from './i18n';
+import { getSeamReleaseNotesAfter, getSeamReleaseNotesForVersion, UpdateModal } from './ui/UpdateModal';
 
 /**
  * Tags and properties that Seam uses as action triggers.
@@ -474,9 +475,33 @@ export default class SeamPlugin extends Plugin {
 
         this.settings.lastAnnouncedVersion = currentVersion;
         if (shouldAnnounce) {
-            new Notice(t().noticeUpdateAvailable(currentVersion));
+            try {
+                const releases = await getSeamReleaseNotesAfter(previousVersion);
+                if (releases.length > 0) {
+                    new UpdateModal(this.app, previousVersion, releases).open();
+                } else {
+                    new Notice(t().noticeUpdateAvailable(currentVersion));
+                }
+            } catch {
+                // Update notices must never interfere with normal plugin startup.
+                new Notice(t().noticeUpdateAvailable(currentVersion));
+            }
         }
         if (versionChanged) await this.saveSettings();
+    }
+
+    /** Opens the release notes for the currently installed Seam version. */
+    async openCurrentReleaseNotes(): Promise<void> {
+        try {
+            const currentRelease = await getSeamReleaseNotesForVersion(this.manifest.version);
+            if (!currentRelease) {
+                new Notice(t().noticeNoReleaseNotesAvailable);
+                return;
+            }
+            new UpdateModal(this.app, null, [currentRelease]).open();
+        } catch {
+            new Notice(t().noticeReleaseNotesFailed);
+        }
     }
 
     private isMajorReleaseChange(previousVersion: string, currentVersion: string): boolean {

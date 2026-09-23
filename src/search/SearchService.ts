@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { SeamSettings, SearchResult, QueryToken, MatchSnippet } from '../types';
+import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } from '../types';
 import { parseQuery } from './QueryParser';
 
 /**
@@ -63,6 +63,102 @@ export function noteHasTag(fileTag: string, targetTag: string): boolean {
     return f === t || f.startsWith(t + '/');
 }
 
+const DOCUMENT_EXTENSIONS = new Set([
+    'doc', 'docm', 'docx', 'dot', 'dotx', 'odt', 'pdf', 'rtf', 'tex', 'txt',
+    'csv', 'xls', 'xlsm', 'xlsx', 'xlt', 'ods', 'ppt', 'pptm', 'pptx', 'odp',
+]);
+const IMAGE_EXTENSIONS = new Set([
+    'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'tif', 'tiff', 'webp',
+]);
+const TEXT_ATTACHMENT_EXTENSIONS = new Set([
+    'css', 'csv', 'htm', 'html', 'js', 'json', 'md', 'markdown', 'svg', 'tex',
+    'text', 'ts', 'tsx', 'txt', 'xml', 'yaml', 'yml',
+]);
+
+/** Removes the optional surrounding quotes used for exact phrase searches. */
+export function normalizeTextQuery(query: string): string {
+    const trimmed = query.trim();
+    if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+        return trimmed.slice(1, -1);
+    }
+    return trimmed;
+}
+
+/** Extracts a supported @ filter and the remaining text query. */
+export function parseSpecialSearch(query: string): { search: SpecialSearch | null; textQuery: string } {
+    const trimmed = query.trim();
+    const match = trimmed.match(/^@(untagged|docs|images|ocr|task|todo|done|code)(?:\s+([\s\S]*))?$/i);
+    if (!match) return { search: null, textQuery: trimmed };
+    return {
+        search: match[1].toLowerCase() as SpecialSearch,
+        textQuery: normalizeTextQuery(match[2] ?? ''),
+    };
+}
+
+function attachmentExtension(link: string): string {
+    const cleanLink = link.split('#', 1)[0].split('?', 1)[0].split('|', 1)[0];
+    const filename = cleanLink.split('/').pop() ?? '';
+    return filename.includes('.') ? filename.split('.').pop()?.toLowerCase() ?? '' : '';
+}
+
+function getAttachmentLinks(app: App, file: TFile): string[] {
+    const cache = app.metadataCache.getFileCache(file);
+    if (!cache) return [];
+    return [...(cache.links ?? []), ...(cache.embeds ?? [])].map((reference) => reference.link);
+}
+
+export function hasAttachmentType(app: App, file: TFile, extensions: Set<string>): boolean {
+    return getAttachmentLinks(app, file).some((link) => extensions.has(attachmentExtension(link)));
+}
+
+export function hasAnyAttachment(app: App, file: TFile): boolean {
+    return getAttachmentLinks(app, file).some((link) => attachmentExtension(link).length > 0);
+}
+
+async function attachmentContainsText(app: App, note: TFile, query: string): Promise<boolean> {
+    const lowerQuery = query.toLowerCase();
+    for (const link of getAttachmentLinks(app, note)) {
+        if (link.toLowerCase().includes(lowerQuery)) return true;
+
+        const attachment = app.metadataCache.getFirstLinkpathDest(link, note.path);
+        if (!attachment || !(attachment instanceof TFile)) continue;
+        if (!TEXT_ATTACHMENT_EXTENSIONS.has(attachment.extension.toLowerCase())) continue;
+        try {
+            const content = await app.vault.cachedRead(attachment);
+            if (content.toLowerCase().includes(lowerQuery)) return true;
+        } catch {
+            // Unavailable attachments are still valid for @ocr without a text query.
+        }
+    }
+    return false;
+}
+
+/** Applies a special search using metadata available from Obsidian's public APIs. */
+export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearch): boolean {
+    const cache = app.metadataCache.getFileCache(file);
+    switch (search) {
+        case 'untagged':
+            return getFileTags(app, file).length === 0;
+        case 'docs':
+            return hasAttachmentType(app, file, DOCUMENT_EXTENSIONS);
+        case 'images':
+            return hasAttachmentType(app, file, IMAGE_EXTENSIONS);
+        case 'ocr':
+            // OCR searches are scoped to notes that reference at least one attachment.
+            return hasAnyAttachment(app, file);
+        case 'task':
+            return (cache?.listItems ?? []).some((item) => item.task !== undefined);
+        case 'todo':
+            return (cache?.listItems ?? []).some((item) => item.task === ' ');
+        case 'done': {
+            const tasks = (cache?.listItems ?? []).filter((item) => item.task !== undefined);
+            return tasks.length > 0 && tasks.every((item) => item.task !== ' ');
+        }
+        case 'code':
+            return (cache?.sections ?? []).some((section) => section.type === 'code');
+    }
+}
+
 /**
  * Extracts a short snippet of text surrounding a match in the content.
  * Returns the snippet text along with the match position within the snippet.
@@ -123,7 +219,8 @@ export function extractMatchSnippet(
 /**
  * Search service for the Universal Palette.
  * Uses MetadataCache for tag-based search and file listing for text search.
- * Supports prefix tag filtering, || OR operator, and in-note content search.
+ * Supports prefix tag filtering, || OR operator, quoted phrase search,
+ * special searches, and in-note content search.
  */
 export class SearchService {
     private searchVersion = 0;
@@ -181,7 +278,8 @@ export class SearchService {
         const files = this.app.vault.getMarkdownFiles();
         const lowerTags = selectedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
         const lowerExcludedTags = excludedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
-        const lowerText = textQuery.trim().toLowerCase();
+        const normalizedText = normalizeTextQuery(textQuery);
+        const lowerText = normalizedText.toLowerCase();
 
         const results: SearchResult[] = [];
 
@@ -233,7 +331,8 @@ export class SearchService {
         const files = this.app.vault.getMarkdownFiles();
         const lowerTags = selectedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
         const lowerExcludedTags = excludedTags.map((t) => t.toLowerCase().replace(/^#/, ''));
-        const lowerText = textQuery.trim().toLowerCase();
+        const normalizedText = normalizeTextQuery(textQuery);
+        const lowerText = normalizedText.toLowerCase();
 
         const results: SearchResult[] = [];
 
@@ -263,7 +362,7 @@ export class SearchService {
                         const content = await this.app.vault.cachedRead(file);
                         if (content) {
                             const body = this.stripFrontmatter(content);
-                            const snippet = extractMatchSnippet(body, textQuery);
+                            const snippet = extractMatchSnippet(body, normalizedText);
                             if (snippet) {
                                 matchSnippet = snippet;
                             } else {
@@ -312,9 +411,16 @@ export class SearchService {
 
         const files = this.app.vault.getMarkdownFiles();
 
+        const specialQuery = parseSpecialSearch(trimmed);
+
+        // If query contains a supported @ filter, apply it before text matching.
+        if (specialQuery.search) {
+            return this.specialSearch(specialQuery.search, specialQuery.textQuery, files);
+        }
+
         // If query contains no # characters, treat as text search
         if (!trimmed.includes('#')) {
-            return this.textSearch(trimmed, files);
+            return this.textSearch(specialQuery.textQuery, files);
         }
 
         // Otherwise, parse as tag query
@@ -322,7 +428,8 @@ export class SearchService {
     }
 
     private textSearch(query: string, files: TFile[]): SearchResult[] {
-        const lowerQuery = query.toLowerCase();
+        const normalizedQuery = normalizeTextQuery(query);
+        const lowerQuery = normalizedQuery.toLowerCase();
         const results: SearchResult[] = [];
 
         for (const file of files) {
@@ -338,7 +445,7 @@ export class SearchService {
             if (cachedContent) {
                 // Strip frontmatter before searching content
                 const bodyContent = this.stripFrontmatter(cachedContent);
-                const snippet = extractMatchSnippet(bodyContent, query);
+                const snippet = extractMatchSnippet(bodyContent, normalizedQuery);
                 if (snippet) {
                     matchSnippet = snippet;
                 }
@@ -397,9 +504,21 @@ export class SearchService {
 
         const files = this.app.vault.getMarkdownFiles();
 
+        const specialQuery = parseSpecialSearch(trimmed);
+
+        // If query contains a supported @ filter, apply it before text matching.
+        if (specialQuery.search) {
+            return this.specialSearchWithContent(
+                specialQuery.search,
+                specialQuery.textQuery,
+                files,
+                currentVersion,
+            );
+        }
+
         // If query contains no # characters, treat as text search with content
         if (!trimmed.includes('#')) {
-            return this.textSearchWithContent(trimmed, files, currentVersion);
+            return this.textSearchWithContent(specialQuery.textQuery, files, currentVersion);
         }
 
         // Otherwise, parse as tag query (synchronous, no content search needed)
@@ -411,7 +530,8 @@ export class SearchService {
         files: TFile[],
         searchVersion: number,
     ): Promise<SearchResult[]> {
-        const lowerQuery = query.toLowerCase();
+        const normalizedQuery = normalizeTextQuery(query);
+        const lowerQuery = normalizedQuery.toLowerCase();
         const results: SearchResult[] = [];
 
         for (const file of files) {
@@ -428,7 +548,7 @@ export class SearchService {
                 const content = await this.app.vault.cachedRead(file);
                 if (content) {
                     const bodyContent = this.stripFrontmatter(content);
-                    const snippet = extractMatchSnippet(bodyContent, query);
+                    const snippet = extractMatchSnippet(bodyContent, normalizedQuery);
                     if (snippet) {
                         matchSnippet = snippet;
                     }
@@ -516,6 +636,94 @@ export class SearchService {
         }
 
         results.sort((a, b) => a.title.localeCompare(b.title));
+        return results;
+    }
+
+    private specialSearch(search: SpecialSearch, textQuery: string, files: TFile[]): SearchResult[] {
+        const normalizedText = normalizeTextQuery(textQuery);
+        const lowerText = normalizedText.toLowerCase();
+        const results: SearchResult[] = [];
+
+        for (const file of files) {
+            if (!matchesSpecialSearch(this.app, file, search)) continue;
+
+            const titleMatch = !lowerText ||
+                file.basename.toLowerCase().includes(lowerText) ||
+                file.path.toLowerCase().includes(lowerText);
+            if (!titleMatch) continue;
+
+            results.push({
+                file,
+                title: file.basename,
+                path: file.path,
+                tags: getFileTags(this.app, file),
+            });
+        }
+
+        results.sort((a, b) => a.title.localeCompare(b.title));
+        return results;
+    }
+
+    private async specialSearchWithContent(
+        search: SpecialSearch,
+        textQuery: string,
+        files: TFile[],
+        searchVersion: number,
+    ): Promise<SearchResult[]> {
+        const normalizedText = normalizeTextQuery(textQuery);
+        const lowerText = normalizedText.toLowerCase();
+        const results: SearchResult[] = [];
+
+        for (const file of files) {
+            if (this.searchVersion !== searchVersion) return [];
+            if (!matchesSpecialSearch(this.app, file, search)) continue;
+
+            if (search === 'ocr' && lowerText) {
+                if (!(await attachmentContainsText(this.app, file, normalizedText))) continue;
+                results.push({
+                    file,
+                    title: file.basename,
+                    path: file.path,
+                    tags: getFileTags(this.app, file),
+                });
+                continue;
+            }
+
+            const titleMatch = !lowerText ||
+                file.basename.toLowerCase().includes(lowerText) ||
+                file.path.toLowerCase().includes(lowerText);
+            let matchSnippet: MatchSnippet | undefined;
+
+            if (!titleMatch && lowerText) {
+                try {
+                    const content = await this.app.vault.cachedRead(file);
+                    const body = this.stripFrontmatter(content);
+                    const snippet = extractMatchSnippet(body, normalizedText);
+                    if (snippet) matchSnippet = snippet;
+                } catch {
+                    // File may have been deleted or moved during search.
+                }
+                if (!matchSnippet) continue;
+            }
+
+            results.push({
+                file,
+                title: file.basename,
+                path: file.path,
+                tags: getFileTags(this.app, file),
+                matchSnippet,
+            });
+        }
+
+        if (this.searchVersion !== searchVersion) return [];
+        results.sort((a, b) => {
+            if (lowerText) {
+                const aTitle = a.title.toLowerCase().includes(lowerText) ? 0 : 1;
+                const bTitle = b.title.toLowerCase().includes(lowerText) ? 0 : 1;
+                if (aTitle !== bTitle) return aTitle - bTitle;
+            }
+            return a.title.localeCompare(b.title);
+        });
         return results;
     }
 
