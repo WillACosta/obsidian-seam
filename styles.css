@@ -243,7 +243,20 @@
     opacity: 0.6;
 }
 
+/* The Quick Add choices renderer is a full-width custom settings item. */
+.seam-quick-add-choices-setting {
+    display: block;
+}
+
+.seam-quick-add-choices-control {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+
 .seam-quick-add-panel {
+    width: 100%;
+    box-sizing: border-box;
     margin: 8px 0 16px;
     padding: 16px;
     border: 1px solid var(--background-modifier-border);
@@ -252,6 +265,7 @@
 
 .seam-quick-add-panel-header {
     margin-bottom: 12px;
+    text-align: left;
 }
 
 .seam-quick-add-panel-title {
@@ -276,6 +290,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-right: 2px;
+    text-align: left;
 }
 
 .seam-quick-add-choice {

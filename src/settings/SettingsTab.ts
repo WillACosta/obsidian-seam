@@ -1,4 +1,4 @@
-import { App, getIcon, PluginSettingTab, setIcon, Setting } from 'obsidian';
+import { App, getIcon, PluginSettingTab, setIcon, Setting, SettingDefinitionItem } from 'obsidian';
 import type SeamPlugin from '../main';
 import { AutomationDelayMode, QuickAddChoice, UpdateAnnouncementMode } from '../types';
 import { t } from '../i18n';
@@ -11,256 +11,221 @@ import {
 
 export class SeamSettingsTab extends PluginSettingTab {
     plugin: SeamPlugin;
+    private moveCleanupTagsSetting: Setting | null = null;
+    private moveCleanupPropertiesSetting: Setting | null = null;
+    private latestNotesSetting: Setting | null = null;
 
     constructor(app: App, plugin: SeamPlugin) {
         super(app, plugin);
         this.plugin = plugin;
+        this.icon = 'feather';
     }
 
-    /** Imperative settings rendering keeps Seam compatible with its declared minimum version. */
-    display(): void {
-        const { containerEl } = this;
-        containerEl.empty();
-
+    /**
+     * Uses Obsidian's declarative settings entry point so the tab participates in
+     * settings search while retaining Seam's custom Quick Add editor.
+     */
+    getSettingDefinitions(): SettingDefinitionItem[] {
         const strings = t();
+        return [{
+            type: 'group',
+            heading: strings.settingsFolderHeading,
+            items: [
+                this.folderDefinition(strings.settingsPermanentFolder, strings.settingsPermanentFolderDesc, 'Permanent', 'permanentFolder', 'folder'),
+                this.folderDefinition(strings.settingsArchiveFolder, strings.settingsArchiveFolderDesc, 'Archive', 'archiveFolder', 'folder'),
+                this.folderDefinition(strings.settingsFleetingFolder, strings.settingsFleetingFolderDesc, 'Fleeting', 'fleetingFolder', 'folder'),
+                this.folderDefinition(strings.settingsFleetingTemplate, strings.settingsFleetingTemplateDesc, 'Templates/Fleeting', 'fleetingNoteTemplate', 'file'),
+            ],
+        }, {
+            type: 'group',
+            heading: strings.settingsQuickAddHeading,
+            items: [
+                { name: strings.settingsQuickAddChoices, desc: strings.settingsQuickAddChoicesDesc, render: (setting) => this.renderQuickAddSetting(setting) },
+            ],
+        }, {
+            type: 'group',
+            items: [{ name: strings.settingsQuickAddPersistDrafts, desc: strings.settingsQuickAddPersistDraftsDesc, render: (setting) => this.renderPersistDraftsSetting(setting) }],
+        }, {
+            type: 'group',
+            heading: strings.settingsAutomationHeading,
+            items: [
+                { name: strings.settingsAutoProcessing, desc: strings.settingsAutoProcessingDesc, render: (setting) => this.renderAutomationSetting(setting) },
+                { name: strings.settingsAutomationDelay, desc: strings.settingsAutomationDelayDesc, render: (setting) => this.renderAutomationDelaySetting(setting) },
+            ],
+        }, {
+            type: 'group',
+            heading: strings.settingsArchiveBehaviorHeading,
+            items: [{ name: strings.settingsAddArchivedState, desc: strings.settingsAddArchivedStateDesc, render: (setting) => this.renderArchivedStateSetting(setting) }],
+        }, {
+            type: 'group',
+            heading: strings.settingsMovingHeading,
+            items: [
+                { name: strings.settingsEnableMoveCleanup, desc: strings.settingsEnableMoveCleanupDesc, render: (setting) => this.renderMoveCleanupToggle(setting) },
+                { name: strings.settingsMoveCleanupTags, desc: strings.settingsMoveCleanupTagsDesc, render: (setting) => this.renderMoveCleanupText(setting, 'tags') },
+                { name: strings.settingsMoveCleanupProps, desc: strings.settingsMoveCleanupPropsDesc, render: (setting) => this.renderMoveCleanupText(setting, 'properties') },
+            ],
+        }, {
+            type: 'group',
+            heading: strings.settingsInterfaceHeading,
+            items: [
+                { name: strings.settingsShowIcons, desc: strings.settingsShowIconsDesc, render: (setting) => this.renderShowIconsSetting(setting) },
+                { name: strings.settingsPaletteHotkey, desc: strings.settingsPaletteHotkeyDesc, render: (setting) => this.renderHotkeySetting(setting, `${this.plugin.manifest.id}:open-palette`) },
+            ],
+        }, {
+            type: 'group',
+            heading: strings.settingsAdvancedHeading,
+            items: [{ name: strings.settingsReconInterval, desc: strings.settingsReconIntervalDesc, render: (setting) => this.renderReconciliationSetting(setting) }],
+        }, {
+            type: 'group',
+            heading: strings.settingsUpdatesHeading,
+            items: [
+                { name: strings.settingsAnnounceUpdates, desc: strings.settingsAnnounceUpdatesDesc, render: (setting) => this.renderAnnounceUpdatesSetting(setting) },
+                { name: strings.settingsCurrentReleaseNotes, desc: strings.settingsCurrentReleaseNotesDesc, render: (setting) => this.renderCurrentReleaseNotesSetting(setting) },
+            ],
+        }];
+    }
 
-        new Setting(containerEl).setName(strings.settingsTitle).setHeading();
+    private folderDefinition(
+        name: string,
+        desc: string,
+        placeholder: string,
+        key: 'permanentFolder' | 'archiveFolder' | 'fleetingFolder' | 'fleetingNoteTemplate',
+        pathType: 'folder' | 'file',
+    ) {
+        return {
+            name,
+            desc,
+            render: (setting: Setting): void => {
+                setting.addText((text) =>
+                    text
+                        .setPlaceholder(placeholder)
+                        .then((component) => new VaultPathSuggest(this.app, component.inputEl, pathType, (path) => {
+                            this.plugin.settings[key] = path;
+                            void this.plugin.saveSettings();
+                        }))
+                        .setValue(this.plugin.settings[key])
+                        .onChange(async (value) => {
+                            this.plugin.settings[key] = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+            },
+        };
+    }
 
-        // --- Folders ---
-        new Setting(containerEl).setName(strings.settingsFolderHeading).setHeading();
+    private renderQuickAddSetting(setting: Setting): void {
+        setting.infoEl.remove();
+        setting.settingEl.addClass('seam-quick-add-choices-setting');
+        setting.controlEl.addClass('seam-quick-add-choices-control');
+        const panel = setting.controlEl.createDiv({ cls: 'seam-quick-add-panel' });
+        this.renderQuickAddChoices(panel);
+    }
 
-        new Setting(containerEl)
-            .setName(strings.settingsPermanentFolder)
-            .setDesc(strings.settingsPermanentFolderDesc)
-            .addText((text) =>
-                text
-                    .setPlaceholder('Permanent').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'folder', (path) => {
-                        this.plugin.settings.permanentFolder = path;
-                        void this.plugin.saveSettings();
-                    }))
-                    .setValue(this.plugin.settings.permanentFolder)
-                    .onChange(async (value) => {
-                        this.plugin.settings.permanentFolder = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        new Setting(containerEl)
-            .setName(strings.settingsArchiveFolder)
-            .setDesc(strings.settingsArchiveFolderDesc)
-            .addText((text) =>
-                text
-                    .setPlaceholder('Archive').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'folder', (path) => {
-                        this.plugin.settings.archiveFolder = path;
-                        void this.plugin.saveSettings();
-                    }))
-                    .setValue(this.plugin.settings.archiveFolder)
-                    .onChange(async (value) => {
-                        this.plugin.settings.archiveFolder = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        new Setting(containerEl)
-            .setName(strings.settingsFleetingFolder)
-            .setDesc(strings.settingsFleetingFolderDesc)
-            .addText((text) =>
-                text
-                    .setPlaceholder('Fleeting').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'folder', (path) => {
-                        this.plugin.settings.fleetingFolder = path;
-                        void this.plugin.saveSettings();
-                    }))
-                    .setValue(this.plugin.settings.fleetingFolder)
-                    .onChange(async (value) => {
-                        this.plugin.settings.fleetingFolder = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        new Setting(containerEl)
-            .setName(strings.settingsFleetingTemplate)
-            .setDesc(strings.settingsFleetingTemplateDesc)
-            .addText((text) =>
-                text
-                    .setPlaceholder('Templates/Fleeting').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'file', (path) => {
-                        this.plugin.settings.fleetingNoteTemplate = path;
-                        void this.plugin.saveSettings();
-                    }))
-                    .setValue(this.plugin.settings.fleetingNoteTemplate)
-                    .onChange(async (value) => {
-                        this.plugin.settings.fleetingNoteTemplate = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        // --- Quick Add ---
-        new Setting(containerEl).setName(strings.settingsQuickAddHeading).setHeading();
-        const quickAddPanel = containerEl.createDiv({ cls: 'seam-quick-add-panel' });
-        this.renderQuickAddChoices(quickAddPanel);
-        new Setting(containerEl)
-            .setName(strings.settingsQuickAddPersistDrafts)
-            .setDesc(strings.settingsQuickAddPersistDraftsDesc)
-            .addToggle((toggle) => toggle.setValue(this.plugin.settings.persistQuickAddDrafts).onChange(async (value) => {
+    private renderPersistDraftsSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.persistQuickAddDrafts)
+            .onChange(async (value) => {
                 this.plugin.settings.persistQuickAddDrafts = value;
                 await this.plugin.saveSettings();
             }));
+    }
 
-        // --- Automation ---
-        new Setting(containerEl).setName(strings.settingsAutomationHeading).setHeading();
+    private renderAutomationSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.automaticProcessing)
+            .onChange(async (value) => {
+                this.plugin.settings.automaticProcessing = value;
+                await this.plugin.saveSettings();
+            }));
+    }
 
-        new Setting(containerEl)
-            .setName(strings.settingsAutoProcessing)
-            .setDesc(strings.settingsAutoProcessingDesc)
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.automaticProcessing)
-                    .onChange(async (value) => {
-                        this.plugin.settings.automaticProcessing = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+    private renderAutomationDelaySetting(setting: Setting): void {
+        const strings = t();
+        setting.addDropdown((dropdown) => dropdown
+            .addOption('on-switch', strings.settingsAutomationDelayOnSwitch)
+            .addOption('2000', strings.settingsAutomationDelay2s)
+            .addOption('5000', strings.settingsAutomationDelay5s)
+            .addOption('1000', strings.settingsAutomationDelay1s)
+            .setValue(this.plugin.settings.automationDelay)
+            .onChange(async (value) => {
+                this.plugin.settings.automationDelay = value as AutomationDelayMode;
+                await this.plugin.saveSettings();
+            }));
+    }
 
-        new Setting(containerEl)
-            .setName(strings.settingsAutomationDelay)
-            .setDesc(strings.settingsAutomationDelayDesc)
-            .addDropdown((dropdown) =>
-                dropdown
-                    .addOption('on-switch', strings.settingsAutomationDelayOnSwitch)
-                    .addOption('2000', strings.settingsAutomationDelay2s)
-                    .addOption('5000', strings.settingsAutomationDelay5s)
-                    .addOption('1000', strings.settingsAutomationDelay1s)
-                    .setValue(this.plugin.settings.automationDelay)
-                    .onChange(async (value) => {
-                        this.plugin.settings.automationDelay = value as AutomationDelayMode;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+    private renderArchivedStateSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.addArchivedState)
+            .onChange(async (value) => {
+                this.plugin.settings.addArchivedState = value;
+                await this.plugin.saveSettings();
+            }));
+    }
 
-        // --- Archive behavior ---
-        new Setting(containerEl).setName(strings.settingsArchiveBehaviorHeading).setHeading();
+    private renderMoveCleanupToggle(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.enableMoveCleanup)
+            .onChange(async (value) => {
+                this.plugin.settings.enableMoveCleanup = value;
+                await this.plugin.saveSettings();
+                this.moveCleanupTagsSetting?.settingEl.toggle(value);
+                this.moveCleanupPropertiesSetting?.settingEl.toggle(value);
+            }));
+    }
 
-        new Setting(containerEl)
-            .setName(strings.settingsAddArchivedState)
-            .setDesc(strings.settingsAddArchivedStateDesc)
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.addArchivedState)
-                    .onChange(async (value) => {
-                        this.plugin.settings.addArchivedState = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+    private renderMoveCleanupText(setting: Setting, kind: 'tags' | 'properties'): void {
+        if (kind === 'tags') this.moveCleanupTagsSetting = setting;
+        else this.moveCleanupPropertiesSetting = setting;
+        const key = kind === 'tags' ? 'moveCleanupTags' : 'moveCleanupProperties';
+        setting.addText((text) => text
+            .setPlaceholder(kind === 'tags' ? '#permanent, #todo' : 'status')
+            .setValue(this.plugin.settings[key])
+            .onChange(async (value) => {
+                this.plugin.settings[key] = value;
+                await this.plugin.saveSettings();
+            }));
+        setting.settingEl.toggle(this.plugin.settings.enableMoveCleanup);
+    }
 
-        // --- Moving Notes Behavior ---
-        new Setting(containerEl).setName(strings.settingsMovingHeading).setHeading();
+    private renderShowIconsSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.showIcons)
+            .onChange(async (value) => {
+                this.plugin.settings.showIcons = value;
+                await this.plugin.saveSettings();
+            }));
+    }
 
-        let tagsSetting: Setting | null = null;
-        let propsSetting: Setting | null = null;
+    private renderReconciliationSetting(setting: Setting): void {
+        setting.addSlider((slider) => slider
+            .setLimits(5, 60, 5)
+            .setValue(this.plugin.settings.reconciliationIntervalMinutes)
+            .onChange(async (value) => {
+                this.plugin.settings.reconciliationIntervalMinutes = value;
+                await this.plugin.saveSettings();
+            }));
+    }
 
-        new Setting(containerEl)
-            .setName(strings.settingsEnableMoveCleanup)
-            .setDesc(strings.settingsEnableMoveCleanupDesc)
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.enableMoveCleanup)
-                    .onChange(async (value) => {
-                        this.plugin.settings.enableMoveCleanup = value;
-                        await this.plugin.saveSettings();
-                        if (tagsSetting) tagsSetting.settingEl.toggle(value);
-                        if (propsSetting) propsSetting.settingEl.toggle(value);
-                    }),
-            );
+    private renderAnnounceUpdatesSetting(setting: Setting): void {
+        const strings = t();
+        setting.addDropdown((dropdown) => dropdown
+            .addOption('major', strings.settingsAnnounceUpdatesMajor)
+            .addOption('all', strings.settingsAnnounceUpdatesAll)
+            .addOption('never', strings.settingsAnnounceUpdatesNever)
+            .setValue(this.plugin.settings.updateAnnouncementMode)
+            .onChange(async (value) => {
+                this.plugin.settings.updateAnnouncementMode = value as UpdateAnnouncementMode;
+                await this.plugin.saveSettings();
+                this.latestNotesSetting?.settingEl.toggle(value !== 'never');
+            }));
+    }
 
-        tagsSetting = new Setting(containerEl)
-            .setName(strings.settingsMoveCleanupTags)
-            .setDesc(strings.settingsMoveCleanupTagsDesc)
-            .addText((text) =>
-                text
-                    .setPlaceholder('#permanent, #todo')
-                    .setValue(this.plugin.settings.moveCleanupTags)
-                    .onChange(async (value) => {
-                        this.plugin.settings.moveCleanupTags = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        tagsSetting.settingEl.toggle(this.plugin.settings.enableMoveCleanup);
-
-        propsSetting = new Setting(containerEl)
-            .setName(strings.settingsMoveCleanupProps)
-            .setDesc(strings.settingsMoveCleanupPropsDesc)
-            .addText((text) =>
-                text
-                    .setPlaceholder('status')
-                    .setValue(this.plugin.settings.moveCleanupProperties)
-                    .onChange(async (value) => {
-                        this.plugin.settings.moveCleanupProperties = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        propsSetting.settingEl.toggle(this.plugin.settings.enableMoveCleanup);
-
-        // --- Interface ---
-        new Setting(containerEl).setName(strings.settingsInterfaceHeading).setHeading();
-
-        new Setting(containerEl)
-            .setName(strings.settingsShowIcons)
-            .setDesc(strings.settingsShowIconsDesc)
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.showIcons)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showIcons = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        const paletteCommandId = `${this.plugin.manifest.id}:open-palette`;
-        const hotkeySetting = new Setting(containerEl);
-        this.renderHotkeySetting(hotkeySetting, paletteCommandId);
-
-        // --- Advanced ---
-        new Setting(containerEl).setName(strings.settingsAdvancedHeading).setHeading();
-
-        new Setting(containerEl)
-            .setName(strings.settingsReconInterval)
-            .setDesc(strings.settingsReconIntervalDesc)
-            .addSlider((slider) =>
-                slider
-                    .setLimits(5, 60, 5)
-                    .setValue(this.plugin.settings.reconciliationIntervalMinutes)
-                    .onChange(async (value) => {
-                        this.plugin.settings.reconciliationIntervalMinutes = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        // --- Updates ---
-        new Setting(containerEl).setName(strings.settingsUpdatesHeading).setHeading();
-
-        new Setting(containerEl)
-            .setName(strings.settingsAnnounceUpdates)
-            .setDesc(strings.settingsAnnounceUpdatesDesc)
-            .addDropdown((dropdown) => dropdown
-                .addOption('major', strings.settingsAnnounceUpdatesMajor)
-                .addOption('all', strings.settingsAnnounceUpdatesAll)
-                .addOption('never', strings.settingsAnnounceUpdatesNever)
-                .setValue(this.plugin.settings.updateAnnouncementMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.updateAnnouncementMode = value as UpdateAnnouncementMode;
-                    await this.plugin.saveSettings();
-                    latestNotesSetting?.settingEl.toggle(value !== 'never');
-                }),
-            );
-
-        let latestNotesSetting: Setting;
-        latestNotesSetting = new Setting(containerEl)
-            .setName(strings.settingsCurrentReleaseNotes)
-            .setDesc(strings.settingsCurrentReleaseNotesDesc)
-            .addButton((button) => button
-                .setButtonText(strings.settingsCurrentReleaseNotesButton)
-                .onClick(() => { void this.plugin.openCurrentReleaseNotes(); }),
-            );
-        latestNotesSetting.settingEl.toggle(this.plugin.settings.updateAnnouncementMode !== 'never');
+    private renderCurrentReleaseNotesSetting(setting: Setting): void {
+        this.latestNotesSetting = setting;
+        setting.addButton((button) => button
+            .setButtonText(t().settingsCurrentReleaseNotesButton)
+            .onClick(() => { void this.plugin.openCurrentReleaseNotes(); }));
+        setting.settingEl.toggle(this.plugin.settings.updateAnnouncementMode !== 'never');
     }
 
     private renderQuickAddChoices(parent: HTMLElement): void {
@@ -309,11 +274,11 @@ export class SeamSettingsTab extends PluginSettingTab {
             this.addChoiceButton(buttons, 'copy', `${strings.settingsQuickAddDuplicate} ${choice.name}`, () => {
                 const duplicate: QuickAddChoice = { ...choice, id: crypto.randomUUID(), name: `${choice.name} copy` };
                 this.plugin.settings.quickAddChoices.push(duplicate);
-                void this.plugin.saveSettings().then(() => this.display());
+                void this.plugin.saveSettings().then(() => this.update());
             });
             this.addChoiceButton(buttons, 'trash-2', `${strings.settingsQuickAddDelete} ${choice.name}`, () => {
                 this.plugin.settings.quickAddChoices = this.plugin.settings.quickAddChoices.filter((item) => item.id !== choice.id);
-                void this.plugin.saveSettings().then(() => this.display());
+                void this.plugin.saveSettings().then(() => this.update());
             });
             const handle = this.addChoiceButton(
                 buttons,
@@ -392,7 +357,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             choices.splice(originalIndex < 0 ? choices.length : Math.min(originalIndex, choices.length), 0, saved);
             this.plugin.settings.quickAddChoices = choices;
             await this.plugin.saveSettings();
-            this.display();
+            this.update();
         }).open();
     }
 
@@ -410,7 +375,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         const nextIndex = index + offset;
         if (index < 0 || nextIndex < 0 || nextIndex >= choices.length) return;
         [choices[index], choices[nextIndex]] = [choices[nextIndex], choices[index]];
-        void this.plugin.saveSettings().then(() => this.display());
+        void this.plugin.saveSettings().then(() => this.update());
     }
 
     private reorderChoice(sourceId: string, targetId: string, placeAfter: boolean): void {
@@ -421,7 +386,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         const [source] = choices.splice(sourceIndex, 1);
         if (sourceIndex < targetIndex) targetIndex--;
         choices.splice(targetIndex + (placeAfter ? 1 : 0), 0, source);
-        void this.plugin.saveSettings().then(() => this.display());
+        void this.plugin.saveSettings().then(() => this.update());
     }
 
     /**

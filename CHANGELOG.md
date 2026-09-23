@@ -5,6 +5,19 @@ All notable changes to Seam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-09-23
+
+### Changed
+
+- **Obsidian compatibility**: Requires Obsidian 1.13.0 or newer.
+- **Settings search**: Migrated Seam's settings to Obsidian's declarative settings API so users can find them through Settings search.
+- **Locale detection**: Uses Obsidian's runtime locale APIs without browser storage access.
+
+### Fixed
+
+- **Settings layout**: Restored native section grouping and spacing across Seam's settings, including the Quick Add choices and Updates sections.
+- **Quick Add choices alignment**: Aligned choice names and controls to the left within the settings panel.
+
 ## [2.0.1] - 2026-09-23
 
 ### Fixed
