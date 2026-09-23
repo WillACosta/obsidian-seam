@@ -1,6 +1,6 @@
 {
   "name": "obsidian-seam",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Tag-driven note organization with automatic archiving and a Universal Palette.",
   "license": "GPL-3.0-or-later",
   "packageManager": "pnpm@11.24.0",

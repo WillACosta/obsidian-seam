@@ -5,6 +5,12 @@ All notable changes to Seam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-09-23
+
+### Fixed
+
+- **Release note images**: Resolve repository-relative images from GitHub so screenshots display correctly inside Seam's update modal.
+
 ## [2.0.0] - 2026-09-23
 <!-- iterations: iteration_06..iteration_07 -->
 

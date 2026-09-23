@@ -1,5 +1,6 @@
 import { App, ButtonComponent, Component, MarkdownRenderer, Modal, requestUrl } from 'obsidian';
 import { t } from '../i18n';
+import { resolveReleaseAssetUrls } from '../utils/releaseNotes';
 
 interface GitHubRelease {
     tag_name: string;
@@ -81,7 +82,10 @@ export class UpdateModal extends Modal {
         supportButton.buttonEl.prepend(logo);
 
         const releaseMarkdown = this.releases
-            .map((release) => release.body?.trim() || `## Seam ${release.tag_name}\n\n${t().updateModalNoDetails}`)
+            .map((release) => resolveReleaseAssetUrls(
+                release.body?.trim() || `## Seam ${release.tag_name}\n\n${t().updateModalNoDetails}`,
+                release.tag_name,
+            ))
             .join('\n\n---\n\n');
         const markdown = [
             `## ${t().updateModalHeading(newestVersion)}`,
