@@ -8,6 +8,7 @@ import { SearchService } from './search/SearchService';
 import { UniversalPalette } from './ui/UniversalPalette';
 import { SeamSettingsTab } from './settings/SettingsTab';
 import { t } from './i18n';
+import { getSeamReleaseNotesAfter, getSeamReleaseNotesForVersion, UpdateModal } from './ui/UpdateModal';
 
 /**
  * Tags and properties that Seam uses as action triggers.
@@ -75,6 +76,12 @@ export default class SeamPlugin extends Plugin {
             id: 'show-status',
             name: t().cmdShowStatus,
             callback: () => this.showStatus(),
+        });
+
+        this.addCommand({
+            id: 'show-recent-files',
+            name: t().cmdShowRecentFiles,
+            callback: () => this.openRecentFiles(),
         });
 
         // Commands that operate on the current open note
@@ -164,6 +171,9 @@ export default class SeamPlugin extends Plugin {
 
         // Seed tag/property suggestions so Obsidian autocompletes them
         void this.seedTagSuggestions();
+
+        // Announce plugin updates after Obsidian's layout is ready.
+        void this.announceUpdateIfNeeded();
     }
 
     /**
@@ -261,6 +271,12 @@ export default class SeamPlugin extends Plugin {
         palette.open();
     }
 
+    private openRecentFiles(): void {
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, this.getPaletteCommands());
+        palette.open();
+        window.setTimeout(() => palette.showRecentFiles(), 0);
+    }
+
     private async archiveAll(): Promise<void> {
         const files = this.app.vault.getMarkdownFiles();
         let archivedCount = 0;
@@ -336,6 +352,20 @@ export default class SeamPlugin extends Plugin {
     private getPaletteCommands(): PaletteItem[] {
         const commands: PaletteItem[] = [
             {
+                id: 'cmd-quick-add',
+                title: t().paletteQuickAddTitle,
+                description: t().paletteQuickAddDesc,
+                type: 'command',
+                icon: 'file-plus',
+            },
+            {
+                id: 'cmd-recent-files',
+                title: t().paletteRecentFilesTitle,
+                description: t().paletteRecentFilesDesc,
+                type: 'command',
+                icon: 'clock-3',
+            },
+            {
                 id: 'cmd-archive-all',
                 title: t().paletteArchiveAllTitle,
                 description: t().paletteArchiveAllDesc,
@@ -396,6 +426,16 @@ export default class SeamPlugin extends Plugin {
             const data = raw as Record<string, unknown>;
             this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
+            // Migration: the public Workspace API cannot place a split explicitly on the left.
+            this.settings.quickAddChoices = Array.isArray(this.settings.quickAddChoices) ? this.settings.quickAddChoices.map((choice) => {
+                const storedBehavior = (choice as { openBehavior: string }).openBehavior;
+                return {
+                    ...choice,
+                    openBehavior: storedBehavior === 'split-left' ? 'split' : (choice.openBehavior || 'tab'),
+                    conflictBehavior: choice.conflictBehavior || 'ask',
+                };
+            }) : [];
+
             // Migration: rename old archive cleanup settings to move cleanup
             if ('enableArchiveCleanup' in data && !('enableMoveCleanup' in data)) {
                 this.settings.enableMoveCleanup = Boolean(data.enableArchiveCleanup);
@@ -414,6 +454,64 @@ export default class SeamPlugin extends Plugin {
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
         this.onSettingsChange();
+    }
+
+    private async announceUpdateIfNeeded(): Promise<void> {
+        const currentVersion = this.manifest.version;
+        const previousVersion = this.settings.lastAnnouncedVersion;
+
+        if (!previousVersion) {
+            this.settings.lastAnnouncedVersion = currentVersion;
+            await this.saveSettings();
+            return;
+        }
+
+        const versionChanged = previousVersion !== currentVersion;
+        const shouldAnnounce = this.settings.updateAnnouncementMode === 'all'
+            ? versionChanged
+            : this.settings.updateAnnouncementMode === 'major'
+                ? this.isMajorReleaseChange(previousVersion, currentVersion)
+                : false;
+
+        this.settings.lastAnnouncedVersion = currentVersion;
+        if (shouldAnnounce) {
+            try {
+                const releases = await getSeamReleaseNotesAfter(previousVersion);
+                if (releases.length > 0) {
+                    new UpdateModal(this.app, previousVersion, releases).open();
+                } else {
+                    new Notice(t().noticeUpdateAvailable(currentVersion));
+                }
+            } catch {
+                // Update notices must never interfere with normal plugin startup.
+                new Notice(t().noticeUpdateAvailable(currentVersion));
+            }
+        }
+        if (versionChanged) await this.saveSettings();
+    }
+
+    /** Opens the release notes for the currently installed Seam version. */
+    async openCurrentReleaseNotes(): Promise<void> {
+        try {
+            const currentRelease = await getSeamReleaseNotesForVersion(this.manifest.version);
+            if (!currentRelease) {
+                new Notice(t().noticeNoReleaseNotesAvailable);
+                return;
+            }
+            new UpdateModal(this.app, null, [currentRelease]).open();
+        } catch {
+            new Notice(t().noticeReleaseNotesFailed);
+        }
+    }
+
+    private isMajorReleaseChange(previousVersion: string, currentVersion: string): boolean {
+        const previousParts = previousVersion.split('.').map(Number);
+        const currentParts = currentVersion.split('.').map(Number);
+        if (previousParts.some((part) => !Number.isFinite(part)) || currentParts.some((part) => !Number.isFinite(part))) return false;
+
+        const [previousMajor, previousMinor] = previousParts;
+        const [currentMajor, currentMinor] = currentParts;
+        return currentMajor > previousMajor || (currentMajor === previousMajor && currentMinor > previousMinor);
     }
 
     /**

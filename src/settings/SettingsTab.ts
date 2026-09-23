@@ -1,7 +1,9 @@
-import { App, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
+import { App, getIcon, PluginSettingTab, setIcon, Setting } from 'obsidian';
 import type SeamPlugin from '../main';
-import { AutomationDelayMode, DEFAULT_SETTINGS } from '../types';
+import { AutomationDelayMode, QuickAddChoice, UpdateAnnouncementMode } from '../types';
 import { t } from '../i18n';
+import { QuickAddChoiceModal } from './QuickAddChoiceModal';
+import { VaultPathSuggest } from '../ui/VaultPathSuggest';
 import {
     getCommandHotkeyDisplay,
     openHotkeyAssignment,
@@ -15,197 +17,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    /**
-     * Declarative settings definitions for Obsidian 1.13.0+ and settings search indexing.
-     */
-    override getSettingDefinitions(): SettingDefinitionItem[] {
-        const strings = t();
-        const paletteCommandId = `${this.plugin.manifest.id}:open-palette`;
-
-        return [
-            {
-                type: 'group',
-                heading: strings.settingsFolderHeading,
-                items: [
-                    {
-                        name: strings.settingsPermanentFolder,
-                        desc: strings.settingsPermanentFolderDesc,
-                        control: {
-                            type: 'text',
-                            key: 'permanentFolder',
-                            placeholder: 'Permanent',
-                            defaultValue: DEFAULT_SETTINGS.permanentFolder,
-                        },
-                    },
-                    {
-                        name: strings.settingsArchiveFolder,
-                        desc: strings.settingsArchiveFolderDesc,
-                        control: {
-                            type: 'text',
-                            key: 'archiveFolder',
-                            placeholder: 'Archive',
-                            defaultValue: DEFAULT_SETTINGS.archiveFolder,
-                        },
-                    },
-                    {
-                        name: strings.settingsFleetingFolder,
-                        desc: strings.settingsFleetingFolderDesc,
-                        control: {
-                            type: 'text',
-                            key: 'fleetingFolder',
-                            placeholder: 'Fleeting',
-                            defaultValue: DEFAULT_SETTINGS.fleetingFolder,
-                        },
-                    },
-                    {
-                        name: strings.settingsFleetingTemplate,
-                        desc: strings.settingsFleetingTemplateDesc,
-                        control: {
-                            type: 'text',
-                            key: 'fleetingNoteTemplate',
-                            placeholder: 'Templates/Fleeting',
-                            defaultValue: DEFAULT_SETTINGS.fleetingNoteTemplate,
-                        },
-                    },
-                ],
-            },
-            {
-                type: 'group',
-                heading: strings.settingsAutomationHeading,
-                items: [
-                    {
-                        name: strings.settingsAutoProcessing,
-                        desc: strings.settingsAutoProcessingDesc,
-                        control: {
-                            type: 'toggle',
-                            key: 'automaticProcessing',
-                            defaultValue: DEFAULT_SETTINGS.automaticProcessing,
-                        },
-                    },
-                    {
-                        name: strings.settingsAutomationDelay,
-                        desc: strings.settingsAutomationDelayDesc,
-                        control: {
-                            type: 'dropdown',
-                            key: 'automationDelay',
-                            options: {
-                                'on-switch': strings.settingsAutomationDelayOnSwitch,
-                                '2000': strings.settingsAutomationDelay2s,
-                                '5000': strings.settingsAutomationDelay5s,
-                                '1000': strings.settingsAutomationDelay1s,
-                            },
-                            defaultValue: DEFAULT_SETTINGS.automationDelay,
-                        },
-                    },
-                ],
-            },
-            {
-                type: 'group',
-                heading: strings.settingsArchiveBehaviorHeading,
-                items: [
-                    {
-                        name: strings.settingsAddArchivedState,
-                        desc: strings.settingsAddArchivedStateDesc,
-                        control: {
-                            type: 'toggle',
-                            key: 'addArchivedState',
-                            defaultValue: DEFAULT_SETTINGS.addArchivedState,
-                        },
-                    },
-                ],
-            },
-            {
-                type: 'group',
-                heading: strings.settingsMovingHeading,
-                items: [
-                    {
-                        name: strings.settingsEnableMoveCleanup,
-                        desc: strings.settingsEnableMoveCleanupDesc,
-                        control: {
-                            type: 'toggle',
-                            key: 'enableMoveCleanup',
-                            defaultValue: DEFAULT_SETTINGS.enableMoveCleanup,
-                        },
-                    },
-                    {
-                        name: strings.settingsMoveCleanupTags,
-                        desc: strings.settingsMoveCleanupTagsDesc,
-                        visible: () => this.plugin.settings.enableMoveCleanup,
-                        control: {
-                            type: 'text',
-                            key: 'moveCleanupTags',
-                            placeholder: '#permanent, #todo',
-                            defaultValue: DEFAULT_SETTINGS.moveCleanupTags,
-                        },
-                    },
-                    {
-                        name: strings.settingsMoveCleanupProps,
-                        desc: strings.settingsMoveCleanupPropsDesc,
-                        visible: () => this.plugin.settings.enableMoveCleanup,
-                        control: {
-                            type: 'text',
-                            key: 'moveCleanupProperties',
-                            placeholder: 'status',
-                            defaultValue: DEFAULT_SETTINGS.moveCleanupProperties,
-                        },
-                    },
-                ],
-            },
-            {
-                type: 'group',
-                heading: strings.settingsInterfaceHeading,
-                items: [
-                    {
-                        name: strings.settingsShowIcons,
-                        desc: strings.settingsShowIconsDesc,
-                        control: {
-                            type: 'toggle',
-                            key: 'showIcons',
-                            defaultValue: DEFAULT_SETTINGS.showIcons,
-                        },
-                    },
-                    {
-                        name: strings.settingsPaletteHotkey,
-                        desc: strings.settingsPaletteHotkeyDesc,
-                        render: (setting: Setting) => {
-                            this.renderHotkeySetting(setting, paletteCommandId);
-                        },
-                    },
-                ],
-            },
-            {
-                type: 'group',
-                heading: strings.settingsAdvancedHeading,
-                items: [
-                    {
-                        name: strings.settingsReconInterval,
-                        desc: strings.settingsReconIntervalDesc,
-                        control: {
-                            type: 'slider',
-                            key: 'reconciliationIntervalMinutes',
-                            min: 5,
-                            max: 60,
-                            step: 5,
-                            defaultValue: DEFAULT_SETTINGS.reconciliationIntervalMinutes,
-                        },
-                    },
-                ],
-            },
-        ];
-    }
-
-    override getControlValue(key: string): unknown {
-        return (this.plugin.settings as unknown as Record<string, unknown>)[key];
-    }
-
-    override async setControlValue(key: string, value: unknown): Promise<void> {
-        (this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
-        await this.plugin.saveSettings();
-    }
-
-    /**
-     * Fallback imperative rendering for Obsidian versions older than 1.13.0.
-     */
+    /** Imperative settings rendering keeps Seam compatible with its declared minimum version. */
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
@@ -222,7 +34,10 @@ export class SeamSettingsTab extends PluginSettingTab {
             .setDesc(strings.settingsPermanentFolderDesc)
             .addText((text) =>
                 text
-                    .setPlaceholder('Permanent')
+                    .setPlaceholder('Permanent').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'folder', (path) => {
+                        this.plugin.settings.permanentFolder = path;
+                        void this.plugin.saveSettings();
+                    }))
                     .setValue(this.plugin.settings.permanentFolder)
                     .onChange(async (value) => {
                         this.plugin.settings.permanentFolder = value;
@@ -235,7 +50,10 @@ export class SeamSettingsTab extends PluginSettingTab {
             .setDesc(strings.settingsArchiveFolderDesc)
             .addText((text) =>
                 text
-                    .setPlaceholder('Archive')
+                    .setPlaceholder('Archive').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'folder', (path) => {
+                        this.plugin.settings.archiveFolder = path;
+                        void this.plugin.saveSettings();
+                    }))
                     .setValue(this.plugin.settings.archiveFolder)
                     .onChange(async (value) => {
                         this.plugin.settings.archiveFolder = value;
@@ -248,7 +66,10 @@ export class SeamSettingsTab extends PluginSettingTab {
             .setDesc(strings.settingsFleetingFolderDesc)
             .addText((text) =>
                 text
-                    .setPlaceholder('Fleeting')
+                    .setPlaceholder('Fleeting').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'folder', (path) => {
+                        this.plugin.settings.fleetingFolder = path;
+                        void this.plugin.saveSettings();
+                    }))
                     .setValue(this.plugin.settings.fleetingFolder)
                     .onChange(async (value) => {
                         this.plugin.settings.fleetingFolder = value;
@@ -261,13 +82,28 @@ export class SeamSettingsTab extends PluginSettingTab {
             .setDesc(strings.settingsFleetingTemplateDesc)
             .addText((text) =>
                 text
-                    .setPlaceholder('Templates/Fleeting')
+                    .setPlaceholder('Templates/Fleeting').then((component) => new VaultPathSuggest(this.app, component.inputEl, 'file', (path) => {
+                        this.plugin.settings.fleetingNoteTemplate = path;
+                        void this.plugin.saveSettings();
+                    }))
                     .setValue(this.plugin.settings.fleetingNoteTemplate)
                     .onChange(async (value) => {
                         this.plugin.settings.fleetingNoteTemplate = value;
                         await this.plugin.saveSettings();
                     }),
             );
+
+        // --- Quick Add ---
+        new Setting(containerEl).setName(strings.settingsQuickAddHeading).setHeading();
+        const quickAddPanel = containerEl.createDiv({ cls: 'seam-quick-add-panel' });
+        this.renderQuickAddChoices(quickAddPanel);
+        new Setting(containerEl)
+            .setName(strings.settingsQuickAddPersistDrafts)
+            .setDesc(strings.settingsQuickAddPersistDraftsDesc)
+            .addToggle((toggle) => toggle.setValue(this.plugin.settings.persistQuickAddDrafts).onChange(async (value) => {
+                this.plugin.settings.persistQuickAddDrafts = value;
+                await this.plugin.saveSettings();
+            }));
 
         // --- Automation ---
         new Setting(containerEl).setName(strings.settingsAutomationHeading).setHeading();
@@ -397,6 +233,195 @@ export class SeamSettingsTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+
+        // --- Updates ---
+        new Setting(containerEl).setName(strings.settingsUpdatesHeading).setHeading();
+
+        new Setting(containerEl)
+            .setName(strings.settingsAnnounceUpdates)
+            .setDesc(strings.settingsAnnounceUpdatesDesc)
+            .addDropdown((dropdown) => dropdown
+                .addOption('major', strings.settingsAnnounceUpdatesMajor)
+                .addOption('all', strings.settingsAnnounceUpdatesAll)
+                .addOption('never', strings.settingsAnnounceUpdatesNever)
+                .setValue(this.plugin.settings.updateAnnouncementMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.updateAnnouncementMode = value as UpdateAnnouncementMode;
+                    await this.plugin.saveSettings();
+                    latestNotesSetting?.settingEl.toggle(value !== 'never');
+                }),
+            );
+
+        let latestNotesSetting: Setting;
+        latestNotesSetting = new Setting(containerEl)
+            .setName(strings.settingsCurrentReleaseNotes)
+            .setDesc(strings.settingsCurrentReleaseNotesDesc)
+            .addButton((button) => button
+                .setButtonText(strings.settingsCurrentReleaseNotesButton)
+                .onClick(() => { void this.plugin.openCurrentReleaseNotes(); }),
+            );
+        latestNotesSetting.settingEl.toggle(this.plugin.settings.updateAnnouncementMode !== 'never');
+    }
+
+    private renderQuickAddChoices(parent: HTMLElement): void {
+        const strings = t();
+        const header = parent.createDiv({ cls: 'seam-quick-add-panel-header' });
+        header.createDiv({ cls: 'seam-quick-add-panel-title', text: strings.settingsQuickAddChoices });
+        header.createDiv({ cls: 'setting-item-description', text: strings.settingsQuickAddChoicesDesc });
+
+        const filterContainer = parent.createDiv({ cls: 'search-input-container seam-quick-add-filter' });
+        const filterInput = filterContainer.createEl('input', {
+            type: 'search',
+            placeholder: strings.settingsQuickAddFilter,
+            attr: { autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false' },
+        });
+        const list = parent.createDiv({ cls: 'seam-quick-add-choices' });
+        let draggedChoiceId: string | null = null;
+        let dragArmedChoiceId: string | null = null;
+
+        const renderRows = (): void => {
+            list.empty();
+            const query = filterInput.value.trim().toLowerCase();
+            const choices = this.plugin.settings.quickAddChoices.filter((choice) =>
+                choice.name.toLowerCase().includes(query),
+            );
+
+            if (choices.length === 0) {
+                list.createDiv({
+                    cls: 'seam-quick-add-empty',
+                    text: query ? strings.settingsQuickAddNoMatches : strings.settingsQuickAddNoChoices,
+                });
+                return;
+            }
+
+            for (const choice of choices) {
+            const row = list.createDiv({ cls: 'seam-quick-add-choice' });
+            row.dataset.choiceId = choice.id;
+            row.draggable = query.length === 0;
+            const label = row.createSpan({ cls: 'seam-quick-add-choice-label' });
+            const icon = label.createSpan({ cls: 'seam-quick-add-choice-icon' });
+            const iconId = choice.icon.trim() || 'file-text';
+            const iconSvg = getIcon(iconId);
+            if (iconSvg) icon.appendChild(iconSvg);
+            label.createSpan({ text: choice.name });
+            const buttons = row.createSpan({ cls: 'seam-quick-add-choice-actions' });
+            this.addChoiceButton(buttons, 'pen', `${strings.settingsQuickAddEdit} ${choice.name}`, () => this.openChoiceModal(choice));
+            this.addChoiceButton(buttons, 'copy', `${strings.settingsQuickAddDuplicate} ${choice.name}`, () => {
+                const duplicate: QuickAddChoice = { ...choice, id: crypto.randomUUID(), name: `${choice.name} copy` };
+                this.plugin.settings.quickAddChoices.push(duplicate);
+                void this.plugin.saveSettings().then(() => this.display());
+            });
+            this.addChoiceButton(buttons, 'trash-2', `${strings.settingsQuickAddDelete} ${choice.name}`, () => {
+                this.plugin.settings.quickAddChoices = this.plugin.settings.quickAddChoices.filter((item) => item.id !== choice.id);
+                void this.plugin.saveSettings().then(() => this.display());
+            });
+            const handle = this.addChoiceButton(
+                buttons,
+                'grip-vertical',
+                `${strings.settingsQuickAddReorder} ${choice.name}`,
+                () => undefined,
+                'seam-quick-add-drag-handle',
+            );
+            handle.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown');
+            handle.toggleAttribute('disabled', query.length > 0);
+            handle.addEventListener('pointerdown', () => { dragArmedChoiceId = choice.id; });
+            handle.addEventListener('keydown', (event) => {
+                if (query || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                this.moveChoice(choice.id, event.key === 'ArrowUp' ? -1 : 1);
+            });
+
+            row.addEventListener('dragstart', (event) => {
+                if (query || dragArmedChoiceId !== choice.id) {
+                    event.preventDefault();
+                    return;
+                }
+                draggedChoiceId = choice.id;
+                row.addClass('is-dragging');
+                event.dataTransfer?.setData('text/plain', choice.id);
+                if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+            });
+            row.addEventListener('dragover', (event) => {
+                if (!draggedChoiceId || draggedChoiceId === choice.id || query) return;
+                event.preventDefault();
+                const rect = row.getBoundingClientRect();
+                row.toggleClass('is-drop-after', event.clientY >= rect.top + rect.height / 2);
+                row.toggleClass('is-drop-before', event.clientY < rect.top + rect.height / 2);
+            });
+            row.addEventListener('dragleave', () => row.removeClass('is-drop-before', 'is-drop-after'));
+            row.addEventListener('drop', (event) => {
+                event.preventDefault();
+                row.removeClass('is-drop-before', 'is-drop-after');
+                if (!draggedChoiceId || draggedChoiceId === choice.id || query) return;
+                const rect = row.getBoundingClientRect();
+                this.reorderChoice(draggedChoiceId, choice.id, event.clientY >= rect.top + rect.height / 2);
+            });
+            row.addEventListener('dragend', () => {
+                draggedChoiceId = null;
+                dragArmedChoiceId = null;
+                row.removeClass('is-dragging');
+                list.querySelectorAll('.is-drop-before, .is-drop-after').forEach((item) =>
+                    item.removeClass('is-drop-before', 'is-drop-after'),
+                );
+            });
+            }
+        };
+
+        filterInput.addEventListener('input', renderRows);
+        filterInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && filterInput.value) {
+                event.stopPropagation();
+                filterInput.value = '';
+                renderRows();
+            }
+        });
+        renderRows();
+
+        const footer = parent.createDiv({ cls: 'seam-quick-add-panel-footer' });
+        new Setting(footer).addButton((button) => button
+            .setButtonText(`+ ${strings.settingsQuickAddNewChoice}`)
+            .setCta()
+            .onClick(() => this.openChoiceModal(null)));
+    }
+
+    private openChoiceModal(choice: QuickAddChoice | null): void {
+        const originalIndex = choice ? this.plugin.settings.quickAddChoices.findIndex((item) => item.id === choice.id) : -1;
+        new QuickAddChoiceModal(this.app, choice, async (saved) => {
+            const choices = this.plugin.settings.quickAddChoices.filter((item) => item.id !== saved.id);
+            choices.splice(originalIndex < 0 ? choices.length : Math.min(originalIndex, choices.length), 0, saved);
+            this.plugin.settings.quickAddChoices = choices;
+            await this.plugin.saveSettings();
+            this.display();
+        }).open();
+    }
+
+    private addChoiceButton(parent: HTMLElement, icon: string, label: string, onClick: () => void, extraClass = ''): HTMLButtonElement {
+        const button = parent.createEl('button', { cls: `clickable-icon seam-quick-add-choice-action ${extraClass}`.trim(), attr: { 'aria-label': label } });
+        button.setAttribute('title', label);
+        setIcon(button, icon);
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    private moveChoice(id: string, offset: -1 | 1): void {
+        const choices = this.plugin.settings.quickAddChoices;
+        const index = choices.findIndex((choice) => choice.id === id);
+        const nextIndex = index + offset;
+        if (index < 0 || nextIndex < 0 || nextIndex >= choices.length) return;
+        [choices[index], choices[nextIndex]] = [choices[nextIndex], choices[index]];
+        void this.plugin.saveSettings().then(() => this.display());
+    }
+
+    private reorderChoice(sourceId: string, targetId: string, placeAfter: boolean): void {
+        const choices = this.plugin.settings.quickAddChoices;
+        const sourceIndex = choices.findIndex((choice) => choice.id === sourceId);
+        let targetIndex = choices.findIndex((choice) => choice.id === targetId);
+        if (sourceIndex < 0 || targetIndex < 0) return;
+        const [source] = choices.splice(sourceIndex, 1);
+        if (sourceIndex < targetIndex) targetIndex--;
+        choices.splice(targetIndex + (placeAfter ? 1 : 0), 0, source);
+        void this.plugin.saveSettings().then(() => this.display());
     }
 
     /**

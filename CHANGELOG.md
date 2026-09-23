@@ -5,6 +5,40 @@ All notable changes to Seam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-09-23
+<!-- iterations: iteration_06..iteration_07 -->
+
+!["Seam v2 Showcase"](./docs/images/v2.0.0/seam_v2_showcase.gif)
+
+### Added
+
+- **Quick Add workflows**: Create notes from configurable choices with templates, folders, opening behavior, focus, icons, draft persistence, and collision handling.
+
+!["Quick Add V2"](./docs/images/v2.0.0/quick_add_choices.png)
+
+- **Advanced Universal Palette search**: Search exact phrases with double quotes and filter notes with `@untagged`, `@docs`, `@images`, `@task`, `@todo`, `@done`, and `@code`.
+
+!["Special Search"](./docs/images/v2.0.0/special_search.png)
+
+- **Negated tag search**: Prefix a tag with `!` to exclude matching notes, such as `#projects !#archived`.
+
+!["Filtering Tags"](./docs/images/v2.0.0/filtering_tags.png)
+
+- **Recent Files**: Browse the ten most recently modified Markdown notes from the Universal Palette.
+
+!["Commands Listing"](./docs/images/v2.0.0/commands_listing.png)
+
+- **Release updates**: Choose when Seam announces updates and read the release notes for the currently installed version from the Updates settings.
+
+### Changed
+
+- **Universal Palette**: Added contextual helper text, cleaner command navigation, tag filtering guidance, and Backspace navigation for secondary views.
+- **Quick Add settings**: Added choice filtering, reordering, duplication, deletion, path suggestions, and native icon previews.
+
+### Fixed
+
+- **Quick Add creation**: Fixed template and path persistence, Enter submission, collision safety, numbered new-note titles, and palette dismissal after successful creation.
+
 ## [1.0.4] - 2026-09-15
 
 ### Changed

@@ -22,7 +22,7 @@
 }
 
 .seam-palette-title {
-    font-weight: 600;
+    font-weight: normal;
     margin-bottom: 2px;
 }
 
@@ -136,8 +136,68 @@
     background-color: var(--background-modifier-accent-hover, rgba(var(--accent-rgb, 120, 100, 255), 0.25));
 }
 
+.seam-palette-chip-negative {
+    border-style: dotted;
+    border-width: 2px;
+}
+
 .seam-palette-chip-text {
-    font-weight: 600;
+    font-weight: normal;
+}
+
+.seam-note-title-setting {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.seam-note-title-setting .setting-item-info,
+.seam-note-title-setting .setting-item-control,
+.seam-note-title-setting input {
+    width: 100%;
+}
+
+.seam-note-conflict-modal .modal-content {
+    min-width: min(520px, 90vw);
+}
+
+.seam-note-conflict-description {
+    margin: 0 0 20px;
+}
+
+.seam-note-conflict-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.seam-note-conflict-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.seam-note-conflict-actions button,
+.seam-choice-modal button,
+.seam-note-title-modal button,
+.seam-update-modal button,
+.seam-quick-add-choice-action,
+.seam-quick-add-panel-footer button {
+    cursor: pointer;
+}
+
+.seam-note-conflict-actions kbd {
+    min-width: 1.3em;
+    padding: 1px 4px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.seam-note-conflict-cancel {
+    margin-left: auto;
 }
 
 .seam-palette-chip-remove {
@@ -183,4 +243,231 @@
     opacity: 0.6;
 }
 
+.seam-quick-add-panel {
+    margin: 8px 0 16px;
+    padding: 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+}
 
+.seam-quick-add-panel-header {
+    margin-bottom: 12px;
+}
+
+.seam-quick-add-panel-title {
+    color: var(--text-normal);
+    font-weight: var(--font-semibold);
+}
+
+.seam-quick-add-filter {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.seam-quick-add-filter input {
+    width: 100%;
+}
+
+.seam-quick-add-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 280px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+}
+
+.seam-quick-add-choice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    padding: 3px 6px;
+    border-radius: var(--radius-s);
+    position: relative;
+}
+
+.seam-quick-add-choice:hover {
+    background: var(--background-modifier-hover);
+}
+
+.seam-quick-add-choice-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.seam-quick-add-choice-icon,
+.seam-choice-icon-preview,
+.seam-path-suggest-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-muted);
+}
+
+.seam-quick-add-choice-icon svg,
+.seam-path-suggest-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.seam-quick-add-choice-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    visibility: hidden;
+    flex: 0 0 auto;
+}
+
+.seam-quick-add-choice:hover .seam-quick-add-choice-actions,
+.seam-quick-add-choice:focus-within .seam-quick-add-choice-actions {
+    visibility: visible;
+}
+
+.seam-choice-icon-preview {
+    flex: 0 0 auto;
+}
+
+.seam-choice-icon-preview svg {
+    width: 15px;
+    height: 15px;
+}
+
+.seam-quick-add-choice-action {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    color: var(--text-muted);
+}
+
+.seam-quick-add-choice-action svg {
+    width: 14px;
+    height: 14px;
+}
+
+.seam-quick-add-drag-handle {
+    cursor: grab;
+}
+
+.seam-quick-add-drag-handle:active {
+    cursor: grabbing;
+}
+
+.seam-quick-add-choice.is-dragging {
+    opacity: 0.45;
+}
+
+.seam-quick-add-choice.is-drop-before::before,
+.seam-quick-add-choice.is-drop-after::after {
+    content: '';
+    position: absolute;
+    right: 4px;
+    left: 4px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--interactive-accent);
+}
+
+.seam-quick-add-choice.is-drop-before::before {
+    top: -2px;
+}
+
+.seam-quick-add-choice.is-drop-after::after {
+    bottom: -2px;
+}
+
+.seam-quick-add-empty {
+    padding: 18px 8px;
+    color: var(--text-muted);
+    text-align: center;
+    font-size: var(--font-ui-small);
+}
+
+.seam-quick-add-panel-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.seam-quick-add-panel-footer .setting-item {
+    padding: 0;
+    border: 0;
+}
+
+.seam-choice-modal-text-setting {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.seam-choice-modal-text-setting .setting-item-info,
+.seam-choice-modal-text-setting .setting-item-control,
+.seam-choice-modal-text-setting input {
+    width: 100%;
+}
+
+.seam-choice-modal-text-setting .setting-item-control {
+    display: flex;
+}
+
+.seam-choice-modal-icon-setting .setting-item-control {
+    align-items: center;
+    gap: 7px;
+}
+
+.seam-choice-modal-icon-setting input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.seam-path-suggest-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.seam-update-modal .modal-content {
+    max-height: min(78vh, 720px);
+    overflow-y: auto;
+}
+
+.seam-update-modal-content {
+    padding: 0 4px;
+}
+
+.seam-update-modal-support {
+    padding: 12px 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    margin-bottom: 18px;
+}
+
+.seam-update-modal-support p {
+    margin-top: 0;
+}
+
+.seam-kofi-button {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: 0;
+}
+
+.seam-kofi-button svg {
+    width: 17px;
+    height: 17px;
+    fill: currentColor;
+    flex: 0 0 auto;
+}
+
+.seam-update-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 14px;
+}

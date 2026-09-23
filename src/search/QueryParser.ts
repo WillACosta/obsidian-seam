@@ -4,7 +4,7 @@ import { ParsedQuery, QueryToken } from '../types';
  * Parses simplified search query expressions.
  * Supports:
  * - Positive tags: #tag
- * - Negative tags: -#tag
+ * - Negative tags: -#tag or !#tag
  * - OR operators: ||, |, or OR
  * - Plain text tokens
  */
@@ -26,6 +26,8 @@ export function parseQuery(input: string): ParsedQuery {
     for (let i = 0; i < rawTokens.length; i++) {
         const t = rawTokens[i];
         if (t.startsWith('-#')) {
+            tokens.push({ type: 'negativeTag', value: t.substring(2) });
+        } else if (t.startsWith('!#')) {
             tokens.push({ type: 'negativeTag', value: t.substring(2) });
         } else if (t.startsWith('#')) {
             tokens.push({ type: 'tag', value: t.substring(1) });

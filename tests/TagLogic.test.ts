@@ -1,7 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { MockTFile } from './mocks/obsidian';
 import { DEFAULT_SETTINGS, SeamSettings } from '../src/types';
-import { tagMatches, noteHasTag, extractMatchSnippet } from '../src/search/SearchService';
+import {
+    SearchService,
+    tagMatches,
+    noteHasTag,
+    extractMatchSnippet,
+    matchesSpecialSearch,
+} from '../src/search/SearchService';
 import {
     getPermanentCleanupTags,
     getArchiveCleanupTags,
@@ -24,7 +31,35 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.moveCleanupTags, '#permanent, #todo');
         assert.equal(DEFAULT_SETTINGS.moveCleanupProperties, 'status');
         assert.equal(DEFAULT_SETTINGS.showIcons, true);
+        assert.deepEqual(DEFAULT_SETTINGS.quickAddChoices, []);
+        assert.equal(DEFAULT_SETTINGS.persistQuickAddDrafts, false);
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
+        assert.equal(DEFAULT_SETTINGS.updateAnnouncementMode, 'major');
+        assert.equal(DEFAULT_SETTINGS.lastAnnouncedVersion, '');
+    });
+});
+
+describe('Selected tag exclusion', () => {
+    it('excludes matching notes while retaining required positive tags', () => {
+        const includedFile = { path: 'included.md', basename: 'included', parent: null };
+        const excludedFile = { path: 'excluded.md', basename: 'excluded', parent: null };
+        const app = {
+            vault: { getMarkdownFiles: () => [includedFile, excludedFile] },
+            metadataCache: {
+                getFileCache: (file: { path: string }) => ({
+                    tags: file.path === includedFile.path
+                        ? [{ tag: '#projects/seam' }, { tag: '#todo' }]
+                        : [{ tag: '#projects/seam' }, { tag: '#todo' }, { tag: '#archived' }],
+                }),
+            },
+        } as never;
+
+        const service = new SearchService(app, DEFAULT_SETTINGS);
+        const results = service.searchBySelectedTags(['projects/seam', 'todo'], ['archived']);
+        assert.deepEqual(results.map((result) => result.file.path), ['included.md']);
+
+        const queryResults = service.search('#projects/seam #todo !#archived');
+        assert.deepEqual(queryResults.map((result) => result.file.path), ['included.md']);
     });
 });
 
@@ -154,6 +189,92 @@ describe('Match Snippet Extraction (extractMatchSnippet)', () => {
     });
 });
 
+describe('Special Search Filters', () => {
+    function makeApp(cache: Record<string, unknown>) {
+        const file = { path: 'Notes/example.md', basename: 'example' };
+        return {
+            file,
+            app: {
+                metadataCache: {
+                    getFileCache: () => cache,
+                },
+            } as never,
+        };
+    }
+
+    it('matches untagged notes', () => {
+        const { app, file } = makeApp({});
+        assert.equal(matchesSpecialSearch(app, file as never, 'untagged'), true);
+        const tagged = makeApp({ tags: [{ tag: '#project' }] });
+        assert.equal(matchesSpecialSearch(tagged.app, tagged.file as never, 'untagged'), false);
+    });
+
+    it('matches document and image attachments', () => {
+        const { app, file } = makeApp({
+            links: [{ link: 'Attachments/report.pdf', original: '[report](Attachments/report.pdf)' }],
+            embeds: [{ link: 'Attachments/diagram.png', original: '![[Attachments/diagram.png]]' }],
+        });
+        assert.equal(matchesSpecialSearch(app, file as never, 'docs'), true);
+        assert.equal(matchesSpecialSearch(app, file as never, 'images'), true);
+        assert.equal(matchesSpecialSearch(app, file as never, 'ocr'), true);
+    });
+
+    it('matches task, todo, done, and code metadata', () => {
+        const incomplete = makeApp({ listItems: [{ task: ' ' }] });
+        assert.equal(matchesSpecialSearch(incomplete.app, incomplete.file as never, 'task'), true);
+        assert.equal(matchesSpecialSearch(incomplete.app, incomplete.file as never, 'todo'), true);
+        assert.equal(matchesSpecialSearch(incomplete.app, incomplete.file as never, 'done'), false);
+
+        const complete = makeApp({
+            listItems: [{ task: 'x' }, { task: 'X' }],
+            sections: [{ type: 'code' }],
+        });
+        assert.equal(matchesSpecialSearch(complete.app, complete.file as never, 'task'), true);
+        assert.equal(matchesSpecialSearch(complete.app, complete.file as never, 'todo'), false);
+        assert.equal(matchesSpecialSearch(complete.app, complete.file as never, 'done'), true);
+        assert.equal(matchesSpecialSearch(complete.app, complete.file as never, 'code'), true);
+    });
+
+    it('searches an exact quoted phrase in note content', async () => {
+        const file = { path: 'Notes/kicad.md', basename: 'kicad' };
+        const app = {
+            vault: {
+                getMarkdownFiles: () => [file],
+                cachedRead: async () => 'KiCad is a PCB editor app for electronics.',
+            },
+            metadataCache: {
+                getFileCache: () => ({}),
+            },
+        } as never;
+        const service = new SearchService(app, DEFAULT_SETTINGS);
+        const results = await service.searchWithContent('"KiCad is a PCB editor app"');
+        assert.deepEqual(results.map((result) => result.file.path), ['Notes/kicad.md']);
+    });
+
+    it('searches @ocr text in attachment content without searching the note body', async () => {
+        const note = new MockTFile('Notes/reference.md');
+        const attachment = new MockTFile('Attachments/reference.txt');
+        const app = {
+            vault: {
+                getMarkdownFiles: () => [note],
+                cachedRead: async (file: MockTFile) => file.path === attachment.path
+                    ? 'text extracted from the attachment'
+                    : 'text in the note body',
+            },
+            metadataCache: {
+                getFileCache: () => ({ embeds: [{ link: attachment.path }] }),
+                getFirstLinkpathDest: () => attachment,
+            },
+        } as never;
+        const service = new SearchService(app, DEFAULT_SETTINGS);
+
+        const attachmentResults = await service.searchWithContent('@ocr "text extracted"');
+        const noteResults = await service.searchWithContent('@ocr "text in the note body"');
+        assert.deepEqual(attachmentResults.map((result) => result.file.path), ['Notes/reference.md']);
+        assert.deepEqual(noteResults, []);
+    });
+});
+
 describe('Inline Tag Removal Regex', () => {
     function removeInlineTag(content: string, tagToRemove: string): string {
         const cleanTag = tagToRemove.replace(/^#/, '').toLowerCase();
@@ -258,4 +379,3 @@ describe('Post-Move Tag & Property Cleanup (Iteration 05)', () => {
         assert.deepEqual(remainingTags, ['electronics']);
     });
 });
-
