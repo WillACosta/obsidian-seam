@@ -78,6 +78,8 @@ pnpm run changelog:generate 1.1.0 --from 6 --to 8 --update
 
 Releases are fully automated via the [Release Pipeline](.github/workflows/release.yml). Do not build or package release assets manually.
 
+> **Release naming rule:** Seam release versions and Git tags must use plain semantic versions without a leading `v`, such as `2.0.0` (never `v2.0.0`). The GitHub release title must match the same unprefixed version.
+
 ### Recommended Release Steps
 
 1. **Bump the version**:

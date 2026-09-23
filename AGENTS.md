@@ -135,3 +135,8 @@ Verify that `CHANGELOG.md` reflects the changes cleanly.
   - Never silently overwrite filename conflicts (use numerical disambiguation or abort safely).
 - **Lightweight Lifecycle:** Keep `onload()` minimal; defer heavy indexing or reconciliation to `workspace.onLayoutReady()`. Clean up all event listeners, timers, and DOM nodes on `onunload()`.
 - **No Feature Creep:** Do not add external sync, databases, cloud telemetry, or complex productivity frameworks outside the specs.
+
+## 6. Release Naming
+
+- Use plain semantic versions for releases and Git tags, without a leading `v` (for example, `2.0.0`, never `v2.0.0`).
+- The GitHub release title must match the unprefixed tag exactly.
