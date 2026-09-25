@@ -446,10 +446,11 @@ export default class SeamPlugin extends Plugin {
                     const connections = Array.isArray(pipeline.connections)
                         ? pipeline.connections.filter((connection) => connection && typeof connection.from === 'string' && typeof connection.to === 'string')
                         : queryIds.slice(1).map((queryId, index) => ({ from: queryIds[index], to: queryId }));
-                    return { ...pipeline, queryIds, nodes, connections };
+                    return { ...pipeline, queryIds, nodes, connections, pinned: Boolean(pipeline.pinned) && !Boolean(pipeline.hidden), hidden: Boolean(pipeline.hidden) };
                 })
                 : [];
             this.settings.enableQueryPipelines = Boolean(this.settings.enableQueryPipelines);
+            this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
 
             // Migration: the public Workspace API cannot place a split explicitly on the left.
             this.settings.quickAddChoices = Array.isArray(this.settings.quickAddChoices) ? this.settings.quickAddChoices.map((choice) => {

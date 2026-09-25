@@ -266,7 +266,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.refreshSuggestions();
             return;
         }
-        if (value.type === 'base') return;
+        if (value.type === 'base') {
+            this.close();
+            return;
+        }
         if (value.id === 'cmd-quick-add') {
             this.showQuickAdd();
             return;
@@ -315,7 +318,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const custom = this.getCustomSearchForQuery(trimmed);
             if (custom) {
                 const textQuery = trimmed.slice(custom.identifier.length).trim();
-                if (custom.mode === 'base') return this.getCustomBaseItem(custom);
+                if (custom.mode === 'base') {
+                    return this.getCustomBaseItem(custom);
+                }
                 return this.getCustomFilterSuggestions(custom, textQuery, trimmed);
             }
             const pipeline = this.getPipelineForQuery(trimmed);
@@ -435,6 +440,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     private getCustomSearchForQuery(query: string): CustomSpecialSearch | null {
         return this.settings.customSpecialSearches.find((search) => {
+            if (search.hidden) return false;
             const identifier = search.identifier.toLowerCase();
             const lowerQuery = query.toLowerCase();
             return lowerQuery === identifier || lowerQuery.startsWith(`${identifier} `);
@@ -444,6 +450,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private getPipelineForQuery(query: string): SpecialSearchPipeline | null {
         if (!this.settings.enableQueryPipelines) return null;
         return this.settings.specialSearchPipelines.find((pipeline) => {
+            if (pipeline.hidden) return false;
             const name = pipeline.name.toLowerCase();
             const lowerQuery = query.toLowerCase();
             return lowerQuery === name || lowerQuery.startsWith(`${name} `);
@@ -467,7 +474,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         return [{
             id: `custom-base-${search.id}`,
             title: search.identifier,
-            description: search.baseView || search.basePath,
+            description: '',
             type: 'base',
             customSearchId: search.id,
             basePath: search.basePath,
@@ -635,6 +642,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     private updateInstructions(query: string): void {
         if (this.mode === 'search' && query.startsWith('@')) {
+            const custom = this.getCustomSearchForQuery(query);
+            if (custom?.mode === 'base' && query.toLowerCase() === custom.identifier.toLowerCase()) {
+                this.setInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }]);
+                return;
+            }
             this.setInstructions([
                 { command: '↑↓', purpose: t().paletteHelpNavigate },
                 { command: '↵', purpose: t().paletteHelpSelect },
@@ -735,13 +747,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             }));
         const pipelines = this.settings.enableQueryPipelines
             ? this.settings.specialSearchPipelines
-                .filter((pipeline) => pipeline.name.toLowerCase().startsWith(needle))
+                .filter((pipeline) => !pipeline.hidden && pipeline.name.toLowerCase().startsWith(needle))
                 .map((pipeline) => ({
                     id: `query-pipeline-${pipeline.id}`,
                     title: pipeline.name,
                     description: 'Query pipeline',
-                    type: 'pipeline' as const,
-                    pipeline,
+                    type: 'special' as const,
+                    customSearchId: `pipeline:${pipeline.id}`,
                     icon: 'git-branch',
                 }))
             : [];
@@ -750,7 +762,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return Boolean(search?.pinned);
         }).slice(0, 3);
         const unpinned = custom.filter((item) => !pinned.some((candidate) => candidate.id === item.id));
-        return [...pinned, ...builtIns, ...unpinned, ...pipelines];
+        const pinnedPipelines = pipelines.filter((item) => this.settings.specialSearchPipelines.find((pipeline) => pipeline.id === item.id.replace('query-pipeline-', ''))?.pinned);
+        const unpinnedPipelines = pipelines.filter((item) => !pinnedPipelines.some((candidate) => candidate.id === item.id));
+        return [...pinned, ...pinnedPipelines, ...builtIns, ...unpinned, ...unpinnedPipelines];
     }
 
     private getRecentFiles(query: string): PaletteItem[] {
@@ -807,7 +821,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const titleEl = rowEl.createSpan({ cls: 'seam-palette-title' });
             titleEl.setText(item.title);
 
-            if (item.description) {
+            const isSpecialSearch = Boolean(item.specialSearch || item.customSearchId);
+            if (item.description && (!isSpecialSearch || this.settings.showSpecialSearchDescriptions)) {
                 const descEl = el.createDiv({ cls: 'seam-palette-description' });
                 descEl.setText(item.description);
             }
@@ -893,17 +908,49 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private renderBaseEmbed(item: PaletteItem, el: HTMLElement): void {
         el.addClass('seam-palette-base-item');
         if (!item.showBaseToolbar) el.addClass('seam-palette-base-hide-toolbar');
+        else el.addClass('seam-palette-base-limit-toolbar');
         if (item.customSearchId) el.addClass('seam-palette-custom-search-item');
-        const heading = el.createDiv({ cls: 'seam-palette-base-heading' });
-        heading.createSpan({ cls: 'seam-palette-title', text: item.title });
-        if (item.description) heading.createSpan({ cls: 'seam-palette-base-view-name', text: item.description });
         const embed = el.createDiv({ cls: 'seam-palette-base-embed' });
+        embed.addEventListener('click', (event) => {
+            const target = event.target instanceof Element ? event.target.closest('a.internal-link, a[data-href], [data-href]') : null;
+            if (!(target instanceof HTMLElement)) return;
+            const href = target.getAttribute('data-href') || target.getAttribute('href');
+            if (!href) return;
+            const file = this.app.metadataCache.getFirstLinkpathDest(decodeURIComponent(href.replace(/^\.?\//, '')), item.basePath || '');
+            if (!file) return;
+            event.preventDefault();
+            this.close();
+            void this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false).openFile(file);
+        }, true);
         if (!item.basePath) return;
         const target = `${item.basePath}${item.baseView ? `#${item.baseView}` : ''}`;
         const component = new Component();
         component.load();
         this.baseRenderComponents.push(component);
-        void MarkdownRenderer.render(this.app, `![[${target}]]`, embed, item.basePath, component);
+        void MarkdownRenderer.render(this.app, `![[${target}]]`, embed, item.basePath, component).then(() => {
+            this.limitBaseToolbar(embed, component);
+        });
+    }
+
+    private limitBaseToolbar(embed: HTMLElement, component: Component): void {
+            const apply = (): void => {
+                const toolbar = embed.querySelector<HTMLElement>('.bases-toolbar, .bases-view-toolbar');
+                if (!toolbar) return;
+                const controls = Array.from(toolbar.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+                for (const control of controls) {
+                    const label = [
+                        control.getAttribute('aria-label'),
+                        control.getAttribute('title'),
+                        control.getAttribute('data-tooltip'),
+                        control.textContent,
+                    ].filter(Boolean).join(' ').trim().toLowerCase();
+                    control.style.display = label.includes('search') ? '' : 'none';
+                }
+            };
+        apply();
+        const observer = new MutationObserver(apply);
+        observer.observe(embed, { childList: true, subtree: true });
+        component.register(() => observer.disconnect());
     }
 
     private renderPipeline(item: PaletteItem, el: HTMLElement): void {

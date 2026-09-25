@@ -52,6 +52,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             heading: strings.settingsCustomSearchHeading,
             items: [
                 { name: strings.settingsCustomSearches, desc: strings.settingsCustomSearchesDesc, render: (setting) => this.renderCustomSearchesSetting(setting) },
+                { name: strings.settingsCustomSearchDescriptions, desc: strings.settingsCustomSearchDescriptionsDesc, render: (setting) => this.renderSpecialSearchDescriptionsSetting(setting) },
                 { name: strings.settingsCustomSearchPipeline, desc: strings.settingsCustomSearchPipelineDesc, render: (setting) => this.renderPipelinesSetting(setting) },
             ],
         }, {
@@ -162,6 +163,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             const searches = this.plugin.settings.customSpecialSearches
                 .filter((search) => search.identifier.toLowerCase().includes(query))
                 .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+            list.toggleClass('is-overflowing', searches.length + (this.plugin.settings.enableQueryPipelines ? this.plugin.settings.specialSearchPipelines.length : 0) > 5);
             if (searches.length === 0) {
                 list.createDiv({ cls: 'seam-custom-searches-empty', text: query ? t().settingsCustomSearchNoMatches : t().settingsCustomSearchNone });
             } else {
@@ -237,6 +239,9 @@ export class SeamSettingsTab extends PluginSettingTab {
                     });
                 }
             }
+            if (this.plugin.settings.enableQueryPipelines) {
+                this.renderPipelineRows(list, query);
+            }
         };
         filterInput.addEventListener('input', render);
         filterInput.addEventListener('keydown', (event) => {
@@ -245,10 +250,13 @@ export class SeamSettingsTab extends PluginSettingTab {
         render();
         const footer = panel.createDiv({ cls: 'seam-quick-add-panel-footer' });
         new Setting(footer).addButton((button) => button.setButtonText(`+ ${t().settingsCustomSearchNew}`).setCta().onClick(() => this.openCustomSearchModal(null)));
+        if (this.plugin.settings.enableQueryPipelines) {
+            new Setting(footer).addButton((button) => button.setButtonText(`+ ${t().settingsCustomSearchPipelineNew}`).onClick(() => this.openPipelineModal(null)));
+        }
     }
 
     private renderPipelinesSetting(setting: Setting): void {
-        setting.infoEl.remove();
+        setting.setName(t().settingsCustomSearchPipeline).setDesc(t().settingsCustomSearchPipelineDesc);
         setting.addToggle((component) => component
             .setValue(this.plugin.settings.enableQueryPipelines)
             .onChange(async (value) => {
@@ -256,31 +264,69 @@ export class SeamSettingsTab extends PluginSettingTab {
                 await this.plugin.saveSettings();
                 this.update();
             }));
-        setting.settingEl.addClass('seam-pipeline-toggle-setting');
-        const header = setting.controlEl.createDiv({ cls: 'seam-custom-search-panel-header seam-pipeline-view-header' });
-        header.createDiv({ cls: 'seam-custom-search-panel-title', text: t().settingsCustomSearchPipelineHeading });
-        header.createDiv({ cls: 'setting-item-description', text: t().settingsCustomSearchPipelineDesc });
-        const panel = setting.controlEl.createDiv({ cls: 'seam-custom-searches-panel seam-pipelines-panel' });
-        panel.toggle(this.plugin.settings.enableQueryPipelines);
-        const list = panel.createDiv({ cls: 'seam-custom-searches-list' });
-        if (this.plugin.settings.specialSearchPipelines.length === 0) {
-            list.createDiv({ cls: 'seam-custom-searches-empty', text: t().settingsCustomSearchPipelineNone });
-        } else {
-            for (const pipeline of this.plugin.settings.specialSearchPipelines) {
-                const row = list.createDiv({ cls: 'seam-custom-search-row' });
-                row.createDiv({ cls: 'seam-custom-search-label', text: pipeline.name });
-                const actions = row.createDiv({ cls: 'seam-custom-search-actions' });
-                this.addCustomSearchButton(actions, 'pen', `${t().settingsCustomSearchPipelineEdit} ${pipeline.name}`, () => this.openPipelineModal(pipeline));
-                this.addCustomSearchButton(actions, 'trash-2', `${t().settingsCustomSearchPipelineDelete} ${pipeline.name}`, () => {
-                    this.plugin.settings.specialSearchPipelines = this.plugin.settings.specialSearchPipelines.filter((item) => item.id !== pipeline.id);
-                    void this.plugin.saveSettings().then(() => this.update());
-                });
+    }
+
+    private renderSpecialSearchDescriptionsSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.showSpecialSearchDescriptions)
+            .onChange(async (value) => {
+                this.plugin.settings.showSpecialSearchDescriptions = value;
+                await this.plugin.saveSettings();
+            }));
+    }
+
+    private renderPipelineRows(list: HTMLElement, query: string): void {
+        const pipelines = this.plugin.settings.specialSearchPipelines
+            .filter((pipeline) => pipeline.name.toLowerCase().includes(query))
+            .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+        for (const pipeline of pipelines) {
+            const row = list.createDiv({ cls: `seam-quick-add-choice seam-custom-search-choice seam-custom-search-pipeline-choice${pipeline.pinned ? ' seam-custom-search-pinned' : ''}${pipeline.hidden ? ' seam-custom-search-hidden' : ''}` });
+            row.draggable = query.length === 0;
+            const label = row.createDiv({ cls: 'seam-quick-add-choice-label seam-custom-search-label' });
+            if (this.plugin.settings.showIcons) {
+                const icon = label.createSpan({ cls: 'seam-quick-add-choice-icon' });
+                setIcon(icon, 'git-branch');
             }
+            label.createDiv({ cls: 'seam-custom-search-name', text: pipeline.name });
+            const actions = row.createDiv({ cls: 'seam-quick-add-choice-actions seam-custom-search-actions' });
+            this.addChoiceButton(actions, 'pen', `${t().settingsCustomSearchPipelineEdit} ${pipeline.name}`, () => this.openPipelineModal(pipeline));
+            this.addChoiceButton(actions, 'copy', `Duplicate ${pipeline.name}`, () => {
+                this.plugin.settings.specialSearchPipelines.push({ ...pipeline, id: crypto.randomUUID(), name: `${pipeline.name} copy`, pinned: false, hidden: false });
+                void this.plugin.saveSettings().then(() => this.update());
+            });
+            this.addChoiceButton(actions, pipeline.pinned ? 'pin-off' : 'pin', pipeline.pinned ? `Unpin ${pipeline.name}` : `Pin ${pipeline.name}`, () => {
+                const count = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned && item.id !== pipeline.id).length;
+                if (!pipeline.pinned && count >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
+                pipeline.pinned = !pipeline.pinned;
+                void this.plugin.saveSettings().then(() => this.update());
+            });
+            this.addChoiceButton(actions, pipeline.hidden ? 'eye' : 'eye-off', pipeline.hidden ? `Show ${pipeline.name}` : `Hide ${pipeline.name}`, () => {
+                pipeline.hidden = !pipeline.hidden;
+                if (pipeline.hidden) pipeline.pinned = false;
+                void this.plugin.saveSettings().then(() => this.update());
+            });
+            this.addChoiceButton(actions, 'trash-2', `${t().settingsCustomSearchPipelineDelete} ${pipeline.name}`, () => {
+                this.plugin.settings.specialSearchPipelines = this.plugin.settings.specialSearchPipelines.filter((item) => item.id !== pipeline.id);
+                void this.plugin.saveSettings().then(() => this.update());
+            });
+            const handle = this.addChoiceButton(actions, 'grip-vertical', `Reorder ${pipeline.name}`, () => undefined, 'seam-quick-add-drag-handle');
+            handle.toggleAttribute('disabled', query.length > 0);
+            row.addEventListener('dragstart', (event) => { if (query.length > 0) { event.preventDefault(); return; } event.dataTransfer?.setData('text/plain', pipeline.id); row.addClass('is-dragging'); });
+            row.addEventListener('dragover', (event) => { if (!query.length) { event.preventDefault(); row.addClass('is-drop-after'); } });
+            row.addEventListener('drop', (event) => { event.preventDefault(); const sourceId = event.dataTransfer?.getData('text/plain'); if (sourceId && sourceId !== pipeline.id) this.reorderPipeline(sourceId, pipeline.id, true); });
+            row.addEventListener('dragend', () => row.removeClass('is-dragging', 'is-drop-after'));
         }
-        new Setting(panel).addButton((button) => button
-            .setButtonText(`+ ${t().settingsCustomSearchPipelineNew}`)
-            .setCta()
-            .onClick(() => this.openPipelineModal(null)));
+    }
+
+    private reorderPipeline(sourceId: string, targetId: string, placeAfter: boolean): void {
+        const pipelines = this.plugin.settings.specialSearchPipelines;
+        const sourceIndex = pipelines.findIndex((pipeline) => pipeline.id === sourceId);
+        let targetIndex = pipelines.findIndex((pipeline) => pipeline.id === targetId);
+        if (sourceIndex < 0 || targetIndex < 0 || pipelines[sourceIndex].pinned !== pipelines[targetIndex].pinned) return;
+        const [source] = pipelines.splice(sourceIndex, 1);
+        if (sourceIndex < targetIndex) targetIndex--;
+        pipelines.splice(targetIndex + (placeAfter ? 1 : 0), 0, source);
+        void this.plugin.saveSettings().then(() => this.update());
     }
 
     private addCustomSearchButton(parent: HTMLElement, icon: string, label: string, onClick: () => void): void {
@@ -330,7 +376,8 @@ export class SeamSettingsTab extends PluginSettingTab {
                 new Notice(`A custom search named ${saved.identifier} already exists.`);
                 return;
             }
-            const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned && item.id !== saved.id).length;
+            const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned && item.id !== saved.id).length
+                + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned).length;
             if (saved.pinned && pinnedCount >= 3) {
                 new Notice(t().settingsCustomSearchPinnedLimit);
                 return;
@@ -346,6 +393,10 @@ export class SeamSettingsTab extends PluginSettingTab {
     private openPipelineModal(pipeline: SpecialSearchPipeline | null): void {
         const originalIndex = pipeline ? this.plugin.settings.specialSearchPipelines.findIndex((item) => item.id === pipeline.id) : -1;
         new SpecialSearchPipelineModal(this.app, pipeline, this.plugin.settings.customSpecialSearches, async (saved) => {
+            const duplicate = this.plugin.settings.specialSearchPipelines.some((item) => item.id !== saved.id && item.name.toLowerCase() === saved.name.toLowerCase());
+            if (duplicate) { new Notice(`A pipeline named ${saved.name} already exists.`); return; }
+            const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned && item.id !== saved.id).length;
+            if (saved.pinned && pinnedCount >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
             const pipelines = this.plugin.settings.specialSearchPipelines.filter((item) => item.id !== saved.id);
             pipelines.splice(originalIndex < 0 ? pipelines.length : Math.min(originalIndex, pipelines.length), 0, saved);
             this.plugin.settings.specialSearchPipelines = pipelines;
@@ -474,6 +525,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             const choices = this.plugin.settings.quickAddChoices.filter((choice) =>
                 choice.name.toLowerCase().includes(query),
             );
+            list.toggleClass('is-overflowing', choices.length > 5);
 
             if (choices.length === 0) {
                 list.createDiv({

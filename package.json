@@ -14,7 +14,8 @@
     "changelog:extract": "node scripts/changelog.mjs extract",
     "changelog:generate": "node scripts/changelog.mjs generate",
     "changelog:validate": "node scripts/changelog.mjs validate",
-    "release:check": "node scripts/changelog.mjs validate"
+    "release:check": "node scripts/changelog.mjs validate",
+    "install:local": "pnpm build && pnpm symlink && obsidian vault='seam_test_vault' plugin:reload id=seam"
   },
   "devDependencies": {
     "@types/node": "^16.11.6",

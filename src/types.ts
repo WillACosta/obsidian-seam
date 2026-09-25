@@ -24,6 +24,7 @@ export interface SeamSettings {
     updateAnnouncementMode: UpdateAnnouncementMode;
     lastAnnouncedVersion: string;
     customSpecialSearches: CustomSpecialSearch[];
+    showSpecialSearchDescriptions: boolean;
     specialSearchPipelines: SpecialSearchPipeline[];
     enableQueryPipelines: boolean;
 }
@@ -57,8 +58,6 @@ export interface CustomSpecialSearch {
     hidden: boolean;
 }
 
-export type PipelineDirection = 'right' | 'left';
-
 export interface SpecialSearchPipelineNode {
     queryId: string;
     x: number;
@@ -74,7 +73,8 @@ export interface SpecialSearchPipeline {
     id: string;
     name: string;
     queryIds: string[];
-    direction: PipelineDirection;
+    pinned: boolean;
+    hidden: boolean;
     nodes: SpecialSearchPipelineNode[];
     connections: SpecialSearchPipelineConnection[];
 }
@@ -100,6 +100,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     updateAnnouncementMode: 'major',
     lastAnnouncedVersion: '',
     customSpecialSearches: [],
+    showSpecialSearchDescriptions: true,
     specialSearchPipelines: [],
     enableQueryPipelines: false,
 };

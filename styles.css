@@ -96,18 +96,9 @@
     overflow: hidden;
 }
 
-.seam-palette-base-heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.seam-palette-base-view-name {
-    color: var(--text-muted);
-    font-size: 0.85em;
-    white-space: nowrap;
+.suggestion-item.seam-palette-base-item:hover,
+.suggestion-item.seam-palette-base-item.is-selected {
+    background-color: transparent;
 }
 
 .seam-palette-base-embed {
@@ -124,6 +115,10 @@
 
 .seam-palette-base-hide-toolbar .bases-view-toolbar {
     display: none;
+}
+.seam-palette-base-hide-toolbar .bases-toolbar,
+.seam-palette-base-hide-toolbar .bases-header {
+    display: none !important;
 }
 
 .seam-palette-pipeline-title {
@@ -570,11 +565,16 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: 280px;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
     overscroll-behavior: contain;
     padding-right: 2px;
     text-align: left;
+}
+
+.seam-quick-add-choices.is-overflowing {
+    max-height: 280px;
+    overflow-y: auto;
 }
 
 .seam-quick-add-choice {

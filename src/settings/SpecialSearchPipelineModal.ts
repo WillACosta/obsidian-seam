@@ -1,7 +1,6 @@
 import { AbstractInputSuggest, App, Modal, Setting } from 'obsidian';
 import {
     CustomSpecialSearch,
-    PipelineDirection,
     SpecialSearchPipeline,
     SpecialSearchPipelineNode,
 } from '../types';
@@ -62,27 +61,25 @@ export class SpecialSearchPipelineModal extends Modal {
                 connections: existing.connections?.length ? existing.connections.map((connection) => ({ ...connection })) : queryIds.slice(1).map((queryId, index) => ({ from: queryIds[index], to: queryId })),
             };
         } else {
-            this.pipeline = { id: crypto.randomUUID(), name: '', queryIds: [], direction: 'right', nodes: [], connections: [] };
+            this.pipeline = { id: crypto.randomUUID(), name: '', queryIds: [], pinned: false, hidden: false, nodes: [], connections: [] };
         }
     }
 
     onOpen(): void {
         this.modalEl.addClass('seam-custom-search-pipeline-modal');
         this.setTitle(this.pipeline.name ? t().pipelineModalEdit : t().pipelineModalNew);
-        new Setting(this.contentEl).setName(t().pipelineModalName).setDesc(t().pipelineModalNameDesc)
-            .addText((text) => text.setValue(this.pipeline.name).onChange((value) => { this.pipeline.name = value; }));
+        const nameSetting = new Setting(this.contentEl).setName(t().pipelineModalName).setDesc(t().pipelineModalNameDesc);
+        nameSetting.settingEl.addClass('seam-custom-search-text-setting');
+        nameSetting.addText((text) => text.setValue(this.pipeline.name).onChange((value) => { this.pipeline.name = value; }));
 
         const querySetting = new Setting(this.contentEl).setName(t().pipelineModalQueries).setDesc(t().pipelineModalQueriesDesc);
+        querySetting.settingEl.addClass('seam-custom-search-text-setting');
         const queryControl = querySetting.controlEl.createDiv({ cls: 'seam-pipeline-query-selector' });
         const chips = queryControl.createDiv({ cls: 'seam-pipeline-query-chips' });
         const input = queryControl.createEl('input', { type: 'text', placeholder: t().pipelineModalQueryPlaceholder });
         new PipelineQuerySuggest(this.app, input, () => this.availableOptions(), (option) => this.addQuery(option.id)).onSelect(() => this.renderQueryChips(chips, input));
         input.addEventListener('input', () => this.renderQueryChips(chips, input));
         this.renderQueryChips(chips, input);
-
-        new Setting(this.contentEl).setName(t().pipelineModalDirection).setDesc(t().pipelineModalDirectionDesc)
-            .addDropdown((dropdown) => dropdown.addOption('right', t().pipelineModalDirectionRight).addOption('left', t().pipelineModalDirectionLeft)
-                .setValue(this.pipeline.direction).onChange((value) => { this.pipeline.direction = value as PipelineDirection; }));
 
         new Setting(this.contentEl).setName(t().pipelineModalCanvas).setDesc(t().pipelineModalCanvasDesc);
         this.canvasEl = this.contentEl.createDiv({ cls: 'seam-pipeline-canvas' });
