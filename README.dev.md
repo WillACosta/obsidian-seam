@@ -106,3 +106,7 @@ Once the tag is pushed (or triggered via GitHub's **Run workflow** button):
 2. Validates version consistency across `manifest.json`, `package.json`, `versions.json`, and `CHANGELOG.md`.
 3. Extracts the exact release notes for that version from `CHANGELOG.md`.
 4. Creates the GitHub Release and attaches `main.js`, `manifest.json`, and `styles.css`.
+
+### Changelog Content Rule
+
+Changelog entries should focus on user-facing changes and fixes that affect plugin usage or have a significant impact. Do not expose routine development details or minor internal fixes in release notes.

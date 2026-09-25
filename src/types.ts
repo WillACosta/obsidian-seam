@@ -23,6 +23,9 @@ export interface SeamSettings {
     reconciliationIntervalMinutes: number;
     updateAnnouncementMode: UpdateAnnouncementMode;
     lastAnnouncedVersion: string;
+    customSpecialSearches: CustomSpecialSearch[];
+    specialSearchPipelines: SpecialSearchPipeline[];
+    enableQueryPipelines: boolean;
 }
 
 export type QuickAddLocation = 'default' | 'specific';
@@ -40,6 +43,40 @@ export interface QuickAddChoice {
     focus: boolean;
     icon: string;
     conflictBehavior: QuickAddConflictBehavior;
+}
+
+export interface CustomSpecialSearch {
+    id: string;
+    identifier: string;
+    mode: 'base' | 'tags';
+    basePath: string;
+    baseView: string;
+    showBaseToolbar: boolean;
+    filterQuery: string;
+    pinned: boolean;
+    hidden: boolean;
+}
+
+export type PipelineDirection = 'right' | 'left';
+
+export interface SpecialSearchPipelineNode {
+    queryId: string;
+    x: number;
+    y: number;
+}
+
+export interface SpecialSearchPipelineConnection {
+    from: string;
+    to: string;
+}
+
+export interface SpecialSearchPipeline {
+    id: string;
+    name: string;
+    queryIds: string[];
+    direction: PipelineDirection;
+    nodes: SpecialSearchPipelineNode[];
+    connections: SpecialSearchPipelineConnection[];
 }
 
 export const DEFAULT_SETTINGS: SeamSettings = {
@@ -62,6 +99,9 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     reconciliationIntervalMinutes: 15,
     updateAnnouncementMode: 'major',
     lastAnnouncedVersion: '',
+    customSpecialSearches: [],
+    specialSearchPipelines: [],
+    enableQueryPipelines: false,
 };
 
 export type AutomationResultStatus = 'success' | 'conflict' | 'error' | 'skipped';
@@ -128,12 +168,18 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special';
+    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'pipeline';
     icon?: string;
     file?: TFile;
     tags?: string[];
     matchSnippet?: MatchSnippet;
     tagMode?: 'include' | 'exclude';
     specialSearch?: SpecialSearch;
+    customSearchId?: string;
+    basePath?: string;
+    baseView?: string;
+    baseContent?: string;
+    showBaseToolbar?: boolean;
+    pipeline?: SpecialSearchPipeline;
     action?: () => void | Promise<void>;
 }

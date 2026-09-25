@@ -1,9 +1,10 @@
-import { App, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
-import { PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption } from '../types';
+import { App, Component, MarkdownRenderer, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
+import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption, SpecialSearchPipeline } from '../types';
 import { normalizeTextQuery, parseSpecialSearch, SearchService } from '../search/SearchService';
 import { t } from '../i18n';
 import { NoteTitleModal } from './NoteTitleModal';
 import { NoteConflictModal } from './NoteConflictModal';
+import { getTagInputContext, getTagSuggestions } from './TagFilterSuggest';
 
 /**
  * Internal interface for the SuggestModal's chooser.
@@ -68,6 +69,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private chipsContainerEl: HTMLElement | null = null;
     private mode: 'search' | 'quick-add' | 'recent' = 'search';
     private quickAddDraft = '';
+    private baseRenderComponents: Component[] = [];
 
     constructor(
         app: App,
@@ -117,6 +119,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     onClose(): void {
         this.selectedTags = [];
         this.excludedTags = [];
+        for (const component of this.baseRenderComponents) component.unload();
+        this.baseRenderComponents = [];
     }
 
     /**
@@ -174,7 +178,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (!this.chipsContainerEl) return;
         this.chipsContainerEl.empty();
 
-        if (this.selectedTags.length === 0) {
+        if (this.selectedTags.length === 0 && this.excludedTags.length === 0) {
             this.chipsContainerEl.addClass('is-hidden');
             this.setPlaceholder(t().palettePlaceholder);
             return;
@@ -257,6 +261,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.refreshSuggestions();
             return;
         }
+        if (value.type === 'pipeline') {
+            this.inputEl.value = value.title;
+            this.refreshSuggestions();
+            return;
+        }
+        if (value.type === 'base') return;
         if (value.id === 'cmd-quick-add') {
             this.showQuickAdd();
             return;
@@ -302,6 +312,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Special search mode: typing @ lists supported filters; selecting one applies it.
         if (trimmed.startsWith('@')) {
+            const custom = this.getCustomSearchForQuery(trimmed);
+            if (custom) {
+                const textQuery = trimmed.slice(custom.identifier.length).trim();
+                if (custom.mode === 'base') return this.getCustomBaseItem(custom);
+                return this.getCustomFilterSuggestions(custom, textQuery, trimmed);
+            }
+            const pipeline = this.getPipelineForQuery(trimmed);
+            if (pipeline) return this.getPipelineItem(pipeline);
             const parsed = parseSpecialSearch(trimmed);
             if (!parsed.search) return this.getSpecialSearchChoices(trimmed);
             return this.getAsyncSuggestions(trimmed);
@@ -348,13 +366,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      * Swaps the results listing for available vault tags.
      */
     private handleTagQuery(query: string): PaletteItem[] {
-        // Extract the search prefix from the current token after '#'
-        const lastToken = query.split(/\s+/).pop() || '';
-        const excluded = lastToken.startsWith('!#');
-        const prefix = excluded ? lastToken.substring(2) : lastToken.replace(/^#/, '');
+        const context = getTagInputContext(query);
+        if (!context) return [];
+        const { prefix, excluded } = context;
 
         // Get matching tags, excluding already-selected tags
-        const matchingTags = this.searchService.getTagsMatchingPrefix(prefix, [...this.selectedTags, ...this.excludedTags]);
+        const matchingTags = getTagSuggestions(this.searchService, query, [...this.selectedTags, ...this.excludedTags]).map((suggestion) => suggestion.tag);
 
         if (matchingTags.length > 0) {
             return matchingTags.map((tag) => ({
@@ -414,6 +431,61 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
 
         return this.mapSearchResults(results, query);
+    }
+
+    private getCustomSearchForQuery(query: string): CustomSpecialSearch | null {
+        return this.settings.customSpecialSearches.find((search) => {
+            const identifier = search.identifier.toLowerCase();
+            const lowerQuery = query.toLowerCase();
+            return lowerQuery === identifier || lowerQuery.startsWith(`${identifier} `);
+        }) ?? null;
+    }
+
+    private getPipelineForQuery(query: string): SpecialSearchPipeline | null {
+        if (!this.settings.enableQueryPipelines) return null;
+        return this.settings.specialSearchPipelines.find((pipeline) => {
+            const name = pipeline.name.toLowerCase();
+            const lowerQuery = query.toLowerCase();
+            return lowerQuery === name || lowerQuery.startsWith(`${name} `);
+        }) ?? null;
+    }
+
+    private getPipelineItem(pipeline: SpecialSearchPipeline): PaletteItem[] {
+        return [{
+            id: `query-pipeline-${pipeline.id}`,
+            title: pipeline.name,
+            description: 'Query pipeline',
+            type: 'pipeline',
+            pipeline,
+            icon: 'git-branch',
+        }];
+    }
+
+    private getCustomBaseItem(search: CustomSpecialSearch): PaletteItem[] {
+        const file = this.app.vault.getAbstractFileByPath(normalizePath(search.basePath));
+        if (!(file instanceof TFile)) return [];
+        return [{
+            id: `custom-base-${search.id}`,
+            title: search.identifier,
+            description: search.baseView || search.basePath,
+            type: 'base',
+            customSearchId: search.id,
+            basePath: search.basePath,
+            baseView: search.baseView,
+            showBaseToolbar: search.showBaseToolbar,
+        }];
+    }
+
+    private async getCustomFilterSuggestions(
+        search: CustomSpecialSearch,
+        textQuery: string,
+        inputQuery: string,
+    ): Promise<PaletteItem[]> {
+        if (!search.filterQuery) return [];
+        const combinedQuery = [search.filterQuery, textQuery].filter(Boolean).join(' ');
+        const results = await this.searchService.searchWithContent(combinedQuery);
+        if (this.lastQuery !== inputQuery) return [];
+        return this.mapSearchResults(results, textQuery);
     }
 
     /**
@@ -640,7 +712,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             { search: 'code', label: '@code', description: t().paletteSpecialCode },
         ];
         const needle = query.toLowerCase();
-        return options
+        const builtIns = options
             .filter((option) => option.label.startsWith(needle))
             .map((option) => ({
                 id: `special-search-${option.search}`,
@@ -650,6 +722,35 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 specialSearch: option.search,
                 icon: 'search',
             }));
+        const custom = this.settings.customSpecialSearches
+            .filter((search) => !search.hidden && search.identifier.toLowerCase().startsWith(needle))
+            .sort((a, b) => Number(b.pinned) - Number(a.pinned))
+            .map((search) => ({
+                id: `custom-search-${search.id}`,
+                title: search.identifier,
+                description: search.mode === 'base' ? search.basePath : search.filterQuery || 'Custom filter',
+                type: 'special' as const,
+                customSearchId: search.id,
+                icon: 'sparkles',
+            }));
+        const pipelines = this.settings.enableQueryPipelines
+            ? this.settings.specialSearchPipelines
+                .filter((pipeline) => pipeline.name.toLowerCase().startsWith(needle))
+                .map((pipeline) => ({
+                    id: `query-pipeline-${pipeline.id}`,
+                    title: pipeline.name,
+                    description: 'Query pipeline',
+                    type: 'pipeline' as const,
+                    pipeline,
+                    icon: 'git-branch',
+                }))
+            : [];
+        const pinned = custom.filter((item) => {
+            const search = this.settings.customSpecialSearches.find((candidate) => candidate.id === item.customSearchId);
+            return Boolean(search?.pinned);
+        }).slice(0, 3);
+        const unpinned = custom.filter((item) => !pinned.some((candidate) => candidate.id === item.id));
+        return [...pinned, ...builtIns, ...unpinned, ...pipelines];
     }
 
     private getRecentFiles(query: string): PaletteItem[] {
@@ -689,8 +790,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Derive the plain search query for highlighting
         const highlightQuery = this.getHighlightQuery();
 
-        if (item.type === 'command' || item.type === 'action' || item.type === 'create' || item.type === 'special') {
+        if (item.type === 'base') {
+            this.renderBaseEmbed(item, el);
+        } else if (item.type === 'pipeline') {
+            this.renderPipeline(item, el);
+        } else if (item.type === 'command' || item.type === 'action' || item.type === 'create' || item.type === 'special') {
             el.addClass('seam-palette-command-item');
+            if (item.customSearchId) el.addClass('seam-palette-custom-search');
             const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
 
             if (this.settings.showIcons) {
@@ -782,6 +888,62 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 });
             }
         }
+    }
+
+    private renderBaseEmbed(item: PaletteItem, el: HTMLElement): void {
+        el.addClass('seam-palette-base-item');
+        if (!item.showBaseToolbar) el.addClass('seam-palette-base-hide-toolbar');
+        if (item.customSearchId) el.addClass('seam-palette-custom-search-item');
+        const heading = el.createDiv({ cls: 'seam-palette-base-heading' });
+        heading.createSpan({ cls: 'seam-palette-title', text: item.title });
+        if (item.description) heading.createSpan({ cls: 'seam-palette-base-view-name', text: item.description });
+        const embed = el.createDiv({ cls: 'seam-palette-base-embed' });
+        if (!item.basePath) return;
+        const target = `${item.basePath}${item.baseView ? `#${item.baseView}` : ''}`;
+        const component = new Component();
+        component.load();
+        this.baseRenderComponents.push(component);
+        void MarkdownRenderer.render(this.app, `![[${target}]]`, embed, item.basePath, component);
+    }
+
+    private renderPipeline(item: PaletteItem, el: HTMLElement): void {
+        el.addClass('seam-palette-pipeline-item');
+        const pipeline = item.pipeline;
+        if (!pipeline) return;
+        el.createDiv({ cls: 'seam-palette-pipeline-title', text: pipeline.name });
+        const row = el.createDiv({ cls: 'seam-palette-pipeline-row' });
+        const nodes = pipeline.nodes?.length ? pipeline.nodes : pipeline.queryIds.map((queryId, index) => ({ queryId, x: index * 220, y: 0 }));
+        const renderQuery = (queryId: string): void => {
+            const query = this.settings.customSpecialSearches.find((search) => search.id === queryId);
+            const builtin = query ? null : queryId.startsWith('@') ? queryId : null;
+            const stage = row.createDiv({ cls: 'seam-palette-pipeline-stage' });
+            stage.createDiv({ cls: 'seam-palette-pipeline-stage-title', text: query?.identifier ?? builtin ?? queryId });
+            if (query?.mode === 'base' && query.basePath) {
+                const target = `${query.basePath}${query.baseView ? `#${query.baseView}` : ''}`;
+                const embed = stage.createDiv({ cls: 'seam-palette-base-embed' });
+                const component = new Component();
+                component.load();
+                this.baseRenderComponents.push(component);
+                void MarkdownRenderer.render(this.app, `![[${target}]]`, embed, query.basePath, component);
+            } else if (query?.mode === 'tags') {
+                const results = this.searchService.search(query.filterQuery);
+                for (const result of results.slice(0, 8)) stage.createDiv({ cls: 'seam-palette-pipeline-note', text: result.title });
+            } else if (builtin) {
+                const results = this.searchService.search(builtin);
+                for (const result of results.slice(0, 8)) stage.createDiv({ cls: 'seam-palette-pipeline-note', text: result.title });
+            }
+        };
+        for (const node of [...nodes].sort((a, b) => a.y - b.y || a.x - b.x)) renderQuery(node.queryId);
+        for (const connection of pipeline.connections ?? []) {
+            const from = nodes.find((node) => node.queryId === connection.from);
+            const to = nodes.find((node) => node.queryId === connection.to);
+            if (!from || !to) continue;
+            row.createSpan({ cls: 'seam-palette-pipeline-arrow', text: `${this.getPipelineQueryLabel(connection.from)} → ${this.getPipelineQueryLabel(connection.to)}` });
+        }
+    }
+
+    private getPipelineQueryLabel(queryId: string): string {
+        return this.settings.customSpecialSearches.find((search) => search.id === queryId)?.identifier ?? queryId;
     }
 
     /**

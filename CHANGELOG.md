@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.0.0] - 2026-09-23
 
+### Added
+
+- **Custom special searches**: Create reusable `@` queries backed by Seam tag filters or Obsidian Base files, pin up to three favorites, and hide helper queries from the palette.
+- **Base and query pipeline views**: Preview configured Base views in the Universal Palette and optionally connect custom searches into directional experimental pipelines.
+
 ### Changed
 
 - **Obsidian compatibility**: Requires Obsidian 1.13.0 or newer.
@@ -15,8 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Settings layout**: Restored native section grouping and spacing across Seam's settings, including the Quick Add choices and Updates sections.
-- **Quick Add choices alignment**: Aligned choice names and controls to the left within the settings panel.
+- **Negated tag chips**: Keep an excluded tag visible when it is the first or only tag in the active filter.
 
 ## [2.0.1] - 2026-09-23
 

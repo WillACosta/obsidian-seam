@@ -33,7 +33,7 @@ export default class SeamPlugin extends Plugin {
     private automationService!: AutomationService;
     private automationQueue!: AutomationQueue;
     private reconciler!: Reconciler;
-    private searchService!: SearchService;
+    searchService!: SearchService;
     private reconciliationIntervalId: number | null = null;
 
     async onload(): Promise<void> {
@@ -425,6 +425,31 @@ export default class SeamPlugin extends Plugin {
         if (typeof raw === 'object' && raw !== null) {
             const data = raw as Record<string, unknown>;
             this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+
+            this.settings.customSpecialSearches = Array.isArray(this.settings.customSpecialSearches)
+                ? this.settings.customSpecialSearches.map((search) => ({
+                    ...search,
+                    mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
+                    hidden: Boolean(search.hidden),
+                    pinned: Boolean(search.pinned) && !Boolean(search.hidden),
+                    basePath: typeof search.basePath === 'string' ? search.basePath : '',
+                    baseView: typeof search.baseView === 'string' ? search.baseView : '',
+                    filterQuery: typeof search.filterQuery === 'string' ? search.filterQuery : '',
+                }))
+                : [];
+            this.settings.specialSearchPipelines = Array.isArray(this.settings.specialSearchPipelines)
+                ? this.settings.specialSearchPipelines.map((pipeline) => {
+                    const queryIds = Array.isArray(pipeline.queryIds) ? pipeline.queryIds.filter((id): id is string => typeof id === 'string') : [];
+                    const nodes = Array.isArray(pipeline.nodes)
+                        ? pipeline.nodes.filter((node) => node && typeof node.queryId === 'string').map((node) => ({ queryId: node.queryId, x: Number(node.x) || 0, y: Number(node.y) || 0 }))
+                        : queryIds.map((queryId, index) => ({ queryId, x: index * 220 + 20, y: 20 }));
+                    const connections = Array.isArray(pipeline.connections)
+                        ? pipeline.connections.filter((connection) => connection && typeof connection.from === 'string' && typeof connection.to === 'string')
+                        : queryIds.slice(1).map((queryId, index) => ({ from: queryIds[index], to: queryId }));
+                    return { ...pipeline, queryIds, nodes, connections };
+                })
+                : [];
+            this.settings.enableQueryPipelines = Boolean(this.settings.enableQueryPipelines);
 
             // Migration: the public Workspace API cannot place a split explicitly on the left.
             this.settings.quickAddChoices = Array.isArray(this.settings.quickAddChoices) ? this.settings.quickAddChoices.map((choice) => {
