@@ -428,7 +428,10 @@ export default class SeamPlugin extends Plugin {
         const raw: unknown = await this.loadData();
         if (typeof raw === 'object' && raw !== null) {
             const data = raw as Record<string, unknown>;
-            this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+            const persistedData = { ...data };
+            delete persistedData.specialSearchPipelines;
+            delete persistedData.enableQueryPipelines;
+            this.settings = Object.assign({}, DEFAULT_SETTINGS, persistedData);
 
             this.settings.customSpecialSearches = Array.isArray(this.settings.customSpecialSearches)
                 ? this.settings.customSpecialSearches.map((search) => ({
@@ -443,27 +446,6 @@ export default class SeamPlugin extends Plugin {
                     expandModal: Boolean(search.expandModal),
                 }))
                 : [];
-            this.settings.specialSearchPipelines = Array.isArray(this.settings.specialSearchPipelines)
-                ? this.settings.specialSearchPipelines.map((pipeline) => {
-                    const queryIds = Array.isArray(pipeline.queryIds) ? pipeline.queryIds.filter((id): id is string => typeof id === 'string') : [];
-                    const nodes = Array.isArray(pipeline.nodes)
-                        ? pipeline.nodes.filter((node) => node && typeof node.queryId === 'string').map((node) => ({ queryId: node.queryId, x: Number(node.x) || 0, y: Number(node.y) || 0 }))
-                        : queryIds.map((queryId, index) => ({ queryId, x: index * 220 + 20, y: 20 }));
-                    const connections = Array.isArray(pipeline.connections)
-                        ? pipeline.connections.filter((connection) => connection && typeof connection.from === 'string' && typeof connection.to === 'string')
-                        : queryIds.slice(1).map((queryId, index) => ({ from: queryIds[index], to: queryId }));
-                    return {
-                        ...pipeline,
-                        icon: typeof pipeline.icon === 'string' && pipeline.icon.trim() ? pipeline.icon.trim() : 'search',
-                        queryIds,
-                        nodes,
-                        connections,
-                        pinned: Boolean(pipeline.pinned) && !Boolean(pipeline.hidden),
-                        hidden: Boolean(pipeline.hidden),
-                    };
-                })
-                : [];
-            this.settings.enableQueryPipelines = Boolean(this.settings.enableQueryPipelines);
             this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
             const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences;
             const storedPreferences = Array.isArray(this.settings.specialSearchPreferences) ? this.settings.specialSearchPreferences : [];
@@ -474,7 +456,6 @@ export default class SeamPlugin extends Plugin {
             const validSearchOrderKeys = [
                 ...this.settings.customSpecialSearches.map((search) => `custom:${search.id}`),
                 ...this.settings.specialSearchPreferences.map((preference) => `builtin:${preference.search}`),
-                ...this.settings.specialSearchPipelines.map((pipeline) => `pipeline:${pipeline.id}`),
             ];
             const storedSearchOrder = Array.isArray(data.specialSearchOrder) ? data.specialSearchOrder as string[] : [];
             this.settings.specialSearchOrder = [...new Set([

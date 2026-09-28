@@ -26,8 +26,6 @@ export interface SeamSettings {
     lastAnnouncedVersion: string;
     customSpecialSearches: CustomSpecialSearch[];
     showSpecialSearchDescriptions: boolean;
-    specialSearchPipelines: SpecialSearchPipeline[];
-    enableQueryPipelines: boolean;
     specialSearchPreferences: SpecialSearchPreference[];
     specialSearchOrder: string[];
     showTodoCompletionPercent: boolean;
@@ -71,28 +69,6 @@ export interface CustomSpecialSearch {
     hidden: boolean;
 }
 
-export interface SpecialSearchPipelineNode {
-    queryId: string;
-    x: number;
-    y: number;
-}
-
-export interface SpecialSearchPipelineConnection {
-    from: string;
-    to: string;
-}
-
-export interface SpecialSearchPipeline {
-    id: string;
-    name: string;
-    icon?: string;
-    queryIds: string[];
-    pinned: boolean;
-    hidden: boolean;
-    nodes: SpecialSearchPipelineNode[];
-    connections: SpecialSearchPipelineConnection[];
-}
-
 export const DEFAULT_SETTINGS: SeamSettings = {
     permanentFolder: 'Permanent',
     archiveFolder: 'Archive',
@@ -115,8 +91,6 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     lastAnnouncedVersion: '',
     customSpecialSearches: [],
     showSpecialSearchDescriptions: true,
-    specialSearchPipelines: [],
-    enableQueryPipelines: false,
     specialSearchPreferences: [
         { search: 'untagged', pinned: false, hidden: false },
         { search: 'docs', pinned: false, hidden: false },
@@ -209,7 +183,7 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'pipeline';
+    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base';
     icon?: string;
     file?: TFile;
     tags?: string[];
@@ -222,6 +196,5 @@ export interface PaletteItem {
     baseView?: string;
     baseContent?: string;
     showBaseToolbar?: boolean;
-    pipeline?: SpecialSearchPipeline;
     action?: () => void | Promise<void>;
 }
