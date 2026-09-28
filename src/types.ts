@@ -2,6 +2,7 @@ import { TFile } from 'obsidian';
 
 export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000';
 export type UpdateAnnouncementMode = 'major' | 'all' | 'never';
+export type PaletteRibbonMode = 'both' | 'mobile' | 'hidden';
 
 export interface SeamSettings {
     permanentFolder: string;
@@ -27,6 +28,16 @@ export interface SeamSettings {
     showSpecialSearchDescriptions: boolean;
     specialSearchPipelines: SpecialSearchPipeline[];
     enableQueryPipelines: boolean;
+    specialSearchPreferences: SpecialSearchPreference[];
+    specialSearchOrder: string[];
+    showTodoCompletionPercent: boolean;
+    paletteRibbonMode: PaletteRibbonMode;
+}
+
+export interface SpecialSearchPreference {
+    search: SpecialSearch;
+    pinned: boolean;
+    hidden: boolean;
 }
 
 export type QuickAddLocation = 'default' | 'specific';
@@ -49,6 +60,7 @@ export interface QuickAddChoice {
 export interface CustomSpecialSearch {
     id: string;
     identifier: string;
+    icon: string;
     mode: 'base' | 'tags';
     basePath: string;
     baseView: string;
@@ -103,6 +115,22 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     showSpecialSearchDescriptions: true,
     specialSearchPipelines: [],
     enableQueryPipelines: false,
+    specialSearchPreferences: [
+        { search: 'untagged', pinned: false, hidden: false },
+        { search: 'docs', pinned: false, hidden: false },
+        { search: 'images', pinned: false, hidden: false },
+        { search: 'ocr', pinned: false, hidden: false },
+        { search: 'task', pinned: false, hidden: false },
+        { search: 'todo', pinned: false, hidden: false },
+        { search: 'done', pinned: false, hidden: false },
+        { search: 'code', pinned: false, hidden: false },
+    ],
+    specialSearchOrder: [
+        'builtin:untagged', 'builtin:docs', 'builtin:images', 'builtin:ocr',
+        'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code',
+    ],
+    showTodoCompletionPercent: false,
+    paletteRibbonMode: 'both',
 };
 
 export type AutomationResultStatus = 'success' | 'conflict' | 'error' | 'skipped';
@@ -133,6 +161,16 @@ export interface MatchSnippet {
 export type QueryTokenType = 'tag' | 'negativeTag' | 'or' | 'text';
 
 export type SpecialSearch = 'untagged' | 'docs' | 'images' | 'ocr' | 'task' | 'todo' | 'done' | 'code';
+export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
+    untagged: 'tag',
+    docs: 'file-text',
+    images: 'image',
+    ocr: 'scan-text',
+    task: 'list-checks',
+    todo: 'square-check-big',
+    done: 'list-checks',
+    code: 'code',
+};
 
 export interface QueryToken {
     type: QueryTokenType;
@@ -174,6 +212,7 @@ export interface PaletteItem {
     file?: TFile;
     tags?: string[];
     matchSnippet?: MatchSnippet;
+    taskCompletionPercent?: number;
     tagMode?: 'include' | 'exclude';
     specialSearch?: SpecialSearch;
     customSearchId?: string;

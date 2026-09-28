@@ -128,21 +128,40 @@
 }
 
 .seam-palette-pipeline-row {
-    display: flex;
-    align-items: stretch;
-    gap: 8px;
-    width: 100%;
+    position: relative;
+    display: block;
     overflow-x: auto;
+    overflow-y: auto;
     padding-bottom: 4px;
 }
 
 .seam-palette-pipeline-stage {
-    flex: 1 1 0;
-    min-width: 180px;
+    position: absolute;
+    z-index: 1;
+    width: 250px;
+    box-sizing: border-box;
     padding: 8px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
     background: var(--background-secondary);
+}
+
+.seam-palette-pipeline-edges,
+.seam-pipeline-canvas-edges {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: visible;
+    pointer-events: none;
+    color: var(--text-muted);
+}
+
+.seam-palette-pipeline-edge,
+.seam-pipeline-canvas-edge,
+.seam-pipeline-canvas-preview {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
 }
 
 .seam-palette-pipeline-stage-title {
@@ -358,10 +377,18 @@
 }
 
 .seam-custom-search-modal .setting-item-control > input[type='text'],
-.seam-custom-search-pipeline-modal .setting-item-control > input[type='text'],
-.seam-custom-search-pipeline-modal .seam-pipeline-query-selector > input {
+.seam-custom-search-pipeline-modal .setting-item-control > input[type='text'] {
     width: 100%;
     box-sizing: border-box;
+}
+
+.seam-custom-search-pipeline-modal .seam-pipeline-query-selector > input {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 120px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .seam-custom-search-panel-header {
@@ -385,21 +412,30 @@
 }
 
 .seam-pipeline-query-selector {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
     width: 100%;
+    min-height: 38px;
+    padding: 5px 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-modifier-form-field);
 }
 
 .seam-pipeline-query-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 8px;
 }
 
 .seam-pipeline-query-chip {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 4px 8px;
+    padding: 2px 7px;
     border: 1px solid var(--interactive-accent);
     border-radius: 999px;
     color: var(--text-accent);
@@ -414,26 +450,38 @@
 }
 
 .seam-pipeline-canvas {
-    position: relative;
-    min-height: 260px;
+    width: 100%;
+    max-height: min(440px, 55vh);
     margin: 8px 0 16px;
     overflow: auto;
     border: 1px solid var(--background-modifier-border);
     border-radius: 8px;
     background: var(--background-secondary);
+    touch-action: pan-x pan-y;
+}
+
+.seam-pipeline-canvas-surface {
+    position: relative;
+    min-width: 100%;
+    min-height: 260px;
 }
 
 .seam-pipeline-canvas-node {
     position: absolute;
     z-index: 1;
-    min-width: 150px;
-    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    width: 220px;
+    min-height: 88px;
+    box-sizing: border-box;
+    padding: 18px 24px;
     border: 1px solid var(--interactive-accent);
     border-radius: 8px;
     background: var(--background-primary);
     cursor: grab;
     touch-action: none;
     user-select: none;
+    text-align: center;
 }
 
 .seam-pipeline-canvas-node:active {
@@ -443,26 +491,68 @@
 .seam-pipeline-canvas-edge {
     position: absolute;
     z-index: 0;
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+.seam-pipeline-canvas-preview {
+    stroke-dasharray: 5 4;
+}
+
+.seam-pipeline-node-label {
+    width: 100%;
+    overflow-wrap: anywhere;
+    color: var(--text-normal);
+}
+
+.seam-pipeline-node-remove,
+.seam-pipeline-node-port {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 50%;
+    background: var(--background-primary);
     color: var(--text-muted);
-    white-space: nowrap;
-    pointer-events: none;
 }
 
-.seam-pipeline-connections {
-    margin-top: 8px;
+.seam-pipeline-node-remove {
+    top: 3px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
 }
 
-.seam-pipeline-connections select {
-    min-width: 120px;
-    margin-right: 6px;
+.seam-pipeline-node-port {
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    transform: translateY(-50%);
+    touch-action: none;
 }
 
-.seam-pipeline-connection-row {
+.seam-pipeline-node-port-in { left: -8px; }
+.seam-pipeline-node-port-out { right: -8px; }
+.seam-pipeline-node-port.is-connecting { background: var(--interactive-accent); }
+.seam-pipeline-canvas-edge:hover { stroke: var(--text-accent); stroke-width: 3; }
+
+.seam-custom-search-icon-preview {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    margin: 4px 8px 4px 0;
-    color: var(--text-muted);
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 6px;
+    color: var(--text-accent);
+}
+
+.seam-custom-search-icon-preview svg {
+    width: 18px;
+    height: 18px;
 }
 
 .seam-note-conflict-actions kbd {
@@ -573,8 +663,14 @@
 }
 
 .seam-quick-add-choices.is-overflowing {
-    max-height: 280px;
+    max-height: calc(5 * 42px);
     overflow-y: auto;
+}
+
+.seam-custom-search-panel-footer .setting-item-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .seam-quick-add-choice {
@@ -781,4 +877,29 @@
     display: flex;
     justify-content: flex-end;
     padding-top: 14px;
+}
+.seam-palette-note-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.seam-palette-note-title-row > .seam-palette-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.seam-palette-task-completion {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+.seam-palette-task-completion-label,
+.seam-palette-task-completion-separator {
+  color: var(--text-faint);
 }

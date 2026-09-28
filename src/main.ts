@@ -1,4 +1,4 @@
-import { Notice, Plugin, TAbstractFile, TFile } from 'obsidian';
+import { Notice, Platform, Plugin, TAbstractFile, TFile } from 'obsidian';
 import { DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
@@ -35,6 +35,7 @@ export default class SeamPlugin extends Plugin {
     private reconciler!: Reconciler;
     searchService!: SearchService;
     private reconciliationIntervalId: number | null = null;
+    private paletteRibbonEl: HTMLElement | null = null;
 
     async onload(): Promise<void> {
         // 1. Load persisted settings
@@ -52,6 +53,9 @@ export default class SeamPlugin extends Plugin {
         );
         this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue);
         this.searchService = new SearchService(this.app, this.settings);
+
+        this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().cmdOpenPalette, () => this.openPalette());
+        this.refreshPaletteRibbon();
 
         // 3. Register commands
         this.addCommand({
@@ -429,6 +433,7 @@ export default class SeamPlugin extends Plugin {
             this.settings.customSpecialSearches = Array.isArray(this.settings.customSpecialSearches)
                 ? this.settings.customSpecialSearches.map((search) => ({
                     ...search,
+                    icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'sparkles',
                     mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
                     hidden: Boolean(search.hidden),
                     pinned: Boolean(search.pinned) && !Boolean(search.hidden),
@@ -451,6 +456,26 @@ export default class SeamPlugin extends Plugin {
                 : [];
             this.settings.enableQueryPipelines = Boolean(this.settings.enableQueryPipelines);
             this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
+            const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences;
+            const storedPreferences = Array.isArray(this.settings.specialSearchPreferences) ? this.settings.specialSearchPreferences : [];
+            this.settings.specialSearchPreferences = defaultPreferences.map((entry) => {
+                const stored = storedPreferences.find((item) => item?.search === entry.search);
+                return { search: entry.search, pinned: Boolean(stored?.pinned) && !Boolean(stored?.hidden), hidden: Boolean(stored?.hidden) };
+            });
+            const validSearchOrderKeys = [
+                ...this.settings.customSpecialSearches.map((search) => `custom:${search.id}`),
+                ...this.settings.specialSearchPreferences.map((preference) => `builtin:${preference.search}`),
+                ...this.settings.specialSearchPipelines.map((pipeline) => `pipeline:${pipeline.id}`),
+            ];
+            const storedSearchOrder = Array.isArray(data.specialSearchOrder) ? data.specialSearchOrder as string[] : [];
+            this.settings.specialSearchOrder = [...new Set([
+                ...storedSearchOrder.filter((key) => validSearchOrderKeys.includes(key)),
+                ...validSearchOrderKeys,
+            ])];
+            this.settings.showTodoCompletionPercent = Boolean(this.settings.showTodoCompletionPercent);
+            this.settings.paletteRibbonMode = ['both', 'mobile', 'hidden'].includes(this.settings.paletteRibbonMode)
+                ? this.settings.paletteRibbonMode
+                : 'both';
 
             // Migration: the public Workspace API cannot place a split explicitly on the left.
             this.settings.quickAddChoices = Array.isArray(this.settings.quickAddChoices) ? this.settings.quickAddChoices.map((choice) => {
@@ -544,6 +569,7 @@ export default class SeamPlugin extends Plugin {
      * Called when settings change. Propagates new settings to all services.
      */
     onSettingsChange(): void {
+        this.refreshPaletteRibbon();
         this.automationService?.updateSettings(this.settings);
         this.automationQueue?.setDelayMode(this.settings.automationDelay);
         this.reconciler?.updateSettings(this.settings);
@@ -552,5 +578,16 @@ export default class SeamPlugin extends Plugin {
 
         // Re-seed tag suggestions when settings change
         void this.seedTagSuggestions();
+    }
+
+    private refreshPaletteRibbon(): void {
+        // addRibbonIcon is registered once during load; its element is updated
+        // by the settings toggle so changes take effect immediately.
+        const ribbon = this.paletteRibbonEl;
+        if (ribbon) {
+            const shouldShow = this.settings.paletteRibbonMode === 'both'
+                || (this.settings.paletteRibbonMode === 'mobile' && Platform.isMobile);
+            ribbon.style.display = shouldShow ? '' : 'none';
+        }
     }
 }

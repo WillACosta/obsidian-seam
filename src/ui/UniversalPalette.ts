@@ -1,10 +1,11 @@
 import { App, Component, MarkdownRenderer, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
-import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption, SpecialSearchPipeline } from '../types';
+import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption, SpecialSearchPipeline, SPECIAL_SEARCH_ICONS } from '../types';
 import { normalizeTextQuery, parseSpecialSearch, SearchService } from '../search/SearchService';
 import { t } from '../i18n';
 import { NoteTitleModal } from './NoteTitleModal';
 import { NoteConflictModal } from './NoteConflictModal';
 import { getTagInputContext, getTagSuggestions } from './TagFilterSuggest';
+import { buildPipelineCanvas } from '../utils/pipelineCanvas';
 
 /**
  * Internal interface for the SuggestModal's chooser.
@@ -70,6 +71,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private mode: 'search' | 'quick-add' | 'recent' = 'search';
     private quickAddDraft = '';
     private baseRenderComponents: Component[] = [];
+    private selectedPipelineId: string | null = null;
+    private selectedPipelineQuery = '';
 
     constructor(
         app: App,
@@ -81,6 +84,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.setPlaceholder(t().palettePlaceholder);
         this.updateInstructions('');
         this.emptyStateText = 'No results found.';
+        this.inputEl.addEventListener('input', () => {
+            if (this.inputEl.value.trim() !== this.selectedPipelineQuery) this.selectedPipelineId = null;
+        });
 
         // Register Mod+Enter (Cmd on Mac, Ctrl on Win/Linux) to open in new tab.
         // SuggestModal's default Enter handler does not preserve modifier state
@@ -121,6 +127,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.excludedTags = [];
         for (const component of this.baseRenderComponents) component.unload();
         this.baseRenderComponents = [];
+        this.selectedPipelineId = null;
+        this.selectedPipelineQuery = '';
     }
 
     /**
@@ -263,6 +271,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
         if (value.type === 'pipeline') {
             this.inputEl.value = value.title;
+            this.selectedPipelineId = value.id;
+            this.selectedPipelineQuery = value.title;
             this.refreshSuggestions();
             return;
         }
@@ -514,6 +524,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 file: r.file,
                 tags: r.tags,
                 matchSnippet: r.matchSnippet,
+                taskCompletionPercent: this.settings.showTodoCompletionPercent && parseSpecialSearch(query).search === 'todo'
+                    ? this.getTaskCompletionPercent(r.file)
+                    : undefined,
             };
         });
 
@@ -539,6 +552,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
 
         return items;
+    }
+
+    private getTaskCompletionPercent(file: TFile): number | undefined {
+        const tasks = this.app.metadataCache.getFileCache(file)?.listItems?.filter((item) => item.task !== undefined) ?? [];
+        if (tasks.length === 0) return undefined;
+        const completed = tasks.filter((item) => item.task !== ' ').length;
+        return Math.round((completed / tasks.length) * 100);
     }
 
     /**
@@ -718,6 +738,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             { search: 'untagged', label: '@untagged', description: t().paletteSpecialUntagged },
             { search: 'docs', label: '@docs', description: t().paletteSpecialDocs },
             { search: 'images', label: '@images', description: t().paletteSpecialImages },
+            { search: 'ocr', label: '@ocr', description: t().paletteSpecialOcr },
             { search: 'task', label: '@task', description: t().paletteSpecialTask },
             { search: 'todo', label: '@todo', description: t().paletteSpecialTodo },
             { search: 'done', label: '@done', description: t().paletteSpecialDone },
@@ -725,25 +746,24 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         ];
         const needle = query.toLowerCase();
         const builtIns = options
-            .filter((option) => option.label.startsWith(needle))
+            .filter((option) => option.label.startsWith(needle) && !this.settings.specialSearchPreferences.find((preference) => preference.search === option.search)?.hidden)
             .map((option) => ({
                 id: `special-search-${option.search}`,
                 title: option.label,
                 description: option.description,
                 type: 'special' as const,
                 specialSearch: option.search,
-                icon: 'search',
+                icon: SPECIAL_SEARCH_ICONS[option.search],
             }));
         const custom = this.settings.customSpecialSearches
             .filter((search) => !search.hidden && search.identifier.toLowerCase().startsWith(needle))
-            .sort((a, b) => Number(b.pinned) - Number(a.pinned))
             .map((search) => ({
                 id: `custom-search-${search.id}`,
                 title: search.identifier,
                 description: search.mode === 'base' ? search.basePath : search.filterQuery || 'Custom filter',
                 type: 'special' as const,
                 customSearchId: search.id,
-                icon: 'sparkles',
+                icon: search.icon || 'sparkles',
             }));
         const pipelines = this.settings.enableQueryPipelines
             ? this.settings.specialSearchPipelines
@@ -757,14 +777,24 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                     icon: 'git-branch',
                 }))
             : [];
-        const pinned = custom.filter((item) => {
-            const search = this.settings.customSpecialSearches.find((candidate) => candidate.id === item.customSearchId);
-            return Boolean(search?.pinned);
-        }).slice(0, 3);
-        const unpinned = custom.filter((item) => !pinned.some((candidate) => candidate.id === item.id));
-        const pinnedPipelines = pipelines.filter((item) => this.settings.specialSearchPipelines.find((pipeline) => pipeline.id === item.id.replace('query-pipeline-', ''))?.pinned);
-        const unpinnedPipelines = pipelines.filter((item) => !pinnedPipelines.some((candidate) => candidate.id === item.id));
-        return [...pinned, ...pinnedPipelines, ...builtIns, ...unpinned, ...unpinnedPipelines];
+        const orderIndex = (item: PaletteItem): number => {
+            const key = item.customSearchId?.startsWith('pipeline:')
+                ? `pipeline:${item.customSearchId.slice('pipeline:'.length)}`
+                : item.customSearchId
+                    ? `custom:${item.customSearchId}`
+                    : item.specialSearch ? `builtin:${item.specialSearch}` : '';
+            return this.settings.specialSearchOrder.indexOf(key);
+        };
+        const isPinned = (item: PaletteItem): boolean => {
+            if (item.specialSearch) return Boolean(this.settings.specialSearchPreferences.find((preference) => preference.search === item.specialSearch)?.pinned);
+            if (item.customSearchId?.startsWith('pipeline:')) {
+                return Boolean(this.settings.specialSearchPipelines.find((pipeline) => pipeline.id === item.customSearchId?.slice('pipeline:'.length))?.pinned);
+            }
+            return Boolean(this.settings.customSpecialSearches.find((search) => search.id === item.customSearchId)?.pinned);
+        };
+        return [...builtIns, ...custom, ...pipelines].sort((a, b) =>
+            Number(isPinned(b)) - Number(isPinned(a)) || orderIndex(a) - orderIndex(b),
+        );
     }
 
     private getRecentFiles(query: string): PaletteItem[] {
@@ -807,7 +837,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (item.type === 'base') {
             this.renderBaseEmbed(item, el);
         } else if (item.type === 'pipeline') {
-            this.renderPipeline(item, el);
+            if (this.selectedPipelineId === item.id) this.renderPipeline(item, el);
+            else {
+                el.addClass('seam-palette-command-item');
+                const title = el.createDiv({ cls: 'seam-palette-title-row' });
+                if (this.settings.showIcons) {
+                    const icon = title.createSpan({ cls: 'seam-palette-command-icon' });
+                    setIcon(icon, item.icon || 'git-branch');
+                }
+                title.createSpan({ cls: 'seam-palette-title', text: item.title });
+            }
         } else if (item.type === 'command' || item.type === 'action' || item.type === 'create' || item.type === 'special') {
             el.addClass('seam-palette-command-item');
             if (item.customSearchId) el.addClass('seam-palette-custom-search');
@@ -841,8 +880,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             el.addClass('seam-palette-note-item');
 
             // Title with highlighting
-            const titleEl = el.createDiv({ cls: 'seam-palette-title' });
+            const titleRow = el.createDiv({ cls: 'seam-palette-note-title-row' });
+            const titleEl = titleRow.createDiv({ cls: 'seam-palette-title' });
             renderHighlightedText(titleEl, item.title, highlightQuery);
+            if (item.taskCompletionPercent !== undefined) {
+                const completion = titleRow.createDiv({ cls: 'seam-palette-task-completion' });
+                completion.createSpan({ cls: 'seam-palette-task-completion-label', text: t().paletteTodoCompletionLabel });
+                completion.createSpan({ cls: 'seam-palette-task-completion-separator', text: '•' });
+                completion.createSpan({ cls: 'seam-palette-task-completion-value', text: `${item.taskCompletionPercent}%` });
+            }
 
             if (item.description) {
                 const folderEl = el.createDiv({ cls: 'seam-palette-folder' });
@@ -959,11 +1005,25 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (!pipeline) return;
         el.createDiv({ cls: 'seam-palette-pipeline-title', text: pipeline.name });
         const row = el.createDiv({ cls: 'seam-palette-pipeline-row' });
-        const nodes = pipeline.nodes?.length ? pipeline.nodes : pipeline.queryIds.map((queryId, index) => ({ queryId, x: index * 220, y: 0 }));
+        const graph = buildPipelineCanvas(pipeline, (queryId) => this.getPipelineQueryLabel(queryId));
+        const nodes = graph.nodes;
+        const layoutScale = 1.27;
+        const width = Math.max(640, ...nodes.map((node) => Math.round(node.x * layoutScale) + 280));
+        const height = Math.max(260, ...nodes.map((node) => node.y + 250));
+        row.style.width = `${width}px`;
+        row.style.height = `${height}px`;
+        const svg = row.createSvg('svg', { cls: 'seam-palette-pipeline-edges', attr: { width: String(width), height: String(height), 'aria-hidden': 'true' } });
+        const defs = svg.createSvg('defs');
+        const marker = defs.createSvg('marker', { attr: { id: 'seam-palette-pipeline-arrow', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto' } });
+        marker.createSvg('path', { attr: { d: 'M 0 0 L 10 5 L 0 10 z', fill: 'currentColor' } });
         const renderQuery = (queryId: string): void => {
             const query = this.settings.customSpecialSearches.find((search) => search.id === queryId);
             const builtin = query ? null : queryId.startsWith('@') ? queryId : null;
+            const node = nodes.find((entry) => entry.id === queryId);
+            if (!node) return;
             const stage = row.createDiv({ cls: 'seam-palette-pipeline-stage' });
+            stage.setCssStyles({ left: `${Math.round(node.x * layoutScale)}px`, top: `${node.y}px` });
+            stage.setAttribute('data-query-id', queryId);
             stage.createDiv({ cls: 'seam-palette-pipeline-stage-title', text: query?.identifier ?? builtin ?? queryId });
             if (query?.mode === 'base' && query.basePath) {
                 const target = `${query.basePath}${query.baseView ? `#${query.baseView}` : ''}`;
@@ -980,13 +1040,23 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 for (const result of results.slice(0, 8)) stage.createDiv({ cls: 'seam-palette-pipeline-note', text: result.title });
             }
         };
-        for (const node of [...nodes].sort((a, b) => a.y - b.y || a.x - b.x)) renderQuery(node.queryId);
-        for (const connection of pipeline.connections ?? []) {
-            const from = nodes.find((node) => node.queryId === connection.from);
-            const to = nodes.find((node) => node.queryId === connection.to);
-            if (!from || !to) continue;
-            row.createSpan({ cls: 'seam-palette-pipeline-arrow', text: `${this.getPipelineQueryLabel(connection.from)} → ${this.getPipelineQueryLabel(connection.to)}` });
-        }
+        for (const node of nodes) renderQuery(node.id);
+        window.requestAnimationFrame(() => {
+            const rowRect = row.getBoundingClientRect();
+            for (const edge of graph.edges) {
+                const from = row.querySelector<HTMLElement>(`.seam-palette-pipeline-stage[data-query-id="${CSS.escape(edge.fromNode)}"]`);
+                const to = row.querySelector<HTMLElement>(`.seam-palette-pipeline-stage[data-query-id="${CSS.escape(edge.toNode)}"]`);
+                if (!from || !to) continue;
+                const fromRect = from.getBoundingClientRect();
+                const toRect = to.getBoundingClientRect();
+                const x1 = fromRect.right - rowRect.left + row.scrollLeft;
+                const y1 = fromRect.top - rowRect.top + row.scrollTop + Math.min(54, fromRect.height / 2);
+                const x2 = toRect.left - rowRect.left + row.scrollLeft;
+                const y2 = toRect.top - rowRect.top + row.scrollTop + Math.min(54, toRect.height / 2);
+                const curve = Math.max(28, Math.abs(x2 - x1) / 2);
+                svg.createSvg('path', { cls: 'seam-palette-pipeline-edge', attr: { d: `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`, 'marker-end': 'url(#seam-palette-pipeline-arrow)' } });
+            }
+        });
     }
 
     private getPipelineQueryLabel(queryId: string): string {

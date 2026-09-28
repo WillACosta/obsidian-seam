@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, Modal, Notice, parseYaml, Setting, TFile, normalizePath } from 'obsidian';
+import { AbstractInputSuggest, App, getIcon, Modal, Notice, parseYaml, Setting, TFile, normalizePath } from 'obsidian';
 import { SearchService } from '../search/SearchService';
 import { CustomSpecialSearch } from '../types';
 import { t } from '../i18n';
@@ -55,9 +55,10 @@ export class CustomSpecialSearchModal extends Modal {
     constructor(app: App, existing: CustomSpecialSearch | null, private readonly onSave: SaveSearch, private readonly searchService?: SearchService, private readonly showIcons = true) {
         super(app);
         this.search = existing ? { ...existing, mode: existing.mode ?? (existing.basePath ? 'base' : 'tags') } : {
-            id: crypto.randomUUID(), identifier: '', mode: 'tags', basePath: '', baseView: '', showBaseToolbar: false,
+            id: crypto.randomUUID(), identifier: '', icon: 'sparkles', mode: 'tags', basePath: '', baseView: '', showBaseToolbar: false,
             filterQuery: '', pinned: false, hidden: false,
         };
+        this.search.icon = this.search.icon || 'sparkles';
     }
 
     onOpen(): void {
@@ -67,6 +68,16 @@ export class CustomSpecialSearchModal extends Modal {
         identifierSetting.settingEl.addClass('seam-custom-search-text-setting');
         identifierSetting
             .addText((text) => text.setValue(this.search.identifier).onChange((value) => { this.search.identifier = value; }));
+
+        const iconSetting = new Setting(this.contentEl).setName(t().customSearchModalIcon).setDesc(t().customSearchModalIconDesc);
+        iconSetting.settingEl.addClass('seam-custom-search-text-setting');
+        iconSetting.addText((text) => {
+            text.setValue(this.search.icon).onChange((value) => {
+                this.search.icon = value.trim() || 'sparkles';
+                this.renderIconPreview(iconSetting.controlEl, this.search.icon, text.inputEl);
+            });
+            this.renderIconPreview(iconSetting.controlEl, this.search.icon, text.inputEl);
+        });
         new Setting(this.contentEl).setName(t().customSearchModalMode).setDesc(t().customSearchModalModeDesc)
             .addDropdown((dropdown) => dropdown.addOption('base', t().customSearchModalModeBase).addOption('tags', t().customSearchModalModeTags)
                 .setValue(this.search.mode).onChange((value) => { this.search.mode = value as CustomSpecialSearch['mode']; this.updateModeVisibility(); }));
@@ -125,6 +136,15 @@ export class CustomSpecialSearchModal extends Modal {
         this.toolbarSetting?.settingEl.toggle(this.search.mode === 'base');
         this.filterSetting?.settingEl.toggle(this.search.mode === 'tags');
         if (this.search.mode === 'base') void this.refreshBaseViewSuggestions();
+    }
+
+    private renderIconPreview(parent: HTMLElement, iconId: string, input?: HTMLInputElement): void {
+        parent.querySelector('.seam-custom-search-icon-preview')?.remove();
+        const preview = parent.createSpan({ cls: 'seam-custom-search-icon-preview' });
+        const icon = getIcon(iconId.trim() || 'sparkles');
+        if (icon) preview.appendChild(icon);
+        const textInput = input ?? parent.querySelector('input');
+        if (textInput) parent.insertBefore(preview, textInput);
     }
 
     private async refreshBaseViewSuggestions(): Promise<void> {

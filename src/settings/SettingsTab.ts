@@ -1,6 +1,6 @@
 import { App, getIcon, Notice, PluginSettingTab, setIcon, Setting, SettingDefinitionItem } from 'obsidian';
 import type SeamPlugin from '../main';
-import { AutomationDelayMode, CustomSpecialSearch, QuickAddChoice, SpecialSearchPipeline, UpdateAnnouncementMode } from '../types';
+import { AutomationDelayMode, CustomSpecialSearch, QuickAddChoice, SpecialSearchPipeline, UpdateAnnouncementMode, SpecialSearch, PaletteRibbonMode, SPECIAL_SEARCH_ICONS } from '../types';
 import { t } from '../i18n';
 import { QuickAddChoiceModal } from './QuickAddChoiceModal';
 import { CustomSpecialSearchModal } from './CustomSpecialSearchModal';
@@ -53,6 +53,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             items: [
                 { name: strings.settingsCustomSearches, desc: strings.settingsCustomSearchesDesc, render: (setting) => this.renderCustomSearchesSetting(setting) },
                 { name: strings.settingsCustomSearchDescriptions, desc: strings.settingsCustomSearchDescriptionsDesc, render: (setting) => this.renderSpecialSearchDescriptionsSetting(setting) },
+                { name: strings.settingsTodoCompletion, desc: strings.settingsTodoCompletionDesc, render: (setting) => this.renderTodoCompletionSetting(setting) },
                 { name: strings.settingsCustomSearchPipeline, desc: strings.settingsCustomSearchPipelineDesc, render: (setting) => this.renderPipelinesSetting(setting) },
             ],
         }, {
@@ -79,6 +80,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             heading: strings.settingsInterfaceHeading,
             items: [
                 { name: strings.settingsShowIcons, desc: strings.settingsShowIconsDesc, render: (setting) => this.renderShowIconsSetting(setting) },
+                { name: strings.settingsPaletteRibbon, desc: strings.settingsPaletteRibbonDesc, render: (setting) => this.renderPaletteRibbonSetting(setting) },
                 { name: strings.settingsPaletteHotkey, desc: strings.settingsPaletteHotkeyDesc, render: (setting) => this.renderHotkeySetting(setting, `${this.plugin.manifest.id}:open-palette`) },
             ],
         }, {
@@ -157,27 +159,32 @@ export class SeamSettingsTab extends PluginSettingTab {
         const list = panel.createDiv({ cls: 'seam-quick-add-choices seam-custom-searches-list' });
         let draggedSearchId: string | null = null;
         let dragArmedSearchId: string | null = null;
+        let draggedOrderKey: string | null = null;
         const render = (): void => {
             list.empty();
             const query = filterInput.value.trim().toLowerCase();
             const searches = this.plugin.settings.customSpecialSearches
                 .filter((search) => search.identifier.toLowerCase().includes(query))
                 .sort((a, b) => Number(b.pinned) - Number(a.pinned));
-            list.toggleClass('is-overflowing', searches.length + (this.plugin.settings.enableQueryPipelines ? this.plugin.settings.specialSearchPipelines.length : 0) > 5);
-            if (searches.length === 0) {
+            const pipelineCount = this.plugin.settings.enableQueryPipelines
+                ? this.plugin.settings.specialSearchPipelines.filter((pipeline) => pipeline.name.toLowerCase().includes(query)).length
+                : 0;
+            const builtins = this.plugin.settings.specialSearchPreferences.filter((preference) => `@${preference.search}`.includes(query));
+            list.toggleClass('is-overflowing', searches.length + pipelineCount + builtins.length > 5);
+            if (searches.length === 0 && pipelineCount === 0 && builtins.length === 0) {
                 list.createDiv({ cls: 'seam-custom-searches-empty', text: query ? t().settingsCustomSearchNoMatches : t().settingsCustomSearchNone });
-            } else {
+            } else if (searches.length > 0) {
                 for (const search of searches) {
                     const row = list.createDiv({ cls: `seam-quick-add-choice seam-custom-search-choice${search.pinned ? ' seam-custom-search-pinned' : ''}${search.hidden ? ' seam-custom-search-hidden' : ''}` });
+                    row.dataset.specialSearchOrderKey = `custom:${search.id}`;
                     row.draggable = query.length === 0;
                     const label = row.createDiv({ cls: 'seam-quick-add-choice-label seam-custom-search-label' });
                     if (this.plugin.settings.showIcons) {
                         const icon = label.createSpan({ cls: 'seam-quick-add-choice-icon' });
-                        setIcon(icon, search.mode === 'base' ? 'database' : 'hash');
+                        const iconSvg = getIcon(search.icon || 'sparkles');
+                        if (iconSvg) icon.appendChild(iconSvg);
                     }
                     label.createDiv({ cls: 'seam-custom-search-name', text: search.identifier });
-                    if (search.mode === 'base') label.createDiv({ cls: 'setting-item-description', text: search.basePath });
-                    if (search.hidden) row.createSpan({ cls: 'seam-custom-search-badge', text: 'Hidden' });
                     const actions = row.createDiv({ cls: 'seam-quick-add-choice-actions seam-custom-search-actions' });
                     this.addChoiceButton(actions, 'pen', `${t().settingsCustomSearchEdit} ${search.identifier}`, () => this.openCustomSearchModal(search));
                     this.addChoiceButton(actions, 'copy', `${t().settingsCustomSearchDuplicate} ${search.identifier}`, () => {
@@ -186,7 +193,9 @@ export class SeamSettingsTab extends PluginSettingTab {
                         void this.plugin.saveSettings().then(() => this.update());
                     });
                     this.addChoiceButton(actions, search.pinned ? 'pin-off' : 'pin', search.pinned ? `Unpin ${search.identifier}` : `Pin ${search.identifier}`, () => {
-                        const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned && item.id !== search.id).length;
+                        const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned && item.id !== search.id).length
+                            + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned).length
+                            + this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned).length;
                         if (!search.pinned && pinnedCount >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
                         search.pinned = !search.pinned;
                         void this.plugin.saveSettings().then(() => this.update());
@@ -207,7 +216,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                         if (query || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
                         event.preventDefault();
                         event.stopPropagation();
-                        this.moveCustomSearch(search.id, event.key === 'ArrowUp' ? -1 : 1, render);
+                        this.moveSpecialSearchOrder(`custom:${search.id}`, event.key === 'ArrowUp' ? -1 : 1, list, render);
                     });
                     row.addEventListener('dragstart', (event) => {
                         if (query || dragArmedSearchId !== search.id) { event.preventDefault(); return; }
@@ -239,20 +248,84 @@ export class SeamSettingsTab extends PluginSettingTab {
                     });
                 }
             }
+            for (const preference of builtins) this.renderBuiltinSpecialSearchRow(list, preference.search, query, render);
             if (this.plugin.settings.enableQueryPipelines) {
                 this.renderPipelineRows(list, query);
             }
+            const rows = Array.from(list.querySelectorAll<HTMLElement>('.seam-custom-search-choice'));
+            for (const row of rows) {
+                const key = row.dataset.specialSearchOrderKey;
+                if (key && !this.plugin.settings.specialSearchOrder.includes(key)) this.plugin.settings.specialSearchOrder.push(key);
+            }
+            const rowOrder = new Map(rows.map((row, index) => [row, index]));
+            rows.sort((a, b) => {
+                const rank = (row: HTMLElement): number => row.hasClass('seam-custom-search-pinned')
+                    ? 0
+                    : row.hasClass('seam-custom-search-hidden') ? 2 : 1;
+                const order = this.plugin.settings.specialSearchOrder;
+                return rank(a) - rank(b)
+                    || order.indexOf(a.dataset.specialSearchOrderKey ?? '') - order.indexOf(b.dataset.specialSearchOrderKey ?? '')
+                    || (rowOrder.get(a) ?? 0) - (rowOrder.get(b) ?? 0);
+            }).forEach((row) => list.appendChild(row));
         };
+        list.addEventListener('pointerdown', (event) => {
+            const handle = (event.target as HTMLElement).closest('.seam-quick-add-drag-handle');
+            const row = handle?.closest<HTMLElement>('.seam-custom-search-choice');
+            if (row) row.dataset.reorderArmed = 'true';
+        }, true);
+        list.addEventListener('dragstart', (event) => {
+            const row = (event.target as HTMLElement).closest<HTMLElement>('.seam-custom-search-choice');
+            if (!row || filterInput.value.trim() || row.dataset.reorderArmed !== 'true') {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return;
+            }
+            draggedOrderKey = row.dataset.specialSearchOrderKey ?? null;
+            if (draggedOrderKey) event.dataTransfer?.setData('text/plain', draggedOrderKey);
+            if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+            row.addClass('is-dragging');
+            event.stopImmediatePropagation();
+        }, true);
+        list.addEventListener('dragover', (event) => {
+            const row = (event.target as HTMLElement).closest<HTMLElement>('.seam-custom-search-choice');
+            const sourceRow = Array.from(list.querySelectorAll<HTMLElement>('.seam-custom-search-choice'))
+                .find((item) => item.dataset.specialSearchOrderKey === draggedOrderKey);
+            if (!row || !sourceRow || filterInput.value.trim()) return;
+            const rank = (item: HTMLElement): string => item.classList.contains('seam-custom-search-pinned') ? 'pinned'
+                : item.classList.contains('seam-custom-search-hidden') ? 'hidden' : 'normal';
+            if (rank(row) !== rank(sourceRow)) return;
+            event.preventDefault();
+            row.addClass('is-drop-after');
+            event.stopImmediatePropagation();
+        }, true);
+        list.addEventListener('drop', (event) => {
+            const row = (event.target as HTMLElement).closest<HTMLElement>('.seam-custom-search-choice');
+            const targetKey = row?.dataset.specialSearchOrderKey;
+            if (!row || !draggedOrderKey || !targetKey || filterInput.value.trim()) return;
+            const rect = row.getBoundingClientRect();
+            this.reorderSpecialSearchOrder(draggedOrderKey, targetKey, event.clientY >= rect.top + rect.height / 2, list, render);
+            row.removeClass('is-drop-after');
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }, true);
+        list.addEventListener('dragend', (event) => {
+            const row = (event.target as HTMLElement).closest<HTMLElement>('.seam-custom-search-choice');
+            if (row) row.removeClass('is-dragging', 'is-drop-after');
+            draggedOrderKey = null;
+            list.querySelectorAll<HTMLElement>('.seam-custom-search-choice').forEach((item) => { delete item.dataset.reorderArmed; });
+            event.stopImmediatePropagation();
+        }, true);
         filterInput.addEventListener('input', render);
         filterInput.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && filterInput.value) { event.stopPropagation(); filterInput.value = ''; render(); }
         });
         render();
-        const footer = panel.createDiv({ cls: 'seam-quick-add-panel-footer' });
-        new Setting(footer).addButton((button) => button.setButtonText(`+ ${t().settingsCustomSearchNew}`).setCta().onClick(() => this.openCustomSearchModal(null)));
-        if (this.plugin.settings.enableQueryPipelines) {
-            new Setting(footer).addButton((button) => button.setButtonText(`+ ${t().settingsCustomSearchPipelineNew}`).onClick(() => this.openPipelineModal(null)));
-        }
+        const footer = panel.createDiv({ cls: 'seam-quick-add-panel-footer seam-custom-search-panel-footer' });
+        const buttons = new Setting(footer);
+        buttons.addButton((button) => button.setButtonText(`+ ${t().settingsCustomSearchNew}`).setCta().onClick(() => this.openCustomSearchModal(null)));
+        if (this.plugin.settings.enableQueryPipelines) buttons.addButton((button) => button
+            .setButtonText(`+ ${t().settingsCustomSearchPipelineNew}`)
+            .onClick(() => this.openPipelineModal(null)));
     }
 
     private renderPipelinesSetting(setting: Setting): void {
@@ -275,12 +348,100 @@ export class SeamSettingsTab extends PluginSettingTab {
             }));
     }
 
+    private renderTodoCompletionSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.showTodoCompletionPercent)
+            .onChange(async (value) => {
+                this.plugin.settings.showTodoCompletionPercent = value;
+                await this.plugin.saveSettings();
+            }));
+    }
+
+    private renderPaletteRibbonSetting(setting: Setting): void {
+        setting.setDesc(t().settingsPaletteRibbonDesc);
+        setting.descEl.createEl('div', {
+            cls: 'setting-item-description seam-setting-reload-hint',
+            text: t().settingsPaletteRibbonReloadHint,
+        });
+        setting.addDropdown((dropdown) => dropdown
+            .addOption('both', t().settingsRibbonBoth)
+            .addOption('mobile', t().settingsRibbonMobile)
+            .addOption('hidden', t().settingsRibbonHidden)
+            .setValue(this.plugin.settings.paletteRibbonMode)
+            .onChange(async (value) => {
+                this.plugin.settings.paletteRibbonMode = value as PaletteRibbonMode;
+                await this.plugin.saveSettings();
+            }));
+    }
+
+    private renderBuiltinSpecialSearchRow(list: HTMLElement, search: SpecialSearch, query: string, refresh: () => void): void {
+        const preference = this.plugin.settings.specialSearchPreferences.find((item) => item.search === search);
+        if (!preference) return;
+        const label = `@${search}`;
+        const row = list.createDiv({ cls: `seam-quick-add-choice seam-custom-search-choice${preference.pinned ? ' seam-custom-search-pinned' : ''}${preference.hidden ? ' seam-custom-search-hidden' : ''}` });
+        row.dataset.specialSearchOrderKey = `builtin:${search}`;
+        row.draggable = query.length === 0;
+        const content = row.createDiv({ cls: 'seam-quick-add-choice-label seam-custom-search-label' });
+        if (this.plugin.settings.showIcons) {
+            const icon = content.createSpan({ cls: 'seam-quick-add-choice-icon' });
+            const iconSvg = getIcon(SPECIAL_SEARCH_ICONS[search]);
+            if (iconSvg) icon.appendChild(iconSvg);
+        }
+        content.createDiv({ cls: 'seam-custom-search-name', text: label });
+        const actions = row.createDiv({ cls: 'seam-quick-add-choice-actions seam-custom-search-actions' });
+        this.addChoiceButton(actions, preference.pinned ? 'pin-off' : 'pin', `${preference.pinned ? 'Unpin' : 'Pin'} ${label}`, () => {
+            const pinned = this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned && item.search !== search).length
+                + this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length
+                + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned).length;
+            if (!preference.pinned && pinned >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
+            preference.pinned = !preference.pinned;
+            void this.plugin.saveSettings().then(() => this.update());
+        });
+        this.addChoiceButton(actions, preference.hidden ? 'eye' : 'eye-off', `${preference.hidden ? 'Show' : 'Hide'} ${label}`, () => {
+            preference.hidden = !preference.hidden;
+            if (preference.hidden) preference.pinned = false;
+            void this.plugin.saveSettings().then(() => this.update());
+        });
+        const handle = this.addChoiceButton(actions, 'grip-vertical', `Reorder ${label}`, () => undefined, 'seam-quick-add-drag-handle');
+        handle.toggleAttribute('disabled', query.length > 0);
+        let dragArmed = false;
+        handle.addEventListener('pointerdown', () => { dragArmed = true; });
+        handle.addEventListener('keydown', (event) => {
+            if (query || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+            event.preventDefault();
+            this.moveSpecialSearchOrder(`builtin:${search}`, event.key === 'ArrowUp' ? -1 : 1, list, refresh);
+        });
+        row.addEventListener('dragstart', (event) => {
+            if (!dragArmed) { event.preventDefault(); return; }
+            event.dataTransfer?.setData('text/plain', `special-search:${search}`);
+            row.addClass('is-dragging');
+        });
+        row.addEventListener('dragover', (event) => { event.preventDefault(); row.addClass('is-drop-after'); });
+        row.addEventListener('dragleave', () => row.removeClass('is-drop-after'));
+        row.addEventListener('drop', (event) => {
+            event.preventDefault();
+            row.removeClass('is-drop-after');
+            const source = event.dataTransfer?.getData('text/plain')?.replace('special-search:', '') as SpecialSearch | undefined;
+            if (!source || source === search) return;
+            const items = this.plugin.settings.specialSearchPreferences;
+            const sourceIndex = items.findIndex((item) => item.search === source);
+            let targetIndex = items.findIndex((item) => item.search === search);
+            if (sourceIndex < 0 || targetIndex < 0) return;
+            const [item] = items.splice(sourceIndex, 1);
+            if (sourceIndex < targetIndex) targetIndex--;
+            items.splice(targetIndex + 1, 0, item);
+            void this.plugin.saveSettings().then(() => this.update());
+        });
+        row.addEventListener('dragend', () => { dragArmed = false; row.removeClass('is-dragging', 'is-drop-after'); });
+    }
+
     private renderPipelineRows(list: HTMLElement, query: string): void {
         const pipelines = this.plugin.settings.specialSearchPipelines
             .filter((pipeline) => pipeline.name.toLowerCase().includes(query))
             .sort((a, b) => Number(b.pinned) - Number(a.pinned));
         for (const pipeline of pipelines) {
             const row = list.createDiv({ cls: `seam-quick-add-choice seam-custom-search-choice seam-custom-search-pipeline-choice${pipeline.pinned ? ' seam-custom-search-pinned' : ''}${pipeline.hidden ? ' seam-custom-search-hidden' : ''}` });
+            row.dataset.specialSearchOrderKey = `pipeline:${pipeline.id}`;
             row.draggable = query.length === 0;
             const label = row.createDiv({ cls: 'seam-quick-add-choice-label seam-custom-search-label' });
             if (this.plugin.settings.showIcons) {
@@ -295,7 +456,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                 void this.plugin.saveSettings().then(() => this.update());
             });
             this.addChoiceButton(actions, pipeline.pinned ? 'pin-off' : 'pin', pipeline.pinned ? `Unpin ${pipeline.name}` : `Pin ${pipeline.name}`, () => {
-                const count = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned && item.id !== pipeline.id).length;
+                const count = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned && item.id !== pipeline.id).length + this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned).length;
                 if (!pipeline.pinned && count >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
                 pipeline.pinned = !pipeline.pinned;
                 void this.plugin.saveSettings().then(() => this.update());
@@ -311,6 +472,12 @@ export class SeamSettingsTab extends PluginSettingTab {
             });
             const handle = this.addChoiceButton(actions, 'grip-vertical', `Reorder ${pipeline.name}`, () => undefined, 'seam-quick-add-drag-handle');
             handle.toggleAttribute('disabled', query.length > 0);
+            handle.addEventListener('keydown', (event) => {
+                if (query || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                this.moveSpecialSearchOrder(`pipeline:${pipeline.id}`, event.key === 'ArrowUp' ? -1 : 1, list, () => this.update());
+            });
             row.addEventListener('dragstart', (event) => { if (query.length > 0) { event.preventDefault(); return; } event.dataTransfer?.setData('text/plain', pipeline.id); row.addClass('is-dragging'); });
             row.addEventListener('dragover', (event) => { if (!query.length) { event.preventDefault(); row.addClass('is-drop-after'); } });
             row.addEventListener('drop', (event) => { event.preventDefault(); const sourceId = event.dataTransfer?.getData('text/plain'); if (sourceId && sourceId !== pipeline.id) this.reorderPipeline(sourceId, pipeline.id, true); });
@@ -333,6 +500,46 @@ export class SeamSettingsTab extends PluginSettingTab {
         const button = parent.createEl('button', { cls: 'clickable-icon seam-custom-search-action', attr: { 'aria-label': label, title: label } });
         setIcon(button, icon);
         button.addEventListener('click', onClick);
+    }
+
+    private moveSpecialSearchOrder(sourceKey: string, delta: number, list: HTMLElement, refresh: () => void): void {
+        const rows = Array.from(list.querySelectorAll<HTMLElement>('.seam-custom-search-choice'));
+        const source = rows.find((row) => row.dataset.specialSearchOrderKey === sourceKey);
+        if (!source) return;
+        const group = (row: HTMLElement): string => row.hasClass('seam-custom-search-pinned')
+            ? 'pinned'
+            : row.hasClass('seam-custom-search-hidden') ? 'hidden' : 'normal';
+        const peers = rows.filter((row) => group(row) === group(source));
+        const sourceIndex = peers.indexOf(source);
+        const target = peers[sourceIndex + delta];
+        const targetKey = target?.dataset.specialSearchOrderKey;
+        if (!targetKey) return;
+        this.reorderSpecialSearchOrder(sourceKey, targetKey, delta > 0, list, refresh);
+    }
+
+    private reorderSpecialSearchOrder(sourceKey: string, targetKey: string, placeAfter: boolean, list: HTMLElement, refresh: () => void): void {
+        if (sourceKey === targetKey) return;
+        const rows = Array.from(list.querySelectorAll<HTMLElement>('.seam-custom-search-choice'));
+        const source = rows.find((row) => row.dataset.specialSearchOrderKey === sourceKey);
+        const target = rows.find((row) => row.dataset.specialSearchOrderKey === targetKey);
+        if (!source || !target) return;
+        const rank = (row: HTMLElement): string => row.hasClass('seam-custom-search-pinned')
+            ? 'pinned'
+            : row.hasClass('seam-custom-search-hidden') ? 'hidden' : 'normal';
+        if (rank(source) !== rank(target)) return;
+
+        const order = this.plugin.settings.specialSearchOrder;
+        let sourceIndex = order.indexOf(sourceKey);
+        let targetIndex = order.indexOf(targetKey);
+        if (sourceIndex < 0 || targetIndex < 0) return;
+        const [sourceOrderKey] = order.splice(sourceIndex, 1);
+        targetIndex = order.indexOf(targetKey);
+        if (targetIndex < 0) {
+            order.splice(sourceIndex, 0, sourceOrderKey);
+            return;
+        }
+        order.splice(targetIndex + (placeAfter ? 1 : 0), 0, sourceOrderKey);
+        void this.plugin.saveSettings().then(refresh);
     }
 
     private moveCustomSearch(id: string, delta: number, refresh: () => void): void {
@@ -377,7 +584,8 @@ export class SeamSettingsTab extends PluginSettingTab {
                 return;
             }
             const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned && item.id !== saved.id).length
-                + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned).length;
+                + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned).length
+                + this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned).length;
             if (saved.pinned && pinnedCount >= 3) {
                 new Notice(t().settingsCustomSearchPinnedLimit);
                 return;
@@ -395,7 +603,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         new SpecialSearchPipelineModal(this.app, pipeline, this.plugin.settings.customSpecialSearches, async (saved) => {
             const duplicate = this.plugin.settings.specialSearchPipelines.some((item) => item.id !== saved.id && item.name.toLowerCase() === saved.name.toLowerCase());
             if (duplicate) { new Notice(`A pipeline named ${saved.name} already exists.`); return; }
-            const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned && item.id !== saved.id).length;
+            const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length + this.plugin.settings.specialSearchPipelines.filter((item) => item.pinned && item.id !== saved.id).length + this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned).length;
             if (saved.pinned && pinnedCount >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
             const pipelines = this.plugin.settings.specialSearchPipelines.filter((item) => item.id !== saved.id);
             pipelines.splice(originalIndex < 0 ? pipelines.length : Math.min(originalIndex, pipelines.length), 0, saved);

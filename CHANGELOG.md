@@ -11,16 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Custom special searches**: Create reusable `@` queries backed by Seam tag filters or Obsidian Base files, pin up to three favorites, and hide helper queries from the palette.
 - **Base and query pipeline views**: Preview configured Base views in the Universal Palette and optionally connect custom searches into directional experimental pipelines.
+- **Search query icons and pipelines**: Configure icons for reusable searches (defaulting to `sparkles`) and create canvas-based pipelines from built-in or custom queries.
+- **Built-in special search controls**: Pin, hide, and reorder Seam's built-in searches alongside custom searches and pipelines.
+- **Task completion in `@todo`**: Optionally show each matching note's completion percentage, with a localized “completion” label.
+- **Universal Palette ribbon options**: Choose to show the ribbon command on desktop and mobile, on mobile only, or hide it.
 
 ### Changed
 
 - **Obsidian compatibility**: Requires Obsidian 1.13.0 or newer.
 - **Settings search**: Migrated Seam's settings to Obsidian's declarative settings API so users can find them through Settings search.
 - **Locale detection**: Uses Obsidian's runtime locale APIs without browser storage access.
+- **Special Search settings**: Use the “Special Search” and “Search Queries” headings, show pinned rows first and hidden rows last, and keep the query list minimal by omitting Base paths.
+- **Universal Palette results**: Display icons consistently, show `@todo` completion as “completion • N%”, and respect the persisted order of pinned built-in, custom, and pipeline queries.
 
 ### Fixed
 
 - **Negated tag chips**: Keep an excluded tag visible when it is the first or only tag in the active filter.
+- **Search query filtering and ordering**: Include matching pipelines in the settings filter's empty-state check and allow pinned built-in queries to reorder with pinned custom queries.
 
 ## [2.0.1] - 2026-09-23
 
