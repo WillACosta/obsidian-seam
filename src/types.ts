@@ -65,6 +65,7 @@ export interface CustomSpecialSearch {
     basePath: string;
     baseView: string;
     showBaseToolbar: boolean;
+    expandModal?: boolean;
     filterQuery: string;
     pinned: boolean;
     hidden: boolean;
@@ -84,6 +85,7 @@ export interface SpecialSearchPipelineConnection {
 export interface SpecialSearchPipeline {
     id: string;
     name: string;
+    icon?: string;
     queryIds: string[];
     pinned: boolean;
     hidden: boolean;

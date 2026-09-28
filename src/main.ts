@@ -440,6 +440,7 @@ export default class SeamPlugin extends Plugin {
                     basePath: typeof search.basePath === 'string' ? search.basePath : '',
                     baseView: typeof search.baseView === 'string' ? search.baseView : '',
                     filterQuery: typeof search.filterQuery === 'string' ? search.filterQuery : '',
+                    expandModal: Boolean(search.expandModal),
                 }))
                 : [];
             this.settings.specialSearchPipelines = Array.isArray(this.settings.specialSearchPipelines)
@@ -451,7 +452,15 @@ export default class SeamPlugin extends Plugin {
                     const connections = Array.isArray(pipeline.connections)
                         ? pipeline.connections.filter((connection) => connection && typeof connection.from === 'string' && typeof connection.to === 'string')
                         : queryIds.slice(1).map((queryId, index) => ({ from: queryIds[index], to: queryId }));
-                    return { ...pipeline, queryIds, nodes, connections, pinned: Boolean(pipeline.pinned) && !Boolean(pipeline.hidden), hidden: Boolean(pipeline.hidden) };
+                    return {
+                        ...pipeline,
+                        icon: typeof pipeline.icon === 'string' && pipeline.icon.trim() ? pipeline.icon.trim() : 'search',
+                        queryIds,
+                        nodes,
+                        connections,
+                        pinned: Boolean(pipeline.pinned) && !Boolean(pipeline.hidden),
+                        hidden: Boolean(pipeline.hidden),
+                    };
                 })
                 : [];
             this.settings.enableQueryPipelines = Boolean(this.settings.enableQueryPipelines);

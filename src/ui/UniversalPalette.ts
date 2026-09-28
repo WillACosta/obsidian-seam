@@ -123,6 +123,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     onClose(): void {
+        this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-custom-search-expanded');
         this.selectedTags = [];
         this.excludedTags = [];
         for (const component of this.baseRenderComponents) component.unload();
@@ -319,13 +320,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         const trimmed = query.trim();
         this.lastQuery = trimmed;
         this.updateInstructions(trimmed);
+        const customSearch = this.mode === 'search' && trimmed.startsWith('@')
+            ? this.getCustomSearchForQuery(trimmed)
+            : null;
+        this.inputEl.closest<HTMLElement>('.prompt')?.toggleClass('seam-palette-custom-search-expanded', Boolean(customSearch?.expandModal));
 
         if (this.mode === 'quick-add') return this.getQuickAddChoices(trimmed);
         if (this.mode === 'recent') return this.getRecentFiles(trimmed);
 
         // Special search mode: typing @ lists supported filters; selecting one applies it.
         if (trimmed.startsWith('@')) {
-            const custom = this.getCustomSearchForQuery(trimmed);
+            const custom = customSearch;
             if (custom) {
                 const textQuery = trimmed.slice(custom.identifier.length).trim();
                 if (custom.mode === 'base') {
@@ -474,7 +479,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             description: 'Query pipeline',
             type: 'pipeline',
             pipeline,
-            icon: 'git-branch',
+            icon: pipeline.icon || 'search',
         }];
     }
 
@@ -774,7 +779,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                     description: 'Query pipeline',
                     type: 'special' as const,
                     customSearchId: `pipeline:${pipeline.id}`,
-                    icon: 'git-branch',
+                    icon: pipeline.icon || 'search',
                 }))
             : [];
         const orderIndex = (item: PaletteItem): number => {
@@ -843,7 +848,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 const title = el.createDiv({ cls: 'seam-palette-title-row' });
                 if (this.settings.showIcons) {
                     const icon = title.createSpan({ cls: 'seam-palette-command-icon' });
-                    setIcon(icon, item.icon || 'git-branch');
+                    setIcon(icon, item.icon || 'search');
                 }
                 title.createSpan({ cls: 'seam-palette-title', text: item.title });
             }
@@ -957,17 +962,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         else el.addClass('seam-palette-base-limit-toolbar');
         if (item.customSearchId) el.addClass('seam-palette-custom-search-item');
         const embed = el.createDiv({ cls: 'seam-palette-base-embed' });
-        embed.addEventListener('click', (event) => {
-            const target = event.target instanceof Element ? event.target.closest('a.internal-link, a[data-href], [data-href]') : null;
-            if (!(target instanceof HTMLElement)) return;
-            const href = target.getAttribute('data-href') || target.getAttribute('href');
-            if (!href) return;
-            const file = this.app.metadataCache.getFirstLinkpathDest(decodeURIComponent(href.replace(/^\.?\//, '')), item.basePath || '');
-            if (!file) return;
-            event.preventDefault();
-            this.close();
-            void this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false).openFile(file);
-        }, true);
+        embed.addEventListener('click', (event) => this.openFileFromPaletteLink(event, item.basePath || ''), true);
         if (!item.basePath) return;
         const target = `${item.basePath}${item.baseView ? `#${item.baseView}` : ''}`;
         const component = new Component();
@@ -999,19 +994,39 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         component.register(() => observer.disconnect());
     }
 
+    private openFileFromPaletteLink(event: MouseEvent, sourcePath: string): void {
+        const target = event.target instanceof Element
+            ? event.target.closest('a.internal-link, a[data-href], [data-href]')
+            : null;
+        if (!(target instanceof HTMLElement)) return;
+        const href = target.getAttribute('data-href') || target.getAttribute('href');
+        if (!href) return;
+        let linkPath = href.replace(/^\.?\//, '');
+        try {
+            linkPath = decodeURIComponent(linkPath);
+        } catch {
+            // Keep the original link path if it contains malformed escaping.
+        }
+        const file = this.app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
+        if (!file) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.close();
+        void this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false).openFile(file);
+    }
+
     private renderPipeline(item: PaletteItem, el: HTMLElement): void {
         el.addClass('seam-palette-pipeline-item');
         const pipeline = item.pipeline;
         if (!pipeline) return;
-        el.createDiv({ cls: 'seam-palette-pipeline-title', text: pipeline.name });
         const row = el.createDiv({ cls: 'seam-palette-pipeline-row' });
         const graph = buildPipelineCanvas(pipeline, (queryId) => this.getPipelineQueryLabel(queryId));
         const nodes = graph.nodes;
-        const layoutScale = 1.27;
-        const width = Math.max(640, ...nodes.map((node) => Math.round(node.x * layoutScale) + 280));
+        const layoutScale = 1.4;
+        const width = Math.max(640, ...nodes.map((node) => Math.round(node.x * layoutScale) + 355));
         const height = Math.max(260, ...nodes.map((node) => node.y + 250));
         row.style.width = `${width}px`;
-        row.style.height = `${height}px`;
+        row.style.minHeight = `${height}px`;
         const svg = row.createSvg('svg', { cls: 'seam-palette-pipeline-edges', attr: { width: String(width), height: String(height), 'aria-hidden': 'true' } });
         const defs = svg.createSvg('defs');
         const marker = defs.createSvg('marker', { attr: { id: 'seam-palette-pipeline-arrow', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto' } });
@@ -1025,19 +1040,22 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             stage.setCssStyles({ left: `${Math.round(node.x * layoutScale)}px`, top: `${node.y}px` });
             stage.setAttribute('data-query-id', queryId);
             stage.createDiv({ cls: 'seam-palette-pipeline-stage-title', text: query?.identifier ?? builtin ?? queryId });
+            stage.addEventListener('click', (event) => this.openFileFromPaletteLink(event, query?.basePath ?? ''), true);
             if (query?.mode === 'base' && query.basePath) {
                 const target = `${query.basePath}${query.baseView ? `#${query.baseView}` : ''}`;
+                stage.addClass(query.showBaseToolbar ? 'seam-palette-base-limit-toolbar' : 'seam-palette-base-hide-toolbar');
                 const embed = stage.createDiv({ cls: 'seam-palette-base-embed' });
                 const component = new Component();
                 component.load();
                 this.baseRenderComponents.push(component);
-                void MarkdownRenderer.render(this.app, `![[${target}]]`, embed, query.basePath, component);
+                void MarkdownRenderer.render(this.app, `![[${target}]]`, embed, query.basePath, component)
+                    .then(() => this.limitBaseToolbar(embed, component));
             } else if (query?.mode === 'tags') {
                 const results = this.searchService.search(query.filterQuery);
-                for (const result of results.slice(0, 8)) stage.createDiv({ cls: 'seam-palette-pipeline-note', text: result.title });
+                this.renderPipelineResults(stage, results.slice(0, 8));
             } else if (builtin) {
                 const results = this.searchService.search(builtin);
-                for (const result of results.slice(0, 8)) stage.createDiv({ cls: 'seam-palette-pipeline-note', text: result.title });
+                this.renderPipelineResults(stage, results.slice(0, 8));
             }
         };
         for (const node of nodes) renderQuery(node.id);
@@ -1057,6 +1075,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 svg.createSvg('path', { cls: 'seam-palette-pipeline-edge', attr: { d: `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`, 'marker-end': 'url(#seam-palette-pipeline-arrow)' } });
             }
         });
+    }
+
+    private renderPipelineResults(stage: HTMLElement, results: ReturnType<SearchService['search']>): void {
+        const list = stage.createDiv({ cls: 'seam-palette-pipeline-notes' });
+        for (const result of results) {
+            list.createEl('a', {
+                cls: 'seam-palette-pipeline-note internal-link',
+                text: result.title,
+                attr: { href: result.file.path, 'data-href': result.file.path },
+            });
+        }
     }
 
     private getPipelineQueryLabel(queryId: string): string {

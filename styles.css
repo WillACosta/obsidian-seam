@@ -96,6 +96,45 @@
     overflow: hidden;
 }
 
+.prompt:has(.seam-palette-pipeline-item) {
+    width: min(92vw, 1400px);
+    max-width: min(92vw, 1400px);
+    height: min(85vh, 900px);
+    max-height: min(90vh, 1000px);
+}
+
+.prompt.seam-palette-custom-search-expanded {
+    width: min(90vw, 1400px);
+    max-width: min(90vw, 1400px);
+}
+
+@media (max-width: 600px) {
+    .prompt.seam-palette-custom-search-expanded {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+    }
+}
+
+.prompt:has(.seam-palette-pipeline-item) .prompt-results {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.prompt:has(.seam-palette-pipeline-item) .seam-palette-base-item,
+.prompt:has(.seam-palette-pipeline-item) .seam-palette-pipeline-item,
+.prompt:has(.seam-palette-pipeline-item) .seam-palette-pipeline-row {
+    height: 100%;
+}
+
+@media (max-width: 600px) {
+    .prompt:has(.seam-palette-pipeline-item) {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+        height: min(82dvh, 900px);
+        max-height: calc(100dvh - 24px);
+    }
+}
+
 .suggestion-item.seam-palette-base-item:hover,
 .suggestion-item.seam-palette-base-item.is-selected {
     background-color: transparent;
@@ -138,7 +177,7 @@
 .seam-palette-pipeline-stage {
     position: absolute;
     z-index: 1;
-    width: 250px;
+    width: 325px;
     box-sizing: border-box;
     padding: 8px;
     border: 1px solid var(--background-modifier-border);
@@ -171,15 +210,34 @@
 }
 
 .seam-palette-pipeline-note {
+    display: block;
     padding: 2px 0;
     color: var(--text-muted);
     font-size: 0.85em;
+    text-decoration: none;
+}
+
+.seam-palette-pipeline-note:hover {
+    color: var(--text-accent);
+    text-decoration: underline;
+}
+
+.seam-palette-pipeline-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .seam-palette-pipeline-arrow {
     align-self: center;
     color: var(--text-muted);
     flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+    .seam-palette-pipeline-stage {
+        width: 260px;
+    }
 }
 
 /* Palette input container with chips */
@@ -428,20 +486,16 @@
 .seam-pipeline-query-chips {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
 }
 
-.seam-pipeline-query-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 2px 7px;
-    border: 1px solid var(--interactive-accent);
-    border-radius: 999px;
-    color: var(--text-accent);
+.seam-pipeline-query-chips .seam-palette-chip-remove {
+    border: 0;
+    background: transparent;
+    color: inherit;
 }
 
-.seam-pipeline-query-chip button,
 .seam-pipeline-connection-row button {
     cursor: pointer;
     border: 0;

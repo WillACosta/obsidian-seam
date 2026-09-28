@@ -446,7 +446,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             const label = row.createDiv({ cls: 'seam-quick-add-choice-label seam-custom-search-label' });
             if (this.plugin.settings.showIcons) {
                 const icon = label.createSpan({ cls: 'seam-quick-add-choice-icon' });
-                setIcon(icon, 'git-branch');
+                setIcon(icon, pipeline.icon || 'search');
             }
             label.createDiv({ cls: 'seam-custom-search-name', text: pipeline.name });
             const actions = row.createDiv({ cls: 'seam-quick-add-choice-actions seam-custom-search-actions' });

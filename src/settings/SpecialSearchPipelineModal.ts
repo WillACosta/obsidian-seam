@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, Modal, Setting } from 'obsidian';
+import { AbstractInputSuggest, App, getIcon, Modal, Setting, setIcon } from 'obsidian';
 import {
     CustomSpecialSearch,
     SpecialSearchPipeline,
@@ -62,12 +62,13 @@ export class SpecialSearchPipelineModal extends Modal {
             const queryIds = [...existing.queryIds];
             this.pipeline = {
                 ...existing,
+                icon: existing.icon?.trim() || 'search',
                 queryIds,
                 nodes: existing.nodes?.length ? existing.nodes.map((node) => ({ ...node })) : createNodes(queryIds),
                 connections: existing.connections ? existing.connections.map((connection) => ({ ...connection })) : queryIds.slice(1).map((queryId, index) => ({ from: queryIds[index], to: queryId })),
             };
         } else {
-            this.pipeline = { id: crypto.randomUUID(), name: '', queryIds: [], pinned: false, hidden: false, nodes: [], connections: [] };
+            this.pipeline = { id: crypto.randomUUID(), name: '', icon: 'search', queryIds: [], pinned: false, hidden: false, nodes: [], connections: [] };
         }
     }
 
@@ -77,6 +78,16 @@ export class SpecialSearchPipelineModal extends Modal {
         const nameSetting = new Setting(this.contentEl).setName(t().pipelineModalName).setDesc(t().pipelineModalNameDesc);
         nameSetting.settingEl.addClass('seam-custom-search-text-setting');
         nameSetting.addText((text) => text.setValue(this.pipeline.name).onChange((value) => { this.pipeline.name = value; }));
+
+        const iconSetting = new Setting(this.contentEl).setName(t().pipelineModalIcon).setDesc(t().pipelineModalIconDesc);
+        iconSetting.settingEl.addClass('seam-custom-search-text-setting');
+        iconSetting.addText((text) => {
+            text.setValue(this.pipeline.icon || 'search').onChange((value) => {
+                this.pipeline.icon = value.trim() || 'search';
+                this.renderIconPreview(iconSetting.controlEl, this.pipeline.icon, text.inputEl);
+            });
+            this.renderIconPreview(iconSetting.controlEl, this.pipeline.icon || 'search', text.inputEl);
+        });
 
         const querySetting = new Setting(this.contentEl).setName(t().pipelineModalQueries).setDesc(t().pipelineModalQueriesDesc);
         querySetting.settingEl.addClass('seam-custom-search-text-setting');
@@ -101,6 +112,7 @@ export class SpecialSearchPipelineModal extends Modal {
             this.pipeline.name = this.pipeline.name.trim().replace(/^@+/, '');
             if (!this.pipeline.name || this.pipeline.queryIds.length < 2) return;
             this.pipeline.name = `@${this.pipeline.name}`;
+            this.pipeline.icon = this.pipeline.icon?.trim() || 'search';
             void this.onSave({ ...this.pipeline, nodes: this.pipeline.nodes.map((node) => ({ ...node })), connections: this.pipeline.connections.map((connection) => ({ ...connection })) }).then(() => this.close());
         };
         new Setting(this.contentEl).addButton((button) => button.setButtonText(t().customSearchModalCancel).onClick(() => this.close()))
@@ -143,11 +155,20 @@ export class SpecialSearchPipelineModal extends Modal {
         this.queryChipsEl.empty();
         for (const queryId of this.pipeline.queryIds) {
             const label = this.optionForId(queryId)?.label ?? queryId;
-            const chip = this.queryChipsEl.createSpan({ cls: 'seam-pipeline-query-chip' });
-            chip.createSpan({ text: label });
-            const remove = chip.createEl('button', { text: '×', attr: { 'aria-label': `Remove ${label}` } });
+            const chip = this.queryChipsEl.createSpan({ cls: 'seam-palette-chip' });
+            chip.createSpan({ cls: 'seam-palette-chip-text', text: label });
+            const remove = chip.createEl('button', { cls: 'seam-palette-chip-remove', attr: { 'aria-label': `Remove ${label}`, type: 'button' } });
+            setIcon(remove, 'x');
             remove.addEventListener('click', () => { this.removeQuery(queryId); this.queryInputEl?.focus(); });
         }
+    }
+
+    private renderIconPreview(parent: HTMLElement, iconId: string, input: HTMLInputElement): void {
+        parent.querySelector('.seam-custom-search-icon-preview')?.remove();
+        const preview = parent.createSpan({ cls: 'seam-custom-search-icon-preview' });
+        const icon = getIcon(iconId.trim() || 'search');
+        if (icon) preview.appendChild(icon);
+        parent.insertBefore(preview, input);
     }
 
     private optionForId(id: string): PipelineQueryOption | undefined {

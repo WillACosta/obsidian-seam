@@ -55,7 +55,7 @@ export class CustomSpecialSearchModal extends Modal {
     constructor(app: App, existing: CustomSpecialSearch | null, private readonly onSave: SaveSearch, private readonly searchService?: SearchService, private readonly showIcons = true) {
         super(app);
         this.search = existing ? { ...existing, mode: existing.mode ?? (existing.basePath ? 'base' : 'tags') } : {
-            id: crypto.randomUUID(), identifier: '', icon: 'sparkles', mode: 'tags', basePath: '', baseView: '', showBaseToolbar: false,
+            id: crypto.randomUUID(), identifier: '', icon: 'sparkles', mode: 'tags', basePath: '', baseView: '', showBaseToolbar: false, expandModal: false,
             filterQuery: '', pinned: false, hidden: false,
         };
         this.search.icon = this.search.icon || 'sparkles';
@@ -103,6 +103,9 @@ export class CustomSpecialSearchModal extends Modal {
 
         this.toolbarSetting = new Setting(this.contentEl).setName(t().customSearchModalToolbar).setDesc(t().customSearchModalToolbarDesc)
             .addToggle((toggle) => toggle.setValue(this.search.showBaseToolbar).onChange((value) => { this.search.showBaseToolbar = value; }));
+
+        new Setting(this.contentEl).setName(t().customSearchModalExpand).setDesc(t().customSearchModalExpandDesc)
+            .addToggle((toggle) => toggle.setValue(Boolean(this.search.expandModal)).onChange((value) => { this.search.expandModal = value; }));
 
         this.filterSetting = new Setting(this.contentEl).setName(t().customSearchModalFilter).setDesc(t().customSearchModalFilterDesc);
         this.filterSetting.settingEl.addClass('seam-custom-search-text-setting');
