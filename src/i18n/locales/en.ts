@@ -6,7 +6,7 @@ export const en = {
     cmdMoveToPermanent: 'Move to Permanent',
     cmdProcessPending: 'Process pending automations',
     cmdShowStatus: 'Show automation status',
-    cmdShowRecentFiles: 'Show recent files',
+    cmdCreateNewNote: 'Create a new note',
 
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Create new note: "${title}"`,
@@ -24,8 +24,6 @@ export const en = {
     paletteQuickAddDesc: 'Create a note from a Seam choice',
     paletteSelectChoice: 'Select a choice',
     paletteAddFleeting: 'Add Fleeting',
-    paletteRecentFilesTitle: 'Show recent files',
-    paletteRecentFilesDesc: 'Show the 10 most recently modified notes',
 
     // Universal Palette UI
     palettePlaceholder: 'Search notes, #tags or run Seam commands...',
@@ -39,6 +37,10 @@ export const en = {
     paletteHelpExcludeTag: 'to exclude a tag (e.g. !#tag)',
     paletteHelpExactMatch: 'exact match search',
     paletteHelpSpecialSearch: 'special search',
+    paletteSpecialToday: "Today's daily note",
+    paletteSpecialYesterday: "Yesterday's daily note",
+    paletteSpecialRecent: 'The 10 most recently modified notes',
+    paletteSpecialLastDays: 'Notes modified in the last X days',
     paletteSpecialUntagged: 'Notes without tags',
     paletteSpecialDocs: 'Notes with document attachments',
     paletteSpecialImages: 'Notes with image attachments',
@@ -150,10 +152,9 @@ export const en = {
     customSearchModalView: 'Base view',
     customSearchModalViewDesc: 'View to render in the Universal Palette. Type to see views in the selected Base.',
     customSearchModalViewPlaceholder: 'Type a Base view name',
-    customSearchModalToolbar: 'Show Base menu bar',
-    customSearchModalToolbarDesc: 'Keep the Base toolbar visible inside the palette.',
     customSearchModalExpand: 'Expand Universal Palette',
     customSearchModalExpandDesc: 'Use about 90% of the screen width when this query is active.',
+    paletteBaseNoMatches: 'No Base results match this filter.',
     customSearchModalFilter: 'Tag filter',
     customSearchModalFilterDesc: 'Filter with the same tag syntax and suggestions used by the Universal Palette.',
     customSearchModalPinned: 'Pin query',

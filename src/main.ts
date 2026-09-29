@@ -1,5 +1,5 @@
 import { Notice, Platform, Plugin, TAbstractFile, TFile } from 'obsidian';
-import { DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
+import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
 import { hasTag } from './automation/actions/ArchiveAction';
@@ -65,6 +65,12 @@ export default class SeamPlugin extends Plugin {
         });
 
         this.addCommand({
+            id: 'create-new-note',
+            name: t().cmdCreateNewNote,
+            callback: () => this.openQuickAdd(),
+        });
+
+        this.addCommand({
             id: 'archive-all',
             name: t().cmdArchiveAll,
             callback: () => this.archiveAll(),
@@ -80,12 +86,6 @@ export default class SeamPlugin extends Plugin {
             id: 'show-status',
             name: t().cmdShowStatus,
             callback: () => this.showStatus(),
-        });
-
-        this.addCommand({
-            id: 'show-recent-files',
-            name: t().cmdShowRecentFiles,
-            callback: () => this.openRecentFiles(),
         });
 
         // Commands that operate on the current open note
@@ -275,10 +275,15 @@ export default class SeamPlugin extends Plugin {
         palette.open();
     }
 
-    private openRecentFiles(): void {
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, this.getPaletteCommands());
+    private openQuickAdd(): void {
+        const palette = new UniversalPalette(
+            this.app,
+            this.settings,
+            this.searchService,
+            this.getPaletteCommands(),
+        );
         palette.open();
-        window.setTimeout(() => palette.showRecentFiles(), 0);
+        window.setTimeout(() => palette.showQuickAdd(), 0);
     }
 
     private async archiveAll(): Promise<void> {
@@ -363,13 +368,6 @@ export default class SeamPlugin extends Plugin {
                 icon: 'file-plus',
             },
             {
-                id: 'cmd-recent-files',
-                title: t().paletteRecentFilesTitle,
-                description: t().paletteRecentFilesDesc,
-                type: 'command',
-                icon: 'clock-3',
-            },
-            {
                 id: 'cmd-archive-all',
                 title: t().paletteArchiveAllTitle,
                 description: t().paletteArchiveAllDesc,
@@ -434,17 +432,22 @@ export default class SeamPlugin extends Plugin {
             this.settings = Object.assign({}, DEFAULT_SETTINGS, persistedData);
 
             this.settings.customSpecialSearches = Array.isArray(this.settings.customSpecialSearches)
-                ? this.settings.customSpecialSearches.map((search) => ({
-                    ...search,
-                    icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'sparkles',
-                    mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
-                    hidden: Boolean(search.hidden),
-                    pinned: Boolean(search.pinned) && !Boolean(search.hidden),
-                    basePath: typeof search.basePath === 'string' ? search.basePath : '',
-                    baseView: typeof search.baseView === 'string' ? search.baseView : '',
-                    filterQuery: typeof search.filterQuery === 'string' ? search.filterQuery : '',
-                    expandModal: Boolean(search.expandModal),
-                }))
+                ? this.settings.customSpecialSearches.map((search) => {
+                    const normalized = { ...search } as CustomSpecialSearch & { enableBaseResultNavigation?: unknown; showBaseToolbar?: unknown };
+                    delete normalized.enableBaseResultNavigation;
+                    delete normalized.showBaseToolbar;
+                    return {
+                        ...normalized,
+                        icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'sparkles',
+                        mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
+                        hidden: Boolean(search.hidden),
+                        pinned: Boolean(search.pinned) && !Boolean(search.hidden),
+                        basePath: typeof search.basePath === 'string' ? search.basePath : '',
+                        baseView: typeof search.baseView === 'string' ? search.baseView : '',
+                        filterQuery: typeof search.filterQuery === 'string' ? search.filterQuery : '',
+                        expandModal: Boolean(search.expandModal),
+                    };
+                })
                 : [];
             this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
             const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences;

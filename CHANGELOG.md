@@ -6,28 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [3.0.0] - 2026-09-23
+<!-- iterations: iteration_08 -->
 
 ### Added
 
-- **Custom special searches**: Create reusable `@` queries backed by Seam tag filters or Obsidian Base files, pin up to three favorites, and hide helper queries from the palette.
-- **Search query icons**: Configure icons for reusable searches, with `sparkles` as the default.
-- **Base query previews**: Open Obsidian Base views directly inside the Universal Palette.
-- **Task completion in `@todo`**: Optionally show each matching note's completion percentage, with a localized “completion” label.
-- **Universal Palette ribbon options**: Choose to show the ribbon command on desktop and mobile, on mobile only, or hide it.
-- **Built-in special search controls**: Pin, hide, and reorder Seam's built-in searches alongside custom searches.
+- **Custom special searches**: Create reusable `@` queries from Seam tags or Obsidian Base files, with a configurable icon, pinning, hiding, and ordering controls.
+- **Base results in the Universal Palette**: Render configured Base views as selectable Seam results with arrow-key navigation, Enter-to-open, live filtering, and matching-text highlights.
+
+<!-- Screenshot suggestion: show a Base-backed custom search in the Universal Palette, including filtered results and the keyboard navigation hint. -->
+
+- **Built-in special-search controls**: Pin, hide, and reorder built-in queries; optionally show each `@todo` note's completion percentage with a localized label.
+- **Recent and date-based queries**: Use `@recent` for the ten most recently modified files, `@lastXdays` for a chosen date range, and `@today` or `@yesterday` for Daily Notes.
+- **Universal Palette ribbon options**: Choose to show the command on desktop and mobile, on mobile only, or hide it.
+- **Create-note hotkey command**: Assign a custom Obsidian shortcut to “Seam: Create a new note”.
 
 ### Changed
 
 - **Obsidian compatibility**: Requires Obsidian 1.13.0 or newer.
 - **Settings search**: Migrated Seam's settings to Obsidian's declarative settings API so users can find them through Settings search.
 - **Locale detection**: Uses Obsidian's runtime locale APIs without browser storage access.
-- **Special Search settings**: Use the “Special Search” and “Search Queries” headings, show pinned rows first and hidden rows last, and keep the query list minimal by omitting Base paths.
-- **Universal Palette results**: Display icons consistently, show `@todo` completion as “completion • N%”, and respect the persisted order of pinned built-in and custom queries.
+- **Special-search interaction**: Keep input text in Obsidian's normal color, accent only the active `@query` token, and remove an active query with one Backspace press.
+- **Recent files**: Replaced the former “Show recent files” command and palette subview with the `@recent` special query.
 
 ### Fixed
 
 - **Negated tag chips**: Keep an excluded tag visible when it is the first or only tag in the active filter.
-- **Search query filtering and ordering**: Keep the empty state accurate while filtering built-in and custom queries, and allow pinned built-in queries to reorder with pinned custom queries.
 
 ## [2.0.1] - 2026-09-23
 

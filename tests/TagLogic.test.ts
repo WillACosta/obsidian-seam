@@ -36,6 +36,8 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
         assert.equal(DEFAULT_SETTINGS.updateAnnouncementMode, 'major');
         assert.equal(DEFAULT_SETTINGS.lastAnnouncedVersion, '');
+        assert.equal(DEFAULT_SETTINGS.specialSearchPreferences.some((item) => item.search === 'today'), true);
+        assert.equal(DEFAULT_SETTINGS.specialSearchPreferences.some((item) => item.search === 'yesterday'), true);
     });
 });
 
@@ -209,6 +211,14 @@ describe('Special Search Filters', () => {
         assert.equal(matchesSpecialSearch(tagged.app, tagged.file as never, 'untagged'), false);
     });
 
+    it('matches notes modified within a requested number of days', () => {
+        const { app } = makeApp({});
+        const recentFile = { path: 'Notes/recent.md', basename: 'recent', stat: { mtime: Date.now() - 86_400_000 } };
+        const oldFile = { path: 'Notes/old.md', basename: 'old', stat: { mtime: Date.now() - 10 * 86_400_000 } };
+        assert.equal(matchesSpecialSearch(app, recentFile as never, 'lastDays', 2), true);
+        assert.equal(matchesSpecialSearch(app, oldFile as never, 'lastDays', 2), false);
+    });
+
     it('matches document and image attachments', () => {
         const { app, file } = makeApp({
             links: [{ link: 'Attachments/report.pdf', original: '[report](Attachments/report.pdf)' }],
@@ -272,6 +282,51 @@ describe('Special Search Filters', () => {
         const noteResults = await service.searchWithContent('@ocr "text in the note body"');
         assert.deepEqual(attachmentResults.map((result) => result.file.path), ['Notes/reference.md']);
         assert.deepEqual(noteResults, []);
+    });
+
+    it('filters a saved tag query by live title or note content', async () => {
+        const pcb = new MockTFile('Notes/PCB Design.md');
+        const keyboard = new MockTFile('Notes/Keyboard Design.md');
+        const app = {
+            vault: {
+                getMarkdownFiles: () => [pcb, keyboard],
+                cachedRead: async (file: MockTFile) => file.path === keyboard.path
+                    ? 'Includes a PCB assembly checklist.'
+                    : 'Board layout notes.',
+            },
+            metadataCache: {
+                getFileCache: () => ({ tags: [{ tag: '#electronics' }] }),
+            },
+        } as never;
+        const service = new SearchService(app, DEFAULT_SETTINGS);
+
+        const titleResults = await service.searchFilteredWithContent('#electronics', 'PCB');
+        assert.deepEqual(titleResults.map((result) => result.file.path), [pcb.path, keyboard.path]);
+        const noResults = await service.searchFilteredWithContent('#electronics', 'book');
+        assert.deepEqual(noResults, []);
+    });
+
+    it('finds today and yesterday using the Daily Notes default format', async () => {
+        const formatDate = (offset: number): string => {
+            const date = new Date();
+            date.setDate(date.getDate() - offset);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        };
+        const today = new MockTFile(`${formatDate(0)}.md`);
+        const yesterday = new MockTFile(`${formatDate(1)}.md`);
+        const app = {
+            vault: {
+                configDir: '.obsidian',
+                adapter: { exists: async () => false, read: async () => '' },
+                getMarkdownFiles: () => [today, yesterday],
+                cachedRead: async () => 'Daily planning',
+            },
+            metadataCache: { getFileCache: () => ({}) },
+        } as never;
+        const service = new SearchService(app, DEFAULT_SETTINGS);
+
+        assert.deepEqual((await service.searchWithContent('@today')).map((result) => result.file.path), [today.path]);
+        assert.deepEqual((await service.searchWithContent('@yesterday')).map((result) => result.file.path), [yesterday.path]);
     });
 });
 

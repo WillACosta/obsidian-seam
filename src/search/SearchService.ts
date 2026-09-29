@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { App, moment, normalizePath, TFile } from 'obsidian';
 import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } from '../types';
 import { parseQuery } from './QueryParser';
 
@@ -85,9 +85,17 @@ export function normalizeTextQuery(query: string): string {
 }
 
 /** Extracts a supported @ filter and the remaining text query. */
-export function parseSpecialSearch(query: string): { search: SpecialSearch | null; textQuery: string } {
+export function parseSpecialSearch(query: string): { search: SpecialSearch | null; textQuery: string; days?: number } {
     const trimmed = query.trim();
-    const match = trimmed.match(/^@(untagged|docs|images|ocr|task|todo|done|code)(?:\s+([\s\S]*))?$/i);
+    const lastDaysMatch = trimmed.match(/^@last([1-9]\d*)days(?:\s+([\s\S]*))?$/i);
+    if (lastDaysMatch) {
+        return {
+            search: 'lastDays',
+            textQuery: normalizeTextQuery(lastDaysMatch[2] ?? ''),
+            days: Number(lastDaysMatch[1]),
+        };
+    }
+    const match = trimmed.match(/^@(today|yesterday|recent|untagged|docs|images|ocr|task|todo|done|code)(?:\s+([\s\S]*))?$/i);
     if (!match) return { search: null, textQuery: trimmed };
     return {
         search: match[1].toLowerCase() as SpecialSearch,
@@ -134,9 +142,15 @@ async function attachmentContainsText(app: App, note: TFile, query: string): Pro
 }
 
 /** Applies a special search using metadata available from Obsidian's public APIs. */
-export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearch): boolean {
+export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearch, days?: number): boolean {
     const cache = app.metadataCache.getFileCache(file);
     switch (search) {
+        case 'today':
+        case 'yesterday':
+        case 'recent':
+            return true;
+        case 'lastDays':
+            return typeof days === 'number' && file.stat.mtime >= Date.now() - days * 86_400_000;
         case 'untagged':
             return getFileTags(app, file).length === 0;
         case 'docs':
@@ -225,11 +239,14 @@ export function extractMatchSnippet(
 export class SearchService {
     private searchVersion = 0;
     private contentCache: Map<string, string> = new Map();
+    private dailyNoteSettings = { folder: '', format: 'YYYY-MM-DD' };
 
     constructor(
         private app: App,
         private settings: SeamSettings,
-    ) {}
+    ) {
+        void this.readDailyNoteSettings();
+    }
 
     updateSettings(settings: SeamSettings): void {
         this.settings = settings;
@@ -415,7 +432,8 @@ export class SearchService {
 
         // If query contains a supported @ filter, apply it before text matching.
         if (specialQuery.search) {
-            return this.specialSearch(specialQuery.search, specialQuery.textQuery, files);
+            const specialFiles = this.getCachedSpecialSearchFiles(specialQuery.search, files);
+            return this.specialSearch(specialQuery.search, specialQuery.textQuery, specialFiles, specialQuery.days);
         }
 
         // If query contains no # characters, treat as text search
@@ -508,11 +526,13 @@ export class SearchService {
 
         // If query contains a supported @ filter, apply it before text matching.
         if (specialQuery.search) {
+            const specialFiles = await this.getSpecialSearchFiles(specialQuery.search, files);
             return this.specialSearchWithContent(
                 specialQuery.search,
                 specialQuery.textQuery,
-                files,
+                specialFiles,
                 currentVersion,
+                specialQuery.days,
             );
         }
 
@@ -639,13 +659,60 @@ export class SearchService {
         return results;
     }
 
-    private specialSearch(search: SpecialSearch, textQuery: string, files: TFile[]): SearchResult[] {
+    private getCachedSpecialSearchFiles(search: SpecialSearch, files: TFile[]): TFile[] {
+        if (search !== 'today' && search !== 'yesterday') return files;
+        return this.findDailyNote(search, files, this.dailyNoteSettings);
+    }
+
+    private async getSpecialSearchFiles(search: SpecialSearch, files: TFile[]): Promise<TFile[]> {
+        if (search !== 'today' && search !== 'yesterday') return files;
+        return this.findDailyNote(search, files, await this.readDailyNoteSettings());
+    }
+
+    private findDailyNote(
+        search: 'today' | 'yesterday',
+        files: TFile[],
+        settings: { folder: string; format: string },
+    ): TFile[] {
+        const date = moment();
+        if (search === 'yesterday') date.subtract(1, 'day');
+        const noteName = date.format(settings.format || 'YYYY-MM-DD').replace(/\.md$/i, '');
+        const folder = settings.folder.trim().replace(/^\/+|\/+$/g, '');
+        const path = normalizePath(`${folder ? `${folder}/` : ''}${noteName}.md`);
+        const file = files.find((candidate) => candidate.path.toLowerCase() === path.toLowerCase());
+        return file ? [file] : [];
+    }
+
+    private async readDailyNoteSettings(): Promise<{ folder: string; format: string }> {
+        const defaults = { folder: '', format: 'YYYY-MM-DD' };
+        try {
+            const configPath = normalizePath(`${this.app.vault.configDir}/daily-notes.json`);
+            if (!(await this.app.vault.adapter.exists(configPath))) {
+                this.dailyNoteSettings = defaults;
+                return defaults;
+            }
+            const parsed = JSON.parse(await this.app.vault.adapter.read(configPath)) as { folder?: unknown; format?: unknown };
+            this.dailyNoteSettings = {
+                folder: typeof parsed.folder === 'string' ? parsed.folder : defaults.folder,
+                format: typeof parsed.format === 'string' && parsed.format.trim() ? parsed.format : defaults.format,
+            };
+            return this.dailyNoteSettings;
+        } catch {
+            this.dailyNoteSettings = defaults;
+            return defaults;
+        }
+    }
+
+    private specialSearch(search: SpecialSearch, textQuery: string, files: TFile[], days?: number): SearchResult[] {
         const normalizedText = normalizeTextQuery(textQuery);
         const lowerText = normalizedText.toLowerCase();
         const results: SearchResult[] = [];
 
-        for (const file of files) {
-            if (!matchesSpecialSearch(this.app, file, search)) continue;
+        const candidates = search === 'recent'
+            ? [...files].sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 10)
+            : files;
+        for (const file of candidates) {
+            if (!matchesSpecialSearch(this.app, file, search, days)) continue;
 
             const titleMatch = !lowerText ||
                 file.basename.toLowerCase().includes(lowerText) ||
@@ -660,7 +727,7 @@ export class SearchService {
             });
         }
 
-        results.sort((a, b) => a.title.localeCompare(b.title));
+        if (search !== 'recent') results.sort((a, b) => a.title.localeCompare(b.title));
         return results;
     }
 
@@ -669,14 +736,18 @@ export class SearchService {
         textQuery: string,
         files: TFile[],
         searchVersion: number,
+        days?: number,
     ): Promise<SearchResult[]> {
         const normalizedText = normalizeTextQuery(textQuery);
         const lowerText = normalizedText.toLowerCase();
         const results: SearchResult[] = [];
 
-        for (const file of files) {
+        const candidates = search === 'recent'
+            ? [...files].sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 10)
+            : files;
+        for (const file of candidates) {
             if (this.searchVersion !== searchVersion) return [];
-            if (!matchesSpecialSearch(this.app, file, search)) continue;
+            if (!matchesSpecialSearch(this.app, file, search, days)) continue;
 
             if (search === 'ocr' && lowerText) {
                 if (!(await attachmentContainsText(this.app, file, normalizedText))) continue;
@@ -716,7 +787,7 @@ export class SearchService {
         }
 
         if (this.searchVersion !== searchVersion) return [];
-        results.sort((a, b) => {
+        if (search !== 'recent') results.sort((a, b) => {
             if (lowerText) {
                 const aTitle = a.title.toLowerCase().includes(lowerText) ? 0 : 1;
                 const bTitle = b.title.toLowerCase().includes(lowerText) ? 0 : 1;
@@ -725,6 +796,38 @@ export class SearchService {
             return a.title.localeCompare(b.title);
         });
         return results;
+    }
+
+    async searchFilteredWithContent(filterQuery: string, textQuery: string): Promise<SearchResult[]> {
+        this.searchVersion++;
+        const currentVersion = this.searchVersion;
+        const candidates = this.tagSearch(filterQuery, this.app.vault.getMarkdownFiles());
+        const normalizedText = normalizeTextQuery(textQuery);
+        const lowerText = normalizedText.toLowerCase();
+        if (!lowerText) return candidates;
+
+        const results: SearchResult[] = [];
+        for (const result of candidates) {
+            if (this.searchVersion !== currentVersion) return [];
+            const titleMatch = result.title.toLowerCase().includes(lowerText)
+                || result.path.toLowerCase().includes(lowerText);
+            let matchSnippet: MatchSnippet | undefined;
+            if (!titleMatch) {
+                try {
+                    const body = this.stripFrontmatter(await this.app.vault.cachedRead(result.file));
+                    matchSnippet = extractMatchSnippet(body, normalizedText) ?? undefined;
+                } catch {
+                    // File may have changed while the active custom search was filtering.
+                }
+            }
+            if (titleMatch || matchSnippet) results.push({ ...result, matchSnippet });
+        }
+        if (this.searchVersion !== currentVersion) return [];
+        return results.sort((a, b) => {
+            const aTitle = a.title.toLowerCase().includes(lowerText) ? 0 : 1;
+            const bTitle = b.title.toLowerCase().includes(lowerText) ? 0 : 1;
+            return aTitle - bTitle || a.title.localeCompare(b.title);
+        });
     }
 
     /**

@@ -62,7 +62,6 @@ export interface CustomSpecialSearch {
     mode: 'base' | 'tags';
     basePath: string;
     baseView: string;
-    showBaseToolbar: boolean;
     expandModal?: boolean;
     filterQuery: string;
     pinned: boolean;
@@ -92,6 +91,10 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     customSpecialSearches: [],
     showSpecialSearchDescriptions: true,
     specialSearchPreferences: [
+        { search: 'today', pinned: false, hidden: false },
+        { search: 'yesterday', pinned: false, hidden: false },
+        { search: 'recent', pinned: false, hidden: false },
+        { search: 'lastDays', pinned: false, hidden: false },
         { search: 'untagged', pinned: false, hidden: false },
         { search: 'docs', pinned: false, hidden: false },
         { search: 'images', pinned: false, hidden: false },
@@ -102,6 +105,8 @@ export const DEFAULT_SETTINGS: SeamSettings = {
         { search: 'code', pinned: false, hidden: false },
     ],
     specialSearchOrder: [
+        'builtin:today', 'builtin:yesterday',
+        'builtin:recent', 'builtin:lastDays',
         'builtin:untagged', 'builtin:docs', 'builtin:images', 'builtin:ocr',
         'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code',
     ],
@@ -136,8 +141,12 @@ export interface MatchSnippet {
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'or' | 'text';
 
-export type SpecialSearch = 'untagged' | 'docs' | 'images' | 'ocr' | 'task' | 'todo' | 'done' | 'code';
+export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'ocr' | 'task' | 'todo' | 'done' | 'code';
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
+    today: 'calendar-days',
+    yesterday: 'history',
+    recent: 'clock-3',
+    lastDays: 'calendar-days',
     untagged: 'tag',
     docs: 'file-text',
     images: 'image',
@@ -146,6 +155,21 @@ export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
     todo: 'square-check-big',
     done: 'list-checks',
     code: 'code',
+};
+
+export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
+    today: '@today',
+    yesterday: '@yesterday',
+    recent: '@recent',
+    lastDays: '@lastXdays',
+    untagged: '@untagged',
+    docs: '@docs',
+    images: '@images',
+    ocr: '@ocr',
+    task: '@task',
+    todo: '@todo',
+    done: '@done',
+    code: '@code',
 };
 
 export interface QueryToken {
@@ -191,10 +215,11 @@ export interface PaletteItem {
     taskCompletionPercent?: number;
     tagMode?: 'include' | 'exclude';
     specialSearch?: SpecialSearch;
+    specialSearchInput?: string;
     customSearchId?: string;
     basePath?: string;
     baseView?: string;
     baseContent?: string;
-    showBaseToolbar?: boolean;
+    baseSearchText?: string;
     action?: () => void | Promise<void>;
 }

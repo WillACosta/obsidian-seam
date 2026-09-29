@@ -1,6 +1,6 @@
 import { App, getIcon, Notice, PluginSettingTab, setIcon, Setting, SettingDefinitionItem } from 'obsidian';
 import type SeamPlugin from '../main';
-import { AutomationDelayMode, CustomSpecialSearch, QuickAddChoice, UpdateAnnouncementMode, SpecialSearch, PaletteRibbonMode, SPECIAL_SEARCH_ICONS } from '../types';
+import { AutomationDelayMode, CustomSpecialSearch, QuickAddChoice, UpdateAnnouncementMode, SpecialSearch, PaletteRibbonMode, SPECIAL_SEARCH_ICONS, SPECIAL_SEARCH_LABELS } from '../types';
 import { t } from '../i18n';
 import { QuickAddChoiceModal } from './QuickAddChoiceModal';
 import { CustomSpecialSearchModal } from './CustomSpecialSearchModal';
@@ -164,7 +164,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             const searches = this.plugin.settings.customSpecialSearches
                 .filter((search) => search.identifier.toLowerCase().includes(query))
                 .sort((a, b) => Number(b.pinned) - Number(a.pinned));
-            const builtins = this.plugin.settings.specialSearchPreferences.filter((preference) => `@${preference.search}`.includes(query));
+            const builtins = this.plugin.settings.specialSearchPreferences.filter((preference) => SPECIAL_SEARCH_LABELS[preference.search].toLowerCase().includes(query));
             list.toggleClass('is-overflowing', searches.length + builtins.length > 5);
             if (searches.length === 0 && builtins.length === 0) {
                 list.createDiv({ cls: 'seam-custom-searches-empty', text: query ? t().settingsCustomSearchNoMatches : t().settingsCustomSearchNone });
@@ -354,7 +354,7 @@ export class SeamSettingsTab extends PluginSettingTab {
     private renderBuiltinSpecialSearchRow(list: HTMLElement, search: SpecialSearch, query: string, refresh: () => void): void {
         const preference = this.plugin.settings.specialSearchPreferences.find((item) => item.search === search);
         if (!preference) return;
-        const label = `@${search}`;
+        const label = SPECIAL_SEARCH_LABELS[search];
         const row = list.createDiv({ cls: `seam-quick-add-choice seam-custom-search-choice${preference.pinned ? ' seam-custom-search-pinned' : ''}${preference.hidden ? ' seam-custom-search-hidden' : ''}` });
         row.dataset.specialSearchOrderKey = `builtin:${search}`;
         row.draggable = query.length === 0;

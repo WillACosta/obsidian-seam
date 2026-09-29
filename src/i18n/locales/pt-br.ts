@@ -8,7 +8,7 @@ export const ptBr: Translations = {
     cmdMoveToPermanent: 'Mover para Permanente',
     cmdProcessPending: 'Processar automações pendentes',
     cmdShowStatus: 'Mostrar status da automação',
-    cmdShowRecentFiles: 'Mostrar arquivos recentes',
+    cmdCreateNewNote: 'Criar uma nova nota',
 
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Criar nova nota: "${title}"`,
@@ -26,8 +26,6 @@ export const ptBr: Translations = {
     paletteQuickAddDesc: 'Criar uma nota a partir de uma escolha do Seam',
     paletteSelectChoice: 'Selecione uma escolha',
     paletteAddFleeting: 'Adicionar Fleeting',
-    paletteRecentFilesTitle: 'Mostrar arquivos recentes',
-    paletteRecentFilesDesc: 'Mostrar as 10 notas modificadas mais recentemente',
 
     // Universal Palette UI
     palettePlaceholder: 'Busque notas, #tags ou execute comandos do Seam...',
@@ -41,6 +39,10 @@ export const ptBr: Translations = {
     paletteHelpExcludeTag: 'para excluir uma tag (ex.: !#tag)',
     paletteHelpExactMatch: 'busca por correspondência exata',
     paletteHelpSpecialSearch: 'busca especial',
+    paletteSpecialToday: 'Nota diária de hoje',
+    paletteSpecialYesterday: 'Nota diária de ontem',
+    paletteSpecialRecent: 'As 10 notas modificadas mais recentemente',
+    paletteSpecialLastDays: 'Notas modificadas nos últimos X dias',
     paletteSpecialUntagged: 'Notas sem tags',
     paletteSpecialDocs: 'Notas com anexos de documentos',
     paletteSpecialImages: 'Notas com anexos de imagens',
@@ -152,10 +154,9 @@ export const ptBr: Translations = {
     customSearchModalView: 'Visualização da Base',
     customSearchModalViewDesc: 'Visualização a renderizar na Paleta Universal. Digite para ver as visualizações da Base.',
     customSearchModalViewPlaceholder: 'Digite o nome da visualização',
-    customSearchModalToolbar: 'Mostrar barra de menu da Base',
-    customSearchModalToolbarDesc: 'Manter a barra da Base visível dentro da paleta.',
     customSearchModalExpand: 'Expandir a Paleta Universal',
     customSearchModalExpandDesc: 'Usar cerca de 90% da largura da tela quando esta consulta estiver ativa.',
+    paletteBaseNoMatches: 'Nenhum resultado da Base corresponde a este filtro.',
     customSearchModalFilter: 'Filtro de tags',
     customSearchModalFilterDesc: 'Use a mesma sintaxe e sugestões de tags da Paleta Universal.',
     customSearchModalPinned: 'Fixar consulta',

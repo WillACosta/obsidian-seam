@@ -47,7 +47,6 @@ export class CustomSpecialSearchModal extends Modal {
     private search: CustomSpecialSearch;
     private baseSetting: Setting | null = null;
     private viewSetting: Setting | null = null;
-    private toolbarSetting: Setting | null = null;
     private filterSetting: Setting | null = null;
     private baseViewSuggest: BaseViewSuggest | null = null;
     private baseViewInput: HTMLInputElement | null = null;
@@ -55,7 +54,7 @@ export class CustomSpecialSearchModal extends Modal {
     constructor(app: App, existing: CustomSpecialSearch | null, private readonly onSave: SaveSearch, private readonly searchService?: SearchService, private readonly showIcons = true) {
         super(app);
         this.search = existing ? { ...existing, mode: existing.mode ?? (existing.basePath ? 'base' : 'tags') } : {
-            id: crypto.randomUUID(), identifier: '', icon: 'sparkles', mode: 'tags', basePath: '', baseView: '', showBaseToolbar: false, expandModal: false,
+            id: crypto.randomUUID(), identifier: '', icon: 'sparkles', mode: 'tags', basePath: '', baseView: '', expandModal: false,
             filterQuery: '', pinned: false, hidden: false,
         };
         this.search.icon = this.search.icon || 'sparkles';
@@ -101,9 +100,6 @@ export class CustomSpecialSearchModal extends Modal {
             text.onChange((value) => { this.search.baseView = value; });
         });
 
-        this.toolbarSetting = new Setting(this.contentEl).setName(t().customSearchModalToolbar).setDesc(t().customSearchModalToolbarDesc)
-            .addToggle((toggle) => toggle.setValue(this.search.showBaseToolbar).onChange((value) => { this.search.showBaseToolbar = value; }));
-
         new Setting(this.contentEl).setName(t().customSearchModalExpand).setDesc(t().customSearchModalExpandDesc)
             .addToggle((toggle) => toggle.setValue(Boolean(this.search.expandModal)).onChange((value) => { this.search.expandModal = value; }));
 
@@ -136,7 +132,6 @@ export class CustomSpecialSearchModal extends Modal {
     private updateModeVisibility(): void {
         this.baseSetting?.settingEl.toggle(this.search.mode === 'base');
         this.viewSetting?.settingEl.toggle(this.search.mode === 'base');
-        this.toolbarSetting?.settingEl.toggle(this.search.mode === 'base');
         this.filterSetting?.settingEl.toggle(this.search.mode === 'tags');
         if (this.search.mode === 'base') void this.refreshBaseViewSuggestions();
     }

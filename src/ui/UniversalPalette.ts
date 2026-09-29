@@ -1,10 +1,11 @@
 import { App, Component, MarkdownRenderer, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
-import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption, SPECIAL_SEARCH_ICONS } from '../types';
+import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption, SPECIAL_SEARCH_ICONS, SPECIAL_SEARCH_LABELS } from '../types';
 import { normalizeTextQuery, parseSpecialSearch, SearchService } from '../search/SearchService';
 import { t } from '../i18n';
 import { NoteTitleModal } from './NoteTitleModal';
 import { NoteConflictModal } from './NoteConflictModal';
 import { getTagInputContext, getTagSuggestions } from './TagFilterSuggest';
+import { BaseResultNavigation } from './BaseResultNavigation';
 
 /**
  * Internal interface for the SuggestModal's chooser.
@@ -67,9 +68,23 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private selectedTags: string[] = [];
     private excludedTags: string[] = [];
     private chipsContainerEl: HTMLElement | null = null;
-    private mode: 'search' | 'quick-add' | 'recent' = 'search';
+    private queryInputMirrorEl: HTMLElement | null = null;
+    private mode: 'search' | 'quick-add' = 'search';
     private quickAddDraft = '';
-    private baseRenderComponents: Component[] = [];
+    private baseRenderComponent: Component | null = null;
+    private baseRenderHost: HTMLElement | null = null;
+    private baseRenderKey = '';
+    private baseRenderObserver: MutationObserver | null = null;
+    private baseResultNavigation: BaseResultNavigation | null = null;
+    private baseNavigationEnabled = false;
+    private baseSourcePath = '';
+    private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
+        if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return;
+        if (!(event.target instanceof HTMLElement) || !event.target.matches('.prompt-input')) return;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowRight') this.handleBaseNavigationKey(event, 1);
+        else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') this.handleBaseNavigationKey(event, -1);
+        else if (event.key === 'Enter') this.handleBaseNavigationEnter(event);
+    };
 
     constructor(
         app: App,
@@ -112,16 +127,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     onOpen(): void {
+        window.addEventListener('keydown', this.baseNavigationKeyListener, true);
         void super.onOpen();
         this.setupChipsContainer();
     }
 
     onClose(): void {
-        this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-custom-search-expanded');
+        window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
+        this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-custom-search-expanded', 'seam-palette-special-search-active');
         this.selectedTags = [];
         this.excludedTags = [];
-        for (const component of this.baseRenderComponents) component.unload();
-        this.baseRenderComponents = [];
+        this.disposeBaseRender();
     }
 
     /**
@@ -136,6 +152,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.chipsContainerEl = createDiv({ cls: 'seam-palette-chips-container is-hidden' });
         parent.insertBefore(this.chipsContainerEl, this.inputEl);
 
+        const inputShell = createDiv({ cls: 'seam-palette-input-shell' });
+        parent.insertBefore(inputShell, this.inputEl);
+        inputShell.appendChild(this.inputEl);
+        this.queryInputMirrorEl = inputShell.createDiv({ cls: 'seam-palette-query-input-mirror' });
+
         // Click anywhere in container focuses the input
         parent.addEventListener('click', (e) => {
             if (e.target === parent || e.target === this.chipsContainerEl) {
@@ -145,6 +166,19 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Keydown listener on inputEl for Backspace removal of chips
         this.inputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
+            if (
+                evt.key === 'Backspace'
+                && this.mode === 'search'
+                && this.inputEl.selectionStart === this.inputEl.value.length
+                && this.inputEl.selectionEnd === this.inputEl.value.length
+                && this.isExactActiveSpecialSearch(this.inputEl.value.trim())
+            ) {
+                evt.preventDefault();
+                evt.stopImmediatePropagation();
+                this.inputEl.value = '';
+                this.refreshSuggestions();
+                return;
+            }
             if (
                 evt.key === 'Backspace' &&
                 this.inputEl.selectionStart === 0 &&
@@ -169,7 +203,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 this.inputEl.value = '';
                 this.addSelectedTag(tag, Boolean(match[1]));
             }
+            window.requestAnimationFrame(() => this.syncQueryInputMirrorScroll());
         });
+        this.inputEl.addEventListener('scroll', () => this.syncQueryInputMirrorScroll());
     }
 
     /**
@@ -258,20 +294,21 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return;
         }
         if (value.type === 'special') {
-            this.inputEl.value = value.title;
+            this.inputEl.value = value.specialSearchInput ?? value.title;
             this.refreshSuggestions();
             return;
         }
         if (value.type === 'base') {
+            if (
+                evt instanceof KeyboardEvent
+                && this.baseNavigationEnabled
+                && this.openSelectedBaseResult(evt)
+            ) return;
             this.close();
             return;
         }
         if (value.id === 'cmd-quick-add') {
             this.showQuickAdd();
-            return;
-        }
-        if (value.id === 'cmd-recent-files') {
-            this.showRecentFiles();
             return;
         }
         if (value.id.startsWith('quick-add-choice-')) {
@@ -308,10 +345,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         const customSearch = this.mode === 'search' && trimmed.startsWith('@')
             ? this.getCustomSearchForQuery(trimmed)
             : null;
+        this.baseNavigationEnabled = customSearch?.mode === 'base';
+        if (customSearch?.mode !== 'base') this.disposeBaseRender();
         this.inputEl.closest<HTMLElement>('.prompt')?.toggleClass('seam-palette-custom-search-expanded', Boolean(customSearch?.expandModal));
+        this.renderActiveSpecialQueryInput(query);
 
         if (this.mode === 'quick-add') return this.getQuickAddChoices(trimmed);
-        if (this.mode === 'recent') return this.getRecentFiles(trimmed);
 
         // Special search mode: typing @ lists supported filters; selecting one applies it.
         if (trimmed.startsWith('@')) {
@@ -319,7 +358,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (custom) {
                 const textQuery = trimmed.slice(custom.identifier.length).trim();
                 if (custom.mode === 'base') {
-                    return this.getCustomBaseItem(custom);
+                    const items = this.getCustomBaseItem(custom, textQuery);
+                    if (items.length === 0) this.disposeBaseRender();
+                    return items;
                 }
                 return this.getCustomFilterSuggestions(custom, textQuery, trimmed);
             }
@@ -445,7 +486,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }) ?? null;
     }
 
-    private getCustomBaseItem(search: CustomSpecialSearch): PaletteItem[] {
+    private getCustomBaseItem(search: CustomSpecialSearch, baseSearchText: string): PaletteItem[] {
         const file = this.app.vault.getAbstractFileByPath(normalizePath(search.basePath));
         if (!(file instanceof TFile)) return [];
         return [{
@@ -456,7 +497,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             customSearchId: search.id,
             basePath: search.basePath,
             baseView: search.baseView,
-            showBaseToolbar: search.showBaseToolbar,
+            baseSearchText,
         }];
     }
 
@@ -466,8 +507,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         inputQuery: string,
     ): Promise<PaletteItem[]> {
         if (!search.filterQuery) return [];
-        const combinedQuery = [search.filterQuery, textQuery].filter(Boolean).join(' ');
-        const results = await this.searchService.searchWithContent(combinedQuery);
+        const results = await this.searchService.searchFilteredWithContent(search.filterQuery, textQuery);
         if (this.lastQuery !== inputQuery) return [];
         return this.mapSearchResults(results, textQuery);
     }
@@ -611,14 +651,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.refreshSuggestions();
     }
 
-    showRecentFiles(): void {
-        this.mode = 'recent';
-        this.inputEl.value = '';
-        this.setPlaceholder(t().paletteRecentFilesTitle);
-        this.updateInstructions('');
-        this.refreshSuggestions();
-    }
-
     private returnToSearch(): void {
         this.mode = 'search';
         this.inputEl.value = '';
@@ -630,8 +662,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private updateInstructions(query: string): void {
         if (this.mode === 'search' && query.startsWith('@')) {
             const custom = this.getCustomSearchForQuery(query);
-            if (custom?.mode === 'base' && query.toLowerCase() === custom.identifier.toLowerCase()) {
-                this.setInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }]);
+            if (custom?.mode === 'base') {
+                this.setInstructions([
+                    { command: '↑↓←→', purpose: t().paletteHelpNavigate },
+                    { command: '↵', purpose: t().paletteHelpSelect },
+                    { command: 'esc', purpose: t().paletteHelpDismiss },
+                ]);
                 return;
             }
             this.setInstructions([
@@ -702,14 +738,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     private getSpecialSearchChoices(query: string): PaletteItem[] {
         const options: SpecialSearchOption[] = [
-            { search: 'untagged', label: '@untagged', description: t().paletteSpecialUntagged },
-            { search: 'docs', label: '@docs', description: t().paletteSpecialDocs },
-            { search: 'images', label: '@images', description: t().paletteSpecialImages },
-            { search: 'ocr', label: '@ocr', description: t().paletteSpecialOcr },
-            { search: 'task', label: '@task', description: t().paletteSpecialTask },
-            { search: 'todo', label: '@todo', description: t().paletteSpecialTodo },
-            { search: 'done', label: '@done', description: t().paletteSpecialDone },
-            { search: 'code', label: '@code', description: t().paletteSpecialCode },
+            { search: 'today', label: SPECIAL_SEARCH_LABELS.today, description: t().paletteSpecialToday },
+            { search: 'yesterday', label: SPECIAL_SEARCH_LABELS.yesterday, description: t().paletteSpecialYesterday },
+            { search: 'recent', label: SPECIAL_SEARCH_LABELS.recent, description: t().paletteSpecialRecent },
+            { search: 'lastDays', label: SPECIAL_SEARCH_LABELS.lastDays, description: t().paletteSpecialLastDays },
+            { search: 'untagged', label: SPECIAL_SEARCH_LABELS.untagged, description: t().paletteSpecialUntagged },
+            { search: 'docs', label: SPECIAL_SEARCH_LABELS.docs, description: t().paletteSpecialDocs },
+            { search: 'images', label: SPECIAL_SEARCH_LABELS.images, description: t().paletteSpecialImages },
+            { search: 'ocr', label: SPECIAL_SEARCH_LABELS.ocr, description: t().paletteSpecialOcr },
+            { search: 'task', label: SPECIAL_SEARCH_LABELS.task, description: t().paletteSpecialTask },
+            { search: 'todo', label: SPECIAL_SEARCH_LABELS.todo, description: t().paletteSpecialTodo },
+            { search: 'done', label: SPECIAL_SEARCH_LABELS.done, description: t().paletteSpecialDone },
+            { search: 'code', label: SPECIAL_SEARCH_LABELS.code, description: t().paletteSpecialCode },
         ];
         const needle = query.toLowerCase();
         const builtIns = options
@@ -720,6 +760,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 description: option.description,
                 type: 'special' as const,
                 specialSearch: option.search,
+                specialSearchInput: option.search === 'lastDays' ? '@last1Days' : option.label,
                 icon: SPECIAL_SEARCH_ICONS[option.search],
             }));
         const custom = this.settings.customSpecialSearches
@@ -747,11 +788,37 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         );
     }
 
-    private getRecentFiles(query: string): PaletteItem[] {
-        const needle = query.toLowerCase();
-        return this.app.vault.getMarkdownFiles().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 10)
-            .filter((file) => !needle || file.basename.toLowerCase().includes(needle) || file.path.toLowerCase().includes(needle))
-            .map((file) => ({ id: file.path, title: file.basename, description: file.parent?.path || '', type: 'note' as const, file }));
+    private isExactActiveSpecialSearch(query: string): boolean {
+        if (!query) return false;
+        if (this.settings.customSpecialSearches.some((search) => !search.hidden && search.identifier.toLowerCase() === query.toLowerCase())) return true;
+        const parsed = parseSpecialSearch(query);
+        return parsed.search !== null && parsed.textQuery.length === 0;
+    }
+
+    private getActiveSpecialQueryToken(query: string): string | null {
+        const custom = this.getCustomSearchForQuery(query.trim());
+        if (custom) return query.trimStart().slice(0, custom.identifier.length);
+        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recent|untagged|docs|images|ocr|task|todo|done|code)(?=\s|$)/i);
+        return match?.[0] ?? null;
+    }
+
+    private renderActiveSpecialQueryInput(query: string): void {
+        const prompt = this.inputEl.closest<HTMLElement>('.prompt');
+        const token = this.getActiveSpecialQueryToken(query);
+        prompt?.toggleClass('seam-palette-special-search-active', Boolean(token));
+        if (!this.queryInputMirrorEl) return;
+        this.queryInputMirrorEl.empty();
+        if (!token) return;
+
+        const leadingWhitespace = query.slice(0, query.length - query.trimStart().length);
+        if (leadingWhitespace) this.queryInputMirrorEl.appendText(leadingWhitespace);
+        this.queryInputMirrorEl.createSpan({ cls: 'seam-palette-query-input-token', text: token });
+        this.queryInputMirrorEl.createSpan({ text: query.trimStart().slice(token.length) });
+        window.requestAnimationFrame(() => this.syncQueryInputMirrorScroll());
+    }
+
+    private syncQueryInputMirrorScroll(): void {
+        if (this.queryInputMirrorEl) this.queryInputMirrorEl.scrollLeft = this.inputEl.scrollLeft;
     }
 
     private promptQuickAdd(choice: QuickAddChoice | null): void {
@@ -788,6 +855,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.renderBaseEmbed(item, el);
         } else if (item.type === 'command' || item.type === 'action' || item.type === 'create' || item.type === 'special') {
             el.addClass('seam-palette-command-item');
+            if (item.type === 'special') el.addClass('seam-palette-special-search');
             if (item.customSearchId) el.addClass('seam-palette-custom-search');
             const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
 
@@ -892,19 +960,94 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     private renderBaseEmbed(item: PaletteItem, el: HTMLElement): void {
         el.addClass('seam-palette-base-item');
-        if (!item.showBaseToolbar) el.addClass('seam-palette-base-hide-toolbar');
-        else el.addClass('seam-palette-base-limit-toolbar');
+        el.addClass('seam-palette-base-hide-toolbar');
         if (item.customSearchId) el.addClass('seam-palette-custom-search-item');
-        const embed = el.createDiv({ cls: 'seam-palette-base-embed' });
-        embed.addEventListener('click', (event) => this.openFileFromPaletteLink(event, item.basePath || ''), true);
         if (!item.basePath) return;
         const target = `${item.basePath}${item.baseView ? `#${item.baseView}` : ''}`;
-        const component = new Component();
-        component.load();
-        this.baseRenderComponents.push(component);
-        void MarkdownRenderer.render(this.app, `![[${target}]]`, embed, item.basePath, component).then(() => {
-            this.limitBaseToolbar(embed, component);
-        });
+        const renderKey = `${item.basePath}#${item.baseView}`;
+        if (this.baseRenderKey !== renderKey || !this.baseRenderHost || !this.baseRenderComponent) {
+            this.disposeBaseRender();
+            this.baseRenderKey = renderKey;
+            this.baseSourcePath = item.basePath;
+            this.baseRenderHost = createDiv({ cls: 'seam-palette-base-embed' });
+            this.baseRenderHost.addEventListener('click', (event) => this.handleBaseEmbedClick(event, item.basePath || ''), true);
+            this.baseRenderComponent = new Component();
+            this.baseRenderComponent.load();
+            const host = this.baseRenderHost;
+            const component = this.baseRenderComponent;
+            this.baseRenderObserver = new MutationObserver(() => this.refreshBaseNavigation());
+            this.baseRenderObserver.observe(host, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style'],
+            });
+            void MarkdownRenderer.render(this.app, `![[${target}]]`, host, item.basePath, component).then(() => {
+                if (this.baseRenderHost !== host) return;
+                this.limitBaseToolbar(host, component);
+                this.refreshBaseNavigation();
+            });
+        }
+        el.appendChild(this.baseRenderHost);
+
+        el.addClass('seam-palette-base-navigation');
+        if (!this.baseResultNavigation) {
+            this.baseResultNavigation = new BaseResultNavigation(this.baseRenderHost, t().paletteBaseNoMatches);
+        }
+        this.baseResultNavigation.refresh(item.baseSearchText ?? '');
+        const activeId = this.baseResultNavigation.activeElementId;
+        if (activeId) this.inputEl.setAttribute('aria-activedescendant', activeId);
+        else this.inputEl.removeAttribute('aria-activedescendant');
+    }
+
+    private refreshBaseNavigation(): void {
+        if (!this.baseNavigationEnabled || !this.baseResultNavigation) return;
+        this.baseResultNavigation.refresh();
+        const activeId = this.baseResultNavigation.activeElementId;
+        if (activeId) this.inputEl.setAttribute('aria-activedescendant', activeId);
+        else this.inputEl.removeAttribute('aria-activedescendant');
+    }
+
+    private handleBaseNavigationKey(event: KeyboardEvent, direction: -1 | 1): boolean {
+        if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return true;
+        if (!this.baseResultNavigation.moveSelection(direction)) return true;
+        const activeId = this.baseResultNavigation.activeElementId;
+        if (activeId) this.inputEl.setAttribute('aria-activedescendant', activeId);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return false;
+    }
+
+    private handleBaseNavigationEnter(event: KeyboardEvent): boolean {
+        if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return true;
+        return this.openSelectedBaseResult(event) ? false : true;
+    }
+
+    private openSelectedBaseResult(event: KeyboardEvent): boolean {
+        const fileRef = this.baseResultNavigation?.activeFileRef;
+        const file = fileRef
+            ? this.app.metadataCache.getFirstLinkpathDest(fileRef, this.baseSourcePath)
+            : null;
+        if (!file) return this.baseResultNavigation?.activateSelection() ?? false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        this.close();
+        void this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false).openFile(file);
+        return true;
+    }
+
+    private disposeBaseRender(): void {
+        this.baseRenderObserver?.disconnect();
+        this.baseRenderObserver = null;
+        this.baseResultNavigation?.destroy();
+        this.baseResultNavigation = null;
+        this.baseRenderComponent?.unload();
+        this.baseRenderComponent = null;
+        this.baseRenderHost?.remove();
+        this.baseRenderHost = null;
+        this.baseRenderKey = '';
+        this.baseSourcePath = '';
+        this.inputEl.removeAttribute('aria-activedescendant');
     }
 
     private limitBaseToolbar(embed: HTMLElement, component: Component): void {
@@ -949,6 +1092,21 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         void this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false).openFile(file);
     }
 
+    private handleBaseEmbedClick(event: MouseEvent, sourcePath: string): void {
+        this.openFileFromPaletteLink(event, sourcePath);
+        if (event.defaultPrevented || !this.baseNavigationEnabled) return;
+        const target = event.target instanceof Element ? event.target : null;
+        const card = target?.closest<HTMLElement>('.bases-cards-item[draggable="true"]');
+        const title = card?.querySelector<HTMLElement>('.bases-cards-property.mod-title .bases-cards-line')?.textContent?.trim();
+        if (!title) return;
+        const file = this.app.metadataCache.getFirstLinkpathDest(title, sourcePath);
+        if (!file) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.close();
+        void this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false).openFile(file);
+    }
+
     /**
      * Extracts the plain text query to use for highlighting in results.
      * For tag queries (#tag), extracts the tag name without the # prefix.
@@ -962,6 +1120,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (query.startsWith('>')) return '';
 
         if (query.startsWith('@')) {
+            const custom = this.getCustomSearchForQuery(query);
+            if (custom) return normalizeTextQuery(query.slice(custom.identifier.length).trim());
             return parseSpecialSearch(query).textQuery;
         }
 
