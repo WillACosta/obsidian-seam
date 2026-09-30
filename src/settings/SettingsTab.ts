@@ -78,6 +78,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             heading: strings.settingsInterfaceHeading,
             items: [
                 { name: strings.settingsShowIcons, desc: strings.settingsShowIconsDesc, render: (setting) => this.renderShowIconsSetting(setting) },
+                { name: strings.settingsShowCommandsByDefault, desc: strings.settingsShowCommandsByDefaultDesc, render: (setting) => this.renderShowCommandsByDefaultSetting(setting) },
                 { name: strings.settingsPaletteRibbon, desc: strings.settingsPaletteRibbonDesc, render: (setting) => this.renderPaletteRibbonSetting(setting) },
                 { name: strings.settingsPaletteHotkey, desc: strings.settingsPaletteHotkeyDesc, render: (setting) => this.renderHotkeySetting(setting, `${this.plugin.manifest.id}:open-palette`) },
             ],
@@ -176,7 +177,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                     const label = row.createDiv({ cls: 'seam-quick-add-choice-label seam-custom-search-label' });
                     if (this.plugin.settings.showIcons) {
                         const icon = label.createSpan({ cls: 'seam-quick-add-choice-icon' });
-                        const iconSvg = getIcon(search.icon || 'sparkles');
+                        const iconSvg = getIcon(search.icon || 'search');
                         if (iconSvg) icon.appendChild(iconSvg);
                     }
                     label.createDiv({ cls: 'seam-custom-search-name', text: search.identifier });
@@ -574,6 +575,15 @@ export class SeamSettingsTab extends PluginSettingTab {
             .setValue(this.plugin.settings.showIcons)
             .onChange(async (value) => {
                 this.plugin.settings.showIcons = value;
+                await this.plugin.saveSettings();
+            }));
+    }
+
+    private renderShowCommandsByDefaultSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.showCommandsByDefault)
+            .onChange(async (value) => {
+                this.plugin.settings.showCommandsByDefault = value;
                 await this.plugin.saveSettings();
             }));
     }

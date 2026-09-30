@@ -31,6 +31,7 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.moveCleanupTags, '#permanent, #todo');
         assert.equal(DEFAULT_SETTINGS.moveCleanupProperties, 'status');
         assert.equal(DEFAULT_SETTINGS.showIcons, true);
+        assert.equal(DEFAULT_SETTINGS.showCommandsByDefault, true);
         assert.deepEqual(DEFAULT_SETTINGS.quickAddChoices, []);
         assert.equal(DEFAULT_SETTINGS.persistQuickAddDrafts, false);
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
@@ -38,6 +39,7 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.lastAnnouncedVersion, '');
         assert.equal(DEFAULT_SETTINGS.specialSearchPreferences.some((item) => item.search === 'today'), true);
         assert.equal(DEFAULT_SETTINGS.specialSearchPreferences.some((item) => item.search === 'yesterday'), true);
+        assert.equal(DEFAULT_SETTINGS.showTodoCompletionPercent, true);
     });
 });
 
@@ -226,7 +228,6 @@ describe('Special Search Filters', () => {
         });
         assert.equal(matchesSpecialSearch(app, file as never, 'docs'), true);
         assert.equal(matchesSpecialSearch(app, file as never, 'images'), true);
-        assert.equal(matchesSpecialSearch(app, file as never, 'ocr'), true);
     });
 
     it('matches task, todo, done, and code metadata', () => {
@@ -261,28 +262,6 @@ describe('Special Search Filters', () => {
         assert.deepEqual(results.map((result) => result.file.path), ['Notes/kicad.md']);
     });
 
-    it('searches @ocr text in attachment content without searching the note body', async () => {
-        const note = new MockTFile('Notes/reference.md');
-        const attachment = new MockTFile('Attachments/reference.txt');
-        const app = {
-            vault: {
-                getMarkdownFiles: () => [note],
-                cachedRead: async (file: MockTFile) => file.path === attachment.path
-                    ? 'text extracted from the attachment'
-                    : 'text in the note body',
-            },
-            metadataCache: {
-                getFileCache: () => ({ embeds: [{ link: attachment.path }] }),
-                getFirstLinkpathDest: () => attachment,
-            },
-        } as never;
-        const service = new SearchService(app, DEFAULT_SETTINGS);
-
-        const attachmentResults = await service.searchWithContent('@ocr "text extracted"');
-        const noteResults = await service.searchWithContent('@ocr "text in the note body"');
-        assert.deepEqual(attachmentResults.map((result) => result.file.path), ['Notes/reference.md']);
-        assert.deepEqual(noteResults, []);
-    });
 
     it('filters a saved tag query by live title or note content', async () => {
         const pcb = new MockTFile('Notes/PCB Design.md');

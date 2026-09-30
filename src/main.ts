@@ -393,7 +393,7 @@ export default class SeamPlugin extends Plugin {
         // Contextual commands: only when a note is active
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
-            commands.push(
+            commands.splice(1, 0,
                 {
                     id: 'cmd-archive-current',
                     title: t().paletteArchiveCurrentTitle(activeFile.basename),
@@ -438,7 +438,7 @@ export default class SeamPlugin extends Plugin {
                     delete normalized.showBaseToolbar;
                     return {
                         ...normalized,
-                        icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'sparkles',
+                        icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'search',
                         mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
                         hidden: Boolean(search.hidden),
                         pinned: Boolean(search.pinned) && !Boolean(search.hidden),
@@ -450,6 +450,7 @@ export default class SeamPlugin extends Plugin {
                 })
                 : [];
             this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
+            this.settings.showCommandsByDefault = Boolean(this.settings.showCommandsByDefault);
             const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences;
             const storedPreferences = Array.isArray(this.settings.specialSearchPreferences) ? this.settings.specialSearchPreferences : [];
             this.settings.specialSearchPreferences = defaultPreferences.map((entry) => {

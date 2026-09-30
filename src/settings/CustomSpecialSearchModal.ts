@@ -54,10 +54,10 @@ export class CustomSpecialSearchModal extends Modal {
     constructor(app: App, existing: CustomSpecialSearch | null, private readonly onSave: SaveSearch, private readonly searchService?: SearchService, private readonly showIcons = true) {
         super(app);
         this.search = existing ? { ...existing, mode: existing.mode ?? (existing.basePath ? 'base' : 'tags') } : {
-            id: crypto.randomUUID(), identifier: '', icon: 'sparkles', mode: 'tags', basePath: '', baseView: '', expandModal: false,
+            id: crypto.randomUUID(), identifier: '', icon: 'search', mode: 'tags', basePath: '', baseView: '', expandModal: false,
             filterQuery: '', pinned: false, hidden: false,
         };
-        this.search.icon = this.search.icon || 'sparkles';
+        this.search.icon = this.search.icon || 'search';
     }
 
     onOpen(): void {
@@ -72,7 +72,7 @@ export class CustomSpecialSearchModal extends Modal {
         iconSetting.settingEl.addClass('seam-custom-search-text-setting');
         iconSetting.addText((text) => {
             text.setValue(this.search.icon).onChange((value) => {
-                this.search.icon = value.trim() || 'sparkles';
+                this.search.icon = value.trim() || 'search';
                 this.renderIconPreview(iconSetting.controlEl, this.search.icon, text.inputEl);
             });
             this.renderIconPreview(iconSetting.controlEl, this.search.icon, text.inputEl);
@@ -139,7 +139,7 @@ export class CustomSpecialSearchModal extends Modal {
     private renderIconPreview(parent: HTMLElement, iconId: string, input?: HTMLInputElement): void {
         parent.querySelector('.seam-custom-search-icon-preview')?.remove();
         const preview = parent.createSpan({ cls: 'seam-custom-search-icon-preview' });
-        const icon = getIcon(iconId.trim() || 'sparkles');
+        const icon = getIcon(iconId.trim() || 'search');
         if (icon) preview.appendChild(icon);
         const textInput = input ?? parent.querySelector('input');
         if (textInput) parent.insertBefore(preview, textInput);

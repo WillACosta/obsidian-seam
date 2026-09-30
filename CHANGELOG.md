@@ -10,15 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Custom special searches**: Create reusable `@` queries from Seam tags or Obsidian Base files, with a configurable icon, pinning, hiding, and ordering controls.
+- **Custom special searches**: Create reusable `@` queries from Seam tags or Obsidian Base files, with a configurable `search` icon by default plus pinning, hiding, and ordering controls.
 - **Base results in the Universal Palette**: Render configured Base views as selectable Seam results with arrow-key navigation, Enter-to-open, live filtering, and matching-text highlights.
 
 <!-- Screenshot suggestion: show a Base-backed custom search in the Universal Palette, including filtered results and the keyboard navigation hint. -->
 
-- **Built-in special-search controls**: Pin, hide, and reorder built-in queries; optionally show each `@todo` note's completion percentage with a localized label.
+- **Built-in special-search controls**: Pin, hide, and reorder built-in queries; show each `@todo` note's completion percentage by default, with a localized label.
 - **Recent and date-based queries**: Use `@recent` for the ten most recently modified files, `@lastXdays` for a chosen date range, and `@today` or `@yesterday` for Daily Notes.
 - **Universal Palette ribbon options**: Choose to show the command on desktop and mobile, on mobile only, or hide it.
 - **Create-note hotkey command**: Assign a custom Obsidian shortcut to “Seam: Create a new note”.
+- **Command visibility setting**: Show Seam commands by default or keep them behind the `>` prefix.
 
 ### Changed
 
@@ -28,9 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Special-search interaction**: Keep input text in Obsidian's normal color, accent only the active `@query` token, and remove an active query with one Backspace press.
 - **Recent files**: Replaced the former “Show recent files” command and palette subview with the `@recent` special query.
 
+### Removed
+
+- **`@ocr` special search**: Removed temporarily.
+
 ### Fixed
 
 - **Negated tag chips**: Keep an excluded tag visible when it is the first or only tag in the active filter.
+- **Base result navigation and filtering**: Keep cards visible when navigating down and back up, search the full Base result set, and visit every result with Up/Down while Left/Right move the query caret.
+- **Contextual command order**: Show Archive and Move to Permanent immediately after Create a new note when available.
+- **Special-search input hover**: Keep the active query and typed filter text visible while hovering over the input.
 
 ## [2.0.1] - 2026-09-23
 

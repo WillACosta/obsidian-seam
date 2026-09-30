@@ -81,8 +81,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
         if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return;
         if (!(event.target instanceof HTMLElement) || !event.target.matches('.prompt-input')) return;
-        if (event.key === 'ArrowDown' || event.key === 'ArrowRight') this.handleBaseNavigationKey(event, 1);
-        else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') this.handleBaseNavigationKey(event, -1);
+        if (event.key === 'ArrowDown') this.handleBaseNavigationKey(event, 'down');
+        else if (event.key === 'ArrowUp') this.handleBaseNavigationKey(event, 'up');
         else if (event.key === 'Enter') this.handleBaseNavigationEnter(event);
     };
 
@@ -390,15 +390,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (!trimmed) {
                 // Return all notes matching selected tags synchronously
                 const results = this.searchService.searchBySelectedTags(this.selectedTags, this.excludedTags);
-                return this.mapSearchResults(results, '');
+                return this.withCommandSuggestions(this.mapSearchResults(results, ''), '');
             }
             // Additional text filter with selected tags: async with content
             return this.getAsyncSelectedTagsSuggestions(this.selectedTags, this.excludedTags, trimmed);
         }
 
-        // Keep the default palette quiet; commands are deliberately opt-in via `>`.
+        // Commands can be shown by default or kept behind the `>` prefix.
         if (!trimmed) {
-            return [];
+            return this.settings.showCommandsByDefault ? this.commands : [];
         }
 
         // Plain text queries without tags: async (in-note content search)
@@ -459,7 +459,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return [];
         }
 
-        return this.mapSearchResults(results, textQuery);
+        return this.withCommandSuggestions(this.mapSearchResults(results, textQuery), textQuery);
     }
 
     /**
@@ -474,7 +474,20 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return [];
         }
 
-        return this.mapSearchResults(results, query);
+        const items = this.mapSearchResults(results, query);
+        return query.startsWith('@') || query.includes('#')
+            ? items
+            : this.withCommandSuggestions(items, query);
+    }
+
+    private withCommandSuggestions(items: PaletteItem[], query: string): PaletteItem[] {
+        if (!this.settings.showCommandsByDefault) return items;
+        const normalizedQuery = query.trim().toLowerCase();
+        const commands = this.commands.filter((command) => !normalizedQuery
+            || command.title.toLowerCase().includes(normalizedQuery)
+            || command.description.toLowerCase().includes(normalizedQuery));
+        const existingIds = new Set(items.map((item) => item.id));
+        return [...items, ...commands.filter((command) => !existingIds.has(command.id))];
     }
 
     private getCustomSearchForQuery(query: string): CustomSpecialSearch | null {
@@ -664,7 +677,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const custom = this.getCustomSearchForQuery(query);
             if (custom?.mode === 'base') {
                 this.setInstructions([
-                    { command: '↑↓←→', purpose: t().paletteHelpNavigate },
+                    { command: '↑↓', purpose: t().paletteHelpNavigate },
                     { command: '↵', purpose: t().paletteHelpSelect },
                     { command: 'esc', purpose: t().paletteHelpDismiss },
                 ]);
@@ -745,7 +758,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             { search: 'untagged', label: SPECIAL_SEARCH_LABELS.untagged, description: t().paletteSpecialUntagged },
             { search: 'docs', label: SPECIAL_SEARCH_LABELS.docs, description: t().paletteSpecialDocs },
             { search: 'images', label: SPECIAL_SEARCH_LABELS.images, description: t().paletteSpecialImages },
-            { search: 'ocr', label: SPECIAL_SEARCH_LABELS.ocr, description: t().paletteSpecialOcr },
             { search: 'task', label: SPECIAL_SEARCH_LABELS.task, description: t().paletteSpecialTask },
             { search: 'todo', label: SPECIAL_SEARCH_LABELS.todo, description: t().paletteSpecialTodo },
             { search: 'done', label: SPECIAL_SEARCH_LABELS.done, description: t().paletteSpecialDone },
@@ -771,7 +783,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 description: search.mode === 'base' ? search.basePath : search.filterQuery || 'Custom filter',
                 type: 'special' as const,
                 customSearchId: search.id,
-                icon: search.icon || 'sparkles',
+                icon: search.icon || 'search',
             }));
         const orderIndex = (item: PaletteItem): number => {
             const key = item.customSearchId
@@ -798,7 +810,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private getActiveSpecialQueryToken(query: string): string | null {
         const custom = this.getCustomSearchForQuery(query.trim());
         if (custom) return query.trimStart().slice(0, custom.identifier.length);
-        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recent|untagged|docs|images|ocr|task|todo|done|code)(?=\s|$)/i);
+        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recent|untagged|docs|images|task|todo|done|code)(?=\s|$)/i);
         return match?.[0] ?? null;
     }
 
@@ -1008,11 +1020,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         else this.inputEl.removeAttribute('aria-activedescendant');
     }
 
-    private handleBaseNavigationKey(event: KeyboardEvent, direction: -1 | 1): boolean {
+    private handleBaseNavigationKey(event: KeyboardEvent, direction: 'up' | 'down'): boolean {
         if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return true;
-        if (!this.baseResultNavigation.moveSelection(direction)) return true;
+        this.baseResultNavigation.moveSelection(direction);
         const activeId = this.baseResultNavigation.activeElementId;
         if (activeId) this.inputEl.setAttribute('aria-activedescendant', activeId);
+        else this.inputEl.removeAttribute('aria-activedescendant');
         event.preventDefault();
         event.stopImmediatePropagation();
         return false;

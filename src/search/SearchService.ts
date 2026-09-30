@@ -70,10 +70,6 @@ const DOCUMENT_EXTENSIONS = new Set([
 const IMAGE_EXTENSIONS = new Set([
     'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'tif', 'tiff', 'webp',
 ]);
-const TEXT_ATTACHMENT_EXTENSIONS = new Set([
-    'css', 'csv', 'htm', 'html', 'js', 'json', 'md', 'markdown', 'svg', 'tex',
-    'text', 'ts', 'tsx', 'txt', 'xml', 'yaml', 'yml',
-]);
 
 /** Removes the optional surrounding quotes used for exact phrase searches. */
 export function normalizeTextQuery(query: string): string {
@@ -95,7 +91,7 @@ export function parseSpecialSearch(query: string): { search: SpecialSearch | nul
             days: Number(lastDaysMatch[1]),
         };
     }
-    const match = trimmed.match(/^@(today|yesterday|recent|untagged|docs|images|ocr|task|todo|done|code)(?:\s+([\s\S]*))?$/i);
+    const match = trimmed.match(/^@(today|yesterday|recent|untagged|docs|images|task|todo|done|code)(?:\s+([\s\S]*))?$/i);
     if (!match) return { search: null, textQuery: trimmed };
     return {
         search: match[1].toLowerCase() as SpecialSearch,
@@ -119,28 +115,6 @@ export function hasAttachmentType(app: App, file: TFile, extensions: Set<string>
     return getAttachmentLinks(app, file).some((link) => extensions.has(attachmentExtension(link)));
 }
 
-export function hasAnyAttachment(app: App, file: TFile): boolean {
-    return getAttachmentLinks(app, file).some((link) => attachmentExtension(link).length > 0);
-}
-
-async function attachmentContainsText(app: App, note: TFile, query: string): Promise<boolean> {
-    const lowerQuery = query.toLowerCase();
-    for (const link of getAttachmentLinks(app, note)) {
-        if (link.toLowerCase().includes(lowerQuery)) return true;
-
-        const attachment = app.metadataCache.getFirstLinkpathDest(link, note.path);
-        if (!attachment || !(attachment instanceof TFile)) continue;
-        if (!TEXT_ATTACHMENT_EXTENSIONS.has(attachment.extension.toLowerCase())) continue;
-        try {
-            const content = await app.vault.cachedRead(attachment);
-            if (content.toLowerCase().includes(lowerQuery)) return true;
-        } catch {
-            // Unavailable attachments are still valid for @ocr without a text query.
-        }
-    }
-    return false;
-}
-
 /** Applies a special search using metadata available from Obsidian's public APIs. */
 export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearch, days?: number): boolean {
     const cache = app.metadataCache.getFileCache(file);
@@ -157,9 +131,6 @@ export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearc
             return hasAttachmentType(app, file, DOCUMENT_EXTENSIONS);
         case 'images':
             return hasAttachmentType(app, file, IMAGE_EXTENSIONS);
-        case 'ocr':
-            // OCR searches are scoped to notes that reference at least one attachment.
-            return hasAnyAttachment(app, file);
         case 'task':
             return (cache?.listItems ?? []).some((item) => item.task !== undefined);
         case 'todo':
@@ -748,17 +719,6 @@ export class SearchService {
         for (const file of candidates) {
             if (this.searchVersion !== searchVersion) return [];
             if (!matchesSpecialSearch(this.app, file, search, days)) continue;
-
-            if (search === 'ocr' && lowerText) {
-                if (!(await attachmentContainsText(this.app, file, normalizedText))) continue;
-                results.push({
-                    file,
-                    title: file.basename,
-                    path: file.path,
-                    tags: getFileTags(this.app, file),
-                });
-                continue;
-            }
 
             const titleMatch = !lowerText ||
                 file.basename.toLowerCase().includes(lowerText) ||

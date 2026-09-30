@@ -206,8 +206,41 @@
 }
 
 .prompt.seam-palette-special-search-active .prompt-input {
-    color: transparent;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
     caret-color: var(--text-normal);
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+}
+
+.prompt.seam-palette-special-search-active .prompt-input:hover {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+}
+
+.prompt.seam-palette-special-search-active .seam-palette-query-input-mirror {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.prompt .modal-close-button,
+.prompt .prompt-close-button,
+.prompt .modal-close-button:hover,
+.prompt .prompt-close-button:hover {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.prompt .prompt-input-container.seam-palette-input-container .search-input-clear-button,
+.prompt .prompt-input-container.seam-palette-input-container .search-input-clear-button:hover {
+    color: var(--text-muted) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .seam-palette-query-input-token {

@@ -19,6 +19,7 @@ export interface SeamSettings {
     moveCleanupTags: string;
     moveCleanupProperties: string;
     showIcons: boolean;
+    showCommandsByDefault: boolean;
     quickAddChoices: QuickAddChoice[];
     persistQuickAddDrafts: boolean;
     reconciliationIntervalMinutes: number;
@@ -83,6 +84,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     moveCleanupTags: '#permanent, #todo',
     moveCleanupProperties: 'status',
     showIcons: true,
+    showCommandsByDefault: true,
     quickAddChoices: [],
     persistQuickAddDrafts: false,
     reconciliationIntervalMinutes: 15,
@@ -98,7 +100,6 @@ export const DEFAULT_SETTINGS: SeamSettings = {
         { search: 'untagged', pinned: false, hidden: false },
         { search: 'docs', pinned: false, hidden: false },
         { search: 'images', pinned: false, hidden: false },
-        { search: 'ocr', pinned: false, hidden: false },
         { search: 'task', pinned: false, hidden: false },
         { search: 'todo', pinned: false, hidden: false },
         { search: 'done', pinned: false, hidden: false },
@@ -107,10 +108,10 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     specialSearchOrder: [
         'builtin:today', 'builtin:yesterday',
         'builtin:recent', 'builtin:lastDays',
-        'builtin:untagged', 'builtin:docs', 'builtin:images', 'builtin:ocr',
+        'builtin:untagged', 'builtin:docs', 'builtin:images',
         'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code',
     ],
-    showTodoCompletionPercent: false,
+    showTodoCompletionPercent: true,
     paletteRibbonMode: 'both',
 };
 
@@ -141,7 +142,7 @@ export interface MatchSnippet {
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'or' | 'text';
 
-export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'ocr' | 'task' | 'todo' | 'done' | 'code';
+export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code';
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
     today: 'calendar-days',
     yesterday: 'history',
@@ -150,7 +151,6 @@ export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
     untagged: 'tag',
     docs: 'file-text',
     images: 'image',
-    ocr: 'scan-text',
     task: 'list-checks',
     todo: 'square-check-big',
     done: 'list-checks',
@@ -165,7 +165,6 @@ export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
     untagged: '@untagged',
     docs: '@docs',
     images: '@images',
-    ocr: '@ocr',
     task: '@task',
     todo: '@todo',
     done: '@done',

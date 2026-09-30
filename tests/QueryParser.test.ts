@@ -149,6 +149,7 @@ describe('QueryParser', () => {
             days: 20,
         });
         assert.deepEqual(parseSpecialSearch('@last0Days'), { search: null, textQuery: '@last0Days' });
+        assert.deepEqual(parseSpecialSearch('@ocr'), { search: null, textQuery: '@ocr' });
         assert.deepEqual(parseSpecialSearch('@unknown'), { search: null, textQuery: '@unknown' });
     });
 });
