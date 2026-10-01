@@ -247,7 +247,7 @@ describe('Special Search Filters', () => {
     });
 
     it('searches an exact quoted phrase in note content', async () => {
-        const file = { path: 'Notes/kicad.md', basename: 'kicad' };
+        const file = new MockTFile('Notes/kicad.md');
         const app = {
             vault: {
                 getMarkdownFiles: () => [file],

@@ -6,6 +6,20 @@
     gap: 8px;
 }
 
+.seam-palette-pinned-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    color: var(--text-accent);
+    flex-shrink: 0;
+}
+
+.seam-palette-pinned-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
 .seam-palette-command-icon {
     display: inline-flex;
     align-items: center;
@@ -178,6 +192,10 @@
     overflow: hidden;
 }
 
+.seam-palette-query-input-token.is-hidden {
+    display: none;
+}
+
 .prompt-input-container.seam-palette-input-container .prompt-input {
     width: 100%;
     min-width: 0;
@@ -205,7 +223,13 @@
     line-height: normal;
 }
 
-.prompt.seam-palette-special-search-active .prompt-input {
+.seam-palette-query-placeholder {
+    color: var(--text-muted);
+    margin-left: 6px;
+}
+
+.prompt.seam-palette-special-search-active .prompt-input,
+.prompt.seam-palette-directory-search-active .prompt-input {
     color: transparent !important;
     -webkit-text-fill-color: transparent !important;
     caret-color: var(--text-normal);
@@ -214,7 +238,8 @@
     filter: none !important;
 }
 
-.prompt.seam-palette-special-search-active .prompt-input:hover {
+.prompt.seam-palette-special-search-active .prompt-input:hover,
+.prompt.seam-palette-directory-search-active .prompt-input:hover {
     color: transparent !important;
     -webkit-text-fill-color: transparent !important;
     background: transparent !important;
@@ -223,7 +248,8 @@
     filter: none !important;
 }
 
-.prompt.seam-palette-special-search-active .seam-palette-query-input-mirror {
+.prompt.seam-palette-special-search-active .seam-palette-query-input-mirror,
+.prompt.seam-palette-directory-search-active .seam-palette-query-input-mirror {
     opacity: 1 !important;
     visibility: visible !important;
 }
@@ -705,6 +731,12 @@
     gap: 6px;
 }
 
+.seam-tag-filter-suggest-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .seam-update-modal {
     width: min(960px, calc(100vw - 32px));
     max-width: calc(100vw - 32px);
@@ -782,4 +814,39 @@
 .seam-palette-task-completion-label,
 .seam-palette-task-completion-separator {
   color: var(--text-faint);
+}
+
+.seam-palette-result-metadata {
+    color: var(--text-muted);
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+/* Give native virtualized Bases a measurable viewport on mobile. */
+body.is-mobile .prompt:has(.seam-palette-base-embed) .prompt-results {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+body.is-mobile .seam-palette-base-item {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+}
+body.is-mobile .seam-palette-base-embed {
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    max-height: none;
+}
+body.is-mobile .seam-palette-base-embed > p,
+body.is-mobile .seam-palette-base-embed .internal-embed,
+body.is-mobile .seam-palette-base-embed .bases-view {
+    height: 100%;
+    min-height: 0;
+}
+body.is-mobile .seam-palette-base-embed > p {
+    margin: 0;
 }

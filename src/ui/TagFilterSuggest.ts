@@ -1,9 +1,10 @@
-import { AbstractInputSuggest, App, setIcon } from 'obsidian';
+import { AbstractInputSuggest, App, setIcon, TFolder } from 'obsidian';
 import { SearchService } from '../search/SearchService';
 
 interface TagSuggestion {
     tag: string;
     excluded: boolean;
+    directory?: boolean;
 }
 
 export function getTagInputContext(query: string): { prefix: string; excluded: boolean } | null {
@@ -37,19 +38,36 @@ export class TagFilterSuggest extends AbstractInputSuggest<TagSuggestion> {
     }
 
     getSuggestions(query: string): TagSuggestion[] {
+        const directory = query.match(/(?:^|\s)dir:(?:"([^"]*)|([^\s]*))$/i);
+        if (directory) {
+            const prefix = (directory[1] ?? directory[2]).toLowerCase();
+            return this.app.vault.getAllLoadedFiles()
+                .filter((file): file is TFolder => file instanceof TFolder)
+                .filter(folder => folder.path.toLowerCase().includes(prefix))
+                .slice(0, this.limit)
+                .map(folder => ({ tag: folder.path, excluded: false, directory: true }));
+        }
         return getTagSuggestions(this.searchService, query);
     }
 
     renderSuggestion(value: TagSuggestion, el: HTMLElement): void {
+        el.addClass('seam-tag-filter-suggest-item');
         if (this.showIcons) {
             const icon = el.createSpan({ cls: 'seam-path-suggest-icon' });
-            setIcon(icon, 'hash');
+            setIcon(icon, value.directory ? 'folder' : 'hash');
         }
         el.createSpan({ text: `${value.excluded ? '!' : ''}${value.tag}` });
     }
 
     selectSuggestion(value: TagSuggestion, evt: MouseEvent | KeyboardEvent): void {
         const current = this.getValue();
+        if (value.directory) {
+            const next = current.replace(/dir:(?:"[^"]*|\S*)$/i, `dir:${value.tag.includes(' ') ? JSON.stringify(value.tag) : value.tag}`) + ' ';
+            this.setValue(next);
+            this.onChange?.(next);
+            this.close();
+            return;
+        }
         const parts = current.split(/(\s+)/);
         let index = parts.length - 1;
         while (index >= 0 && /^\s+$/.test(parts[index])) index--;

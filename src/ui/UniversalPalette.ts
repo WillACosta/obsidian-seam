@@ -1,10 +1,12 @@
-import { App, Component, MarkdownRenderer, SuggestModal, setIcon, normalizePath, Notice, TFile } from 'obsidian';
-import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearchOption, SPECIAL_SEARCH_ICONS, SPECIAL_SEARCH_LABELS } from '../types';
+import { App, Component, MarkdownRenderer, SuggestModal, setIcon, normalizePath, Notice, Platform, TFile, TFolder } from 'obsidian';
+import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearch, SpecialSearchOption, SPECIAL_SEARCH_ICONS, SPECIAL_SEARCH_LABELS } from '../types';
 import { normalizeTextQuery, parseSpecialSearch, SearchService } from '../search/SearchService';
 import { t } from '../i18n';
 import { NoteTitleModal } from './NoteTitleModal';
 import { NoteConflictModal } from './NoteConflictModal';
 import { getTagInputContext, getTagSuggestions } from './TagFilterSuggest';
+import { openSearchResult } from '../search/OpenSearchResult';
+import { parseQuery } from '../search/QueryParser';
 import { BaseResultNavigation } from './BaseResultNavigation';
 
 /**
@@ -68,9 +70,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private selectedTags: string[] = [];
     private excludedTags: string[] = [];
     private chipsContainerEl: HTMLElement | null = null;
+    private composedChipsContainerEl: HTMLElement | null = null;
+    private composedTagKeys: string[] = [];
+    private composedQueryPrefix = '';
+    private composedQueryPrefixEl: HTMLElement | null = null;
     private queryInputMirrorEl: HTMLElement | null = null;
     private mode: 'search' | 'quick-add' = 'search';
     private quickAddDraft = '';
+    private selectedDirectoryToken: string | null = null;
+    private selectedInlineTagTokens = new Set<string>();
     private baseRenderComponent: Component | null = null;
     private baseRenderHost: HTMLElement | null = null;
     private baseRenderKey = '';
@@ -105,13 +113,22 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const item = this.getSelectedItem();
             if (item?.type === 'note' && item.file) {
                 this.close();
-                const leaf = this.app.workspace.getLeaf('tab');
-                void leaf.openFile(item.file);
+                void openSearchResult(this.app, item, 'tab');
             } else if (item?.type === 'tag') {
                 this.selectSuggestion(item, evt);
             }
             return false;
         });
+        const openInSplit = (evt: KeyboardEvent): boolean => {
+            const item = this.getSelectedItem();
+            if (item?.type !== 'note' || !item.file || this.baseNavigationEnabled) return true;
+            evt.preventDefault();
+            this.close();
+            void openSearchResult(this.app, item, 'split');
+            return false;
+        };
+        this.scope.register(['Mod', 'Shift'], 'Enter', openInSplit);
+        this.scope.register(['Shift'], 'Enter', openInSplit);
         this.scope.register([], 'Escape', (evt: KeyboardEvent) => {
             if (this.mode === 'search') return true;
             evt.preventDefault();
@@ -134,9 +151,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     onClose(): void {
         window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
-        this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-custom-search-expanded', 'seam-palette-special-search-active');
+        this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-custom-search-expanded', 'seam-palette-special-search-active', 'seam-palette-directory-search-active');
         this.selectedTags = [];
         this.excludedTags = [];
+        this.selectedDirectoryToken = null;
+        this.selectedInlineTagTokens.clear();
+        this.composedTagKeys = [];
+        this.composedQueryPrefix = '';
         this.disposeBaseRender();
     }
 
@@ -156,6 +177,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         parent.insertBefore(inputShell, this.inputEl);
         inputShell.appendChild(this.inputEl);
         this.queryInputMirrorEl = inputShell.createDiv({ cls: 'seam-palette-query-input-mirror' });
+        this.composedQueryPrefixEl = createSpan({ cls: 'seam-palette-query-input-token is-hidden' });
+        parent.insertBefore(this.composedQueryPrefixEl, inputShell);
+        this.composedChipsContainerEl = createDiv({ cls: 'seam-palette-chips-container is-hidden' });
+        parent.insertBefore(this.composedChipsContainerEl, inputShell);
 
         // Click anywhere in container focuses the input
         parent.addEventListener('click', (e) => {
@@ -166,6 +191,41 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Keydown listener on inputEl for Backspace removal of chips
         this.inputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
+            if (evt.key === 'Backspace' && this.composedQueryPrefix && !this.inputEl.value
+                && !this.selectedTags.length && !this.excludedTags.length) {
+                evt.preventDefault();
+                evt.stopImmediatePropagation();
+                this.composedQueryPrefix = '';
+                this.refreshSuggestions();
+                return;
+            }
+            const trailingTag = this.inputEl.value.trimEnd().match(/(?:^|\s)(!?#[^\s]+)$/)?.[1];
+            if (
+                evt.key === 'Backspace' && this.mode === 'search' && trailingTag
+                && this.selectedInlineTagTokens.has(trailingTag)
+                && this.inputEl.selectionStart === this.inputEl.value.length
+                && this.inputEl.selectionEnd === this.inputEl.value.length
+            ) {
+                evt.preventDefault();
+                evt.stopImmediatePropagation();
+                this.inputEl.value = this.inputEl.value.trimEnd().slice(0, -trailingTag.length);
+                this.selectedInlineTagTokens.delete(trailingTag);
+                this.refreshSuggestions();
+                return;
+            }
+            if (
+                evt.key === 'Backspace' && this.mode === 'search' && this.selectedDirectoryToken
+                && this.inputEl.selectionStart === this.inputEl.value.length
+                && this.inputEl.selectionEnd === this.inputEl.value.length
+                && this.inputEl.value.trimEnd().endsWith(this.selectedDirectoryToken)
+            ) {
+                evt.preventDefault();
+                evt.stopImmediatePropagation();
+                this.inputEl.value = this.inputEl.value.trimEnd().slice(0, -this.selectedDirectoryToken.length).trimEnd();
+                this.selectedDirectoryToken = null;
+                this.refreshSuggestions();
+                return;
+            }
             if (
                 evt.key === 'Backspace'
                 && this.mode === 'search'
@@ -175,8 +235,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             ) {
                 evt.preventDefault();
                 evt.stopImmediatePropagation();
-                this.inputEl.value = '';
-                this.refreshSuggestions();
+                if (this.excludedTags.length > 0) {
+                    this.removeSelectedTag(this.excludedTags[this.excludedTags.length - 1], true);
+                } else if (this.selectedTags.length > 0) {
+                    this.removeSelectedTag(this.selectedTags[this.selectedTags.length - 1]);
+                } else {
+                    this.inputEl.value = '';
+                    this.refreshSuggestions();
+                }
                 return;
             }
             if (
@@ -197,9 +263,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Also automatically convert a completed tag when user types space (e.g. "#ai ")
         this.inputEl.addEventListener('input', () => {
             const val = this.inputEl.value;
+            const tokens = new Set(val.split(/\s+/));
+            for (const token of this.selectedInlineTagTokens) {
+                if (!tokens.has(token)) this.selectedInlineTagTokens.delete(token);
+            }
+            if (this.selectedDirectoryToken && !val.includes(this.selectedDirectoryToken)) this.selectedDirectoryToken = null;
             const match = val.match(/^(!)?#([^\s#]+)\s+$/);
             if (match) {
                 const tag = match[2];
+                if (this.composedQueryPrefix) {
+                    const key = `${match[1] ? '!' : ''}#${tag.toLowerCase()}`;
+                    if (!this.composedTagKeys.includes(key)) this.composedTagKeys.push(key);
+                }
                 this.inputEl.value = '';
                 this.addSelectedTag(tag, Boolean(match[1]));
             }
@@ -214,9 +289,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private renderChips(): void {
         if (!this.chipsContainerEl) return;
         this.chipsContainerEl.empty();
+        this.composedChipsContainerEl?.empty();
 
         if (this.selectedTags.length === 0 && this.excludedTags.length === 0) {
             this.chipsContainerEl.addClass('is-hidden');
+            this.composedChipsContainerEl?.addClass('is-hidden');
             this.setPlaceholder(t().palettePlaceholder);
             return;
         }
@@ -228,8 +305,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             ...this.selectedTags.map((tag) => ({ tag, excluded: false })),
             ...this.excludedTags.map((tag) => ({ tag, excluded: true })),
         ];
+        chips.sort((a, b) => this.composedTagKeys.indexOf(`${a.excluded ? '!' : ''}#${a.tag}`) - this.composedTagKeys.indexOf(`${b.excluded ? '!' : ''}#${b.tag}`));
         for (const { tag, excluded } of chips) {
-            const chipEl = this.chipsContainerEl.createSpan({ cls: 'seam-palette-chip' });
+            const key = `${excluded ? '!' : ''}#${tag}`;
+            const container = this.composedTagKeys.includes(key) ? this.composedChipsContainerEl! : this.chipsContainerEl;
+            const chipEl = container.createSpan({ cls: 'seam-palette-chip' });
             if (excluded) chipEl.addClass('seam-palette-chip-negative');
 
             const textEl = chipEl.createSpan({ cls: 'seam-palette-chip-text' });
@@ -244,12 +324,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 this.inputEl.focus();
             });
         }
+        this.chipsContainerEl.toggleClass('is-hidden', !this.chipsContainerEl.childElementCount);
+        this.composedChipsContainerEl?.toggleClass('is-hidden', !this.composedChipsContainerEl.childElementCount);
     }
 
     /**
      * Appends a tag to the active filter conditions and refreshes suggestions.
      */
-    private addSelectedTag(tag: string, excluded = false): void {
+    private addSelectedTag(tag: string, excluded = false, remainingInput = ''): void {
         const normTag = tag.replace(/^#/, '').trim().toLowerCase();
         if (!normTag) return;
 
@@ -258,7 +340,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             targetTags.push(normTag);
         }
 
-        this.inputEl.value = '';
+        this.inputEl.value = remainingInput;
         this.renderChips();
         this.refreshSuggestions();
     }
@@ -273,6 +355,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         } else {
             this.selectedTags = this.selectedTags.filter((t) => t !== normTag);
         }
+        this.composedTagKeys = this.composedTagKeys.filter(key => key !== `${excluded ? '!' : ''}#${normTag}`);
         this.renderChips();
         this.refreshSuggestions();
     }
@@ -288,13 +371,33 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      * Intercept suggestion selection to keep the modal open when a tag is selected.
      */
     selectSuggestion(value: PaletteItem, evt: MouseEvent | KeyboardEvent): void {
+        const fullInput = this.composedQueryPrefix + this.inputEl.value;
+        if (value.type === 'tag' && this.getSpecialQueryTokens(fullInput).length > 0) {
+            const remainingInput = fullInput.replace(/!?#[^\s]*$/, '');
+            const key = `${value.tagMode === 'exclude' ? '!' : ''}#${value.title.toLowerCase()}`;
+            if (!this.composedTagKeys.includes(key)) this.composedTagKeys.push(key);
+            this.composedQueryPrefix = remainingInput;
+            this.addSelectedTag(value.title, value.tagMode === 'exclude');
+            this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
+            return;
+        }
+        if (value.type === 'directory' || (value.type === 'tag' && (/\bdir:/i.test(this.inputEl.value) || this.getSpecialQueryTokens(this.inputEl.value).length > 0))) {
+            const token = value.type === 'directory' ? `dir:${value.title.includes(' ') ? JSON.stringify(value.title) : value.title}` : `${value.tagMode === 'exclude' ? '!' : ''}#${value.title}`;
+            this.inputEl.value = this.inputEl.value.replace(/(?:dir:"[^"]*|dir:\S*|!?#\S*)$/i, token) + ' ';
+            this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
+            if (value.type === 'directory') this.selectedDirectoryToken = token;
+            else this.selectedInlineTagTokens.add(token);
+            this.refreshSuggestions();
+            return;
+        }
         if (value.type === 'tag') {
             const tag = value.title.replace(/^#/, '');
             this.addSelectedTag(tag, value.tagMode === 'exclude');
             return;
         }
         if (value.type === 'special') {
-            this.inputEl.value = value.specialSearchInput ?? value.title;
+            this.inputEl.value = `${value.specialSearchInput ?? value.title} `;
+            this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
             this.refreshSuggestions();
             return;
         }
@@ -339,8 +442,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      * When tags are selected in chips, shows notes matching those tags.
      */
     getSuggestions(query: string): PaletteItem[] | Promise<PaletteItem[]> {
+        query = this.composedQueryPrefix + query;
         const trimmed = query.trim();
         this.lastQuery = trimmed;
+        if (this.mode === 'search') {
+            const specialQueries = this.getSpecialQueryTokens(query);
+            const placeholder = specialQueries.some(entry => entry.custom?.mode === 'base') ? ''
+                : specialQueries.length > 0 ? t().paletteSeamSearchPlaceholder
+                    : /\bdir:/i.test(query) || getTagInputContext(query) || this.selectedTags.length > 0 || this.excludedTags.length > 0
+                        ? t().paletteTagPlaceholder : t().palettePlaceholder;
+            this.setPlaceholder(placeholder);
+        }
         this.updateInstructions(trimmed);
         const customSearch = this.mode === 'search' && trimmed.startsWith('@')
             ? this.getCustomSearchForQuery(trimmed)
@@ -352,8 +464,49 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         if (this.mode === 'quick-add') return this.getQuickAddChoices(trimmed);
 
+        const directoryInput = query.match(/(?:^|\s)dir:(?:"([^"]*)|([^\s]*))$/i);
+        if (directoryInput) {
+            const prefix = (directoryInput[1] ?? directoryInput[2]).toLowerCase();
+            return this.app.vault.getAllLoadedFiles()
+                .filter((file): file is TFolder => file instanceof TFolder)
+                .filter(folder => folder.path.toLowerCase().includes(prefix))
+                .map(folder => ({ id: `dir-${folder.path}`, title: folder.path, description: '', type: 'directory' as const, icon: 'folder' }));
+        }
+
         // Special search mode: typing @ lists supported filters; selecting one applies it.
         if (trimmed.startsWith('@')) {
+            const combined = this.getSpecialQueryTokens(trimmed);
+            if (combined.length > 0 && !combined.some(entry => entry.custom?.mode === 'base') && getTagInputContext(query)) {
+                return this.handleTagQuery(query);
+            }
+            if (combined.length > 0) {
+                const baseQueries = combined.filter(entry => entry.custom?.mode === 'base');
+                const remaining = trimmed.split(/\s+/).filter(token => !combined.some(entry => entry.token.toLowerCase() === token.toLowerCase())).join(' ').trim();
+                if (baseQueries.length > 0) {
+                    if (combined.length !== 1 || this.selectedTags.length || this.excludedTags.length || /(?:^|\s)(?:!?#[^\s]+|dir:|@[^\s]+)/i.test(remaining)) return [];
+                    const base = baseQueries[0].custom!;
+                    const items = this.getCustomBaseItem(base, remaining);
+                    if (items.length === 0) this.disposeBaseRender();
+                    return items;
+                }
+
+                const parsedRemaining = parseQuery(remaining);
+                const filterTokens = parsedRemaining.tokens.filter(token => token.type !== 'text');
+                const inlineTagQuery = filterTokens.map(token => {
+                    if (token.type === 'tag') return `#${token.value}`;
+                    if (token.type === 'negativeTag') return `!#${token.value}`;
+                    if (token.type === 'directory') return `dir:${JSON.stringify(token.value)}`;
+                    return 'OR';
+                }).join(' ');
+                const chipQuery = [...this.selectedTags.map(tag => `#${tag}`), ...this.excludedTags.map(tag => `!#${tag}`)].join(' ');
+                const textQuery = remaining.split(/\s+/).filter(token => token && !/^(?:!?#[^\s]+|dir:|@[^\s]+|\|\|?|or)$/i.test(token)).join(' ');
+                return this.searchService.searchCombinedSpecialWithContent(
+                    combined.flatMap(entry => entry.special ? [{ search: entry.special.search, days: entry.special.days }] : []),
+                    [...combined.flatMap(entry => entry.custom?.mode === 'tags' ? [entry.custom.filterQuery] : []), ...(chipQuery ? [chipQuery] : [])],
+                    inlineTagQuery,
+                    textQuery,
+                ).then(results => this.lastQuery === trimmed ? this.mapSearchResults(results, textQuery || inlineTagQuery || chipQuery) : []);
+            }
             const custom = customSearch;
             if (custom) {
                 const textQuery = trimmed.slice(custom.identifier.length).trim();
@@ -381,16 +534,20 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
 
         // Tag search mode: user has typed '#' in the current input
-        if (query.includes('#')) {
+        if (getTagInputContext(query)) {
             return this.handleTagQuery(query);
+        }
+
+        if (/\bdir:/i.test(query)) {
+            const fullQuery = query + ' ' + this.selectedTags.map(tag => '#' + tag).join(' ') + ' ' + this.excludedTags.map(tag => '!#' + tag).join(' ');
+            return this.searchService.searchWithContent(fullQuery).then(results => this.lastQuery === trimmed ? this.mapSearchResults(results, trimmed) : []);
         }
 
         // Notes search mode when tags are selected
         if (this.selectedTags.length > 0 || this.excludedTags.length > 0) {
             if (!trimmed) {
                 // Return all notes matching selected tags synchronously
-                const results = this.searchService.searchBySelectedTags(this.selectedTags, this.excludedTags);
-                return this.withCommandSuggestions(this.mapSearchResults(results, ''), '');
+                return this.getAsyncSelectedTagsSuggestions(this.selectedTags, this.excludedTags, '');
             }
             // Additional text filter with selected tags: async with content
             return this.getAsyncSelectedTagsSuggestions(this.selectedTags, this.excludedTags, trimmed);
@@ -481,7 +638,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private withCommandSuggestions(items: PaletteItem[], query: string): PaletteItem[] {
-        if (!this.settings.showCommandsByDefault) return items;
+        if (!this.settings.showCommandsByDefault || query.trim() || this.selectedTags.length || this.excludedTags.length) return items;
         const normalizedQuery = query.trim().toLowerCase();
         const commands = this.commands.filter((command) => !normalizedQuery
             || command.title.toLowerCase().includes(normalizedQuery)
@@ -497,6 +654,25 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const lowerQuery = query.toLowerCase();
             return lowerQuery === identifier || lowerQuery.startsWith(`${identifier} `);
         }) ?? null;
+    }
+
+    private getSpecialQueryTokens(query: string): Array<{
+        token: string;
+        special?: { search: SpecialSearch; days?: number };
+        custom?: CustomSpecialSearch;
+    }> {
+        const matches: Array<{ token: string; special?: { search: SpecialSearch; days?: number }; custom?: CustomSpecialSearch }> = [];
+        for (const token of query.split(/\s+/)) {
+            if (!token.startsWith('@')) continue;
+            const custom = this.settings.customSpecialSearches.find(search => !search.hidden && search.identifier.toLowerCase() === token.toLowerCase());
+            if (custom) {
+                matches.push({ token, custom });
+                continue;
+            }
+            const parsed = parseSpecialSearch(token);
+            if (parsed.search) matches.push({ token, special: { search: parsed.search, days: parsed.days } });
+        }
+        return matches;
     }
 
     private getCustomBaseItem(search: CustomSpecialSearch, baseSearchText: string): PaletteItem[] {
@@ -544,32 +720,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 file: r.file,
                 tags: r.tags,
                 matchSnippet: r.matchSnippet,
+                matchCount: r.matchCount,
+                searchTerms: r.searchTerms,
                 taskCompletionPercent: this.settings.showTodoCompletionPercent && parseSpecialSearch(query).search === 'todo'
                     ? this.getTaskCompletionPercent(r.file)
                     : undefined,
             };
         });
-
-        // If no results found and query is plain text without tags, offer to create a new note
-        if (
-            items.length === 0 &&
-            query.length > 0 &&
-            !query.includes('#') &&
-            !query.startsWith('>') &&
-            !query.startsWith('@') &&
-            this.selectedTags.length === 0 &&
-            this.excludedTags.length === 0
-        ) {
-            const createTitle = normalizeTextQuery(query);
-            items.push({
-                id: 'create-note',
-                title: t().paletteCreateNoteTitle(createTitle),
-                description: t().paletteCreateNoteDesc(this.settings.fleetingFolder),
-                type: 'create',
-                icon: 'file-plus',
-                action: () => this.createNote(createTitle),
-            });
-        }
 
         return items;
     }
@@ -673,57 +830,52 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private updateInstructions(query: string): void {
-        if (this.mode === 'search' && query.startsWith('@')) {
-            const custom = this.getCustomSearchForQuery(query);
-            if (custom?.mode === 'base') {
-                this.setInstructions([
-                    { command: '↑↓', purpose: t().paletteHelpNavigate },
-                    { command: '↵', purpose: t().paletteHelpSelect },
-                    { command: 'esc', purpose: t().paletteHelpDismiss },
-                ]);
-                return;
-            }
+        if (this.mode === 'search' && !query.trim() && !this.selectedTags.length && !this.excludedTags.length && !this.composedQueryPrefix) {
             this.setInstructions([
-                { command: '↑↓', purpose: t().paletteHelpNavigate },
-                { command: '↵', purpose: t().paletteHelpSelect },
-                { command: 'esc', purpose: t().paletteHelpDismiss },
+                { command: '#', purpose: t().paletteHelpTag },
                 { command: '@', purpose: t().paletteHelpSpecialSearch },
-            ]);
-            return;
-        }
-
-        if (this.mode === 'search' && query.includes('#')) {
-            this.setInstructions([
-                { command: '↑↓', purpose: t().paletteHelpNavigate },
-                { command: '↵', purpose: t().paletteHelpSelect },
-                { command: 'esc', purpose: t().paletteHelpDismiss },
-                { command: '!', purpose: t().paletteHelpExcludeTag },
-            ]);
-            return;
-        }
-
-        if (this.mode === 'search' && query.includes('"')) {
-            this.setInstructions([
-                { command: '↑↓', purpose: t().paletteHelpNavigate },
-                { command: '↵', purpose: t().paletteHelpSelect },
-                { command: 'esc', purpose: t().paletteHelpDismiss },
-                { command: '""', purpose: t().paletteHelpExactMatch },
-            ]);
-            return;
-        }
-
-        if (this.mode === 'search' && !query) {
-            this.setInstructions([
-                { command: 'esc', purpose: t().paletteHelpDismiss },
+                { command: 'dir:', purpose: t().paletteHelpDirectory },
                 { command: '>', purpose: t().paletteHelpCommands },
-                { command: '@', purpose: t().paletteHelpSpecialSearch },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+            ]);
+            return;
+        }
+
+        if (this.mode === 'search' && (query.startsWith('@') || getTagInputContext(query) || this.selectedTags.length > 0 || this.excludedTags.length > 0)) {
+            const openNewTab = Platform.isMacOS ? '⌘↵' : 'Ctrl+↵';
+            this.setInstructions([
+                { command: '↑↓', purpose: t().paletteHelpNavigate },
+                { command: openNewTab, purpose: t().paletteHelpOpenNewTab },
+                { command: '⇧↵', purpose: t().paletteHelpOpenSplit },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+            ]);
+            return;
+        }
+
+        if (this.mode === 'search' && query.startsWith('>')) {
+            this.setInstructions([
+                { command: '↑↓', purpose: t().paletteHelpNavigate },
+                { command: '↵', purpose: t().paletteHelpSelect },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+            ]);
+            return;
+        }
+
+        if (this.mode === 'search' && query.trim()) {
+            const openNewTab = Platform.isMacOS ? '⌘↵' : 'Ctrl+↵';
+            this.setInstructions([
+                { command: '↑↓', purpose: t().paletteHelpNavigate },
+                { command: '↵', purpose: t().paletteHelpOpen },
+                { command: openNewTab, purpose: t().paletteHelpOpenNewTab },
+                { command: '⇧↵', purpose: t().paletteHelpOpenSplit },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
             ]);
             return;
         }
 
         const instructions = [
             { command: '↑↓', purpose: t().paletteHelpNavigate },
-            { command: '↵', purpose: t().paletteHelpSelect },
+            { command: '↵', purpose: t().paletteHelpOpen },
         ];
         if (this.mode !== 'search' && !query) {
             instructions.push({ command: '⌫', purpose: t().paletteHelpBack });
@@ -816,16 +968,37 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     private renderActiveSpecialQueryInput(query: string): void {
         const prompt = this.inputEl.closest<HTMLElement>('.prompt');
+        this.composedQueryPrefixEl?.setText(this.composedQueryPrefix.trim());
+        this.composedQueryPrefixEl?.toggleClass('is-hidden', !this.composedQueryPrefix);
+        if (this.composedQueryPrefix) {
+            prompt?.removeClass('seam-palette-special-search-active', 'seam-palette-directory-search-active');
+            this.queryInputMirrorEl?.empty();
+            this.inputEl.parentElement?.removeClass('seam-palette-input-before-chips');
+            if (this.inputEl.parentElement) this.inputEl.parentElement.style.width = '';
+            return;
+        }
         const token = this.getActiveSpecialQueryToken(query);
+        const directory = token ? null : /(?:^|\s)(dir:(?:"[^"]*"|[^\s]+))(?=\s|$)/i.exec(query);
         prompt?.toggleClass('seam-palette-special-search-active', Boolean(token));
+        prompt?.toggleClass('seam-palette-directory-search-active', Boolean(directory));
         if (!this.queryInputMirrorEl) return;
         this.queryInputMirrorEl.empty();
-        if (!token) return;
+        if (!token && !directory) return;
 
-        const leadingWhitespace = query.slice(0, query.length - query.trimStart().length);
-        if (leadingWhitespace) this.queryInputMirrorEl.appendText(leadingWhitespace);
-        this.queryInputMirrorEl.createSpan({ cls: 'seam-palette-query-input-token', text: token });
-        this.queryInputMirrorEl.createSpan({ text: query.trimStart().slice(token.length) });
+        const start = token ? query.length - query.trimStart().length : directory!.index + directory![0].indexOf(directory![1]);
+        const activeToken = token ?? directory![1];
+        this.queryInputMirrorEl.appendText(query.slice(0, start));
+        this.queryInputMirrorEl.createSpan({ cls: 'seam-palette-query-input-token', text: activeToken });
+        this.queryInputMirrorEl.appendText(query.slice(start + activeToken.length));
+        const specialOnly = token && this.getSpecialQueryTokens(query).length === query.trim().split(/\s+/).length;
+        const isBaseSearch = Boolean(token && this.getCustomSearchForQuery(query)?.mode === 'base');
+        if ((directory && /^\s*$/.test(query.slice(start + activeToken.length)))
+            || (specialOnly && !isBaseSearch && /\s$/.test(query))) {
+            this.queryInputMirrorEl.createSpan({
+                cls: 'seam-palette-query-placeholder',
+                text: directory ? t().paletteTagPlaceholder : t().paletteSeamSearchPlaceholder,
+            });
+        }
         window.requestAnimationFrame(() => this.syncQueryInputMirrorScroll());
     }
 
@@ -880,11 +1053,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             titleEl.setText(item.title);
 
             const isSpecialSearch = Boolean(item.specialSearch || item.customSearchId);
+            if (isSpecialSearch && this.isSpecialSearchPinned(item)) {
+                const pinEl = rowEl.createSpan({ cls: 'seam-palette-pinned-icon', attr: { 'aria-label': 'Pinned search' } });
+                setIcon(pinEl, 'pin');
+            }
             if (item.description && (!isSpecialSearch || this.settings.showSpecialSearchDescriptions)) {
                 const descEl = el.createDiv({ cls: 'seam-palette-description' });
                 descEl.setText(item.description);
             }
-        } else if (item.type === 'tag') {
+        } else if (item.type === 'tag' || item.type === 'directory') {
             el.addClass('seam-palette-tag-item');
             const rowEl = el.createDiv({ cls: 'seam-palette-title-row' });
 
@@ -902,6 +1079,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const titleRow = el.createDiv({ cls: 'seam-palette-note-title-row' });
             const titleEl = titleRow.createDiv({ cls: 'seam-palette-title' });
             renderHighlightedText(titleEl, item.title, highlightQuery);
+            titleRow.createSpan({ cls: 'seam-palette-result-metadata', text: `.${item.file?.extension ?? 'md'}${item.matchCount !== undefined ? ` • ${item.matchCount} ${item.matchCount === 1 ? 'match' : 'matches'}` : ''}` });
             if (item.taskCompletionPercent !== undefined) {
                 const completion = titleRow.createDiv({ cls: 'seam-palette-task-completion' });
                 completion.createSpan({ cls: 'seam-palette-task-completion-label', text: t().paletteTodoCompletionLabel });
@@ -968,6 +1146,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 });
             }
         }
+    }
+
+    private isSpecialSearchPinned(item: PaletteItem): boolean {
+        if (item.specialSearch) {
+            return Boolean(this.settings.specialSearchPreferences.find((preference) => preference.search === item.specialSearch)?.pinned);
+        }
+        return Boolean(item.customSearchId && this.settings.customSpecialSearches.find((search) => search.id === item.customSearchId)?.pinned);
     }
 
     private renderBaseEmbed(item: PaletteItem, el: HTMLElement): void {
@@ -1045,7 +1230,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         event.preventDefault();
         event.stopImmediatePropagation();
         this.close();
-        void this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false).openFile(file);
+        const leaf = event.shiftKey ? this.app.workspace.getLeaf('split', 'vertical')
+            : this.app.workspace.getLeaf(event.metaKey || event.ctrlKey ? 'tab' : false);
+        void leaf.openFile(file);
         return true;
     }
 
@@ -1139,11 +1326,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
 
         // Tag query: extract tag value for highlighting
-        if (query.includes('#')) {
+        if (getTagInputContext(query)) {
             const lastToken = query.split(/\s+/).pop() || '';
             return lastToken.replace(/^!?#/, '');
         }
 
+        if (/\bdir:/i.test(query)) {
+            const tokens = parseQuery(query).tokens;
+            return tokens.filter(token => token.type === 'text').map(token => token.value).join(' ')
+                || tokens.find(token => token.type === 'tag')?.value || '';
+        }
         return normalizeTextQuery(query);
     }
 
@@ -1151,7 +1343,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (item.type === 'note' && item.file) {
             // Default Enter: open in current tab
             // Mod+Enter (new tab) is handled by the scope handler registered in the constructor
-            void this.app.workspace.openLinkText(item.file.path, '', false);
+            void openSearchResult(this.app, item);
         } else if (
             (item.type === 'command' || item.type === 'action' || item.type === 'create') &&
             item.action

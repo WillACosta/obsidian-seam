@@ -99,6 +99,11 @@ export function parseSpecialSearch(query: string): { search: SpecialSearch | nul
     };
 }
 
+export interface SpecialSearchFilter {
+    search: SpecialSearch;
+    days?: number;
+}
+
 function attachmentExtension(link: string): string {
     const cleanLink = link.split('#', 1)[0].split('?', 1)[0].split('|', 1)[0];
     const filename = cleanLink.split('/').pop() ?? '';
@@ -223,6 +228,10 @@ export class SearchService {
         this.settings = settings;
     }
 
+    private getSearchableFiles(): TFile[] {
+        return this.app.vault.getFiles?.() ?? this.app.vault.getMarkdownFiles();
+    }
+
     /**
      * Returns all unique tags from the vault (without # prefix, lowercase).
      */
@@ -307,7 +316,7 @@ export class SearchService {
      * Asynchronously searches for notes matching all given tags (AND logic),
      * including in-note content search for the text query.
      */
-    async searchBySelectedTagsWithContent(
+    private async searchBySelectedTagsWithContentRaw(
         selectedTags: string[],
         excludedTags: string[] = [],
         textQuery: string = '',
@@ -397,18 +406,18 @@ export class SearchService {
         const trimmed = query.trim();
         if (!trimmed) return [];
 
-        const files = this.app.vault.getMarkdownFiles();
+        const files = this.getSearchableFiles();
 
         const specialQuery = parseSpecialSearch(trimmed);
 
         // If query contains a supported @ filter, apply it before text matching.
         if (specialQuery.search) {
-            const specialFiles = this.getCachedSpecialSearchFiles(specialQuery.search, files);
+            const specialFiles = this.getCachedSpecialSearchFiles(specialQuery.search, this.app.vault.getMarkdownFiles());
             return this.specialSearch(specialQuery.search, specialQuery.textQuery, specialFiles, specialQuery.days);
         }
 
         // If query contains no # characters, treat as text search
-        if (!trimmed.includes('#')) {
+        if (!trimmed.includes('#') && !/\bdir:/i.test(trimmed)) {
             return this.textSearch(specialQuery.textQuery, files);
         }
 
@@ -486,18 +495,99 @@ export class SearchService {
      * Call this instead of search() when content search is needed.
      */
     async searchWithContent(query: string): Promise<SearchResult[]> {
+        return this.annotateMatches(await this.searchWithContentRaw(query), query);
+    }
+
+    async searchBySelectedTagsWithContent(tags: string[], excluded: string[] = [], query = ''): Promise<SearchResult[]> {
+        return this.annotateMatches(await this.searchBySelectedTagsWithContentRaw(tags, excluded, query), query || tags.map(tag => '#' + tag).join(' '));
+    }
+
+    async searchFilteredWithContent(filter: string, query: string): Promise<SearchResult[]> {
+        return this.annotateMatches(await this.searchFilteredWithContentRaw(filter, query), query);
+    }
+
+    async searchCombinedSpecialWithContent(
+        specialFilters: SpecialSearchFilter[],
+        seamFilters: string[],
+        tagQuery: string,
+        textQuery: string,
+    ): Promise<SearchResult[]> {
+        this.searchVersion++;
+        const currentVersion = this.searchVersion;
+        const allCandidates = this.getSearchableFiles();
+        let candidates = allCandidates;
+
+        for (const filter of specialFilters) {
+            let specialCandidates = candidates;
+            if (filter.search === 'today' || filter.search === 'yesterday') {
+                specialCandidates = await this.getSpecialSearchFiles(filter.search, specialCandidates);
+            }
+            if (filter.search === 'recent') {
+                const recentPaths = new Set([...allCandidates].sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 10).map(file => file.path));
+                specialCandidates = specialCandidates.filter(file => recentPaths.has(file.path));
+            }
+            candidates = specialCandidates.filter(file => matchesSpecialSearch(this.app, file, filter.search, filter.days));
+            if (!candidates.length) return [];
+        }
+
+        for (const filter of seamFilters) {
+            const matchingPaths = new Set(this.tagSearch(filter, candidates).map(result => result.file.path));
+            candidates = candidates.filter(file => matchingPaths.has(file.path));
+            if (!candidates.length) return [];
+        }
+
+        if (tagQuery.trim()) {
+            const matchingPaths = new Set(this.tagSearch(tagQuery, candidates).map(result => result.file.path));
+            candidates = candidates.filter(file => matchingPaths.has(file.path));
+        }
+        if (this.searchVersion !== currentVersion || !candidates.length) return [];
+
+        let results = textQuery.trim()
+            ? await this.textSearchWithContent(textQuery, candidates, currentVersion)
+            : candidates.map(file => ({
+                file,
+                title: file.basename,
+                path: file.path,
+                tags: getFileTags(this.app, file),
+            }));
+        if (this.searchVersion !== currentVersion) return [];
+        results = await this.annotateMatches(results, [tagQuery, textQuery].filter(Boolean).join(' '));
+        return this.searchVersion === currentVersion ? results : [];
+    }
+
+    private async annotateMatches(results: SearchResult[], query: string): Promise<SearchResult[]> {
+        const special = parseSpecialSearch(query);
+        const parsed = parseQuery(query);
+        const terms = special.search ? [special.textQuery]
+            : parsed.tokens.some(token => token.type === 'directory' || token.type === 'tag' || token.type === 'negativeTag')
+                ? (parsed.tokens.some(token => token.type === 'text')
+                    ? [parsed.tokens.filter(token => token.type === 'text').map(token => token.value).join(' ')]
+                    : parsed.tokens.filter(token => token.type === 'tag').map(token => token.value))
+                : [normalizeTextQuery(query)];
+        const searchTerms = terms.filter(Boolean);
+        return Promise.all(results.map(async result => {
+            if (!searchTerms.length || result.file.extension !== 'md') return result;
+            try {
+                const content = await this.app.vault.cachedRead(result.file);
+                const matches = findSearchMatches(content, searchTerms);
+                return { ...result, searchTerms, matchCount: matches.length };
+            } catch { return result; }
+        }));
+    }
+
+    private async searchWithContentRaw(query: string): Promise<SearchResult[]> {
         this.searchVersion++;
         const currentVersion = this.searchVersion;
         const trimmed = query.trim();
         if (!trimmed) return [];
 
-        const files = this.app.vault.getMarkdownFiles();
+        const files = this.getSearchableFiles();
 
         const specialQuery = parseSpecialSearch(trimmed);
 
         // If query contains a supported @ filter, apply it before text matching.
         if (specialQuery.search) {
-            const specialFiles = await this.getSpecialSearchFiles(specialQuery.search, files);
+            const specialFiles = await this.getSpecialSearchFiles(specialQuery.search, this.app.vault.getMarkdownFiles());
             return this.specialSearchWithContent(
                 specialQuery.search,
                 specialQuery.textQuery,
@@ -508,8 +598,14 @@ export class SearchService {
         }
 
         // If query contains no # characters, treat as text search with content
-        if (!trimmed.includes('#')) {
+        if (!trimmed.includes('#') && !/\bdir:/i.test(trimmed)) {
             return this.textSearchWithContent(specialQuery.textQuery, files, currentVersion);
+        }
+
+        if (/\bdir:/i.test(trimmed)) {
+            const candidates = this.tagSearch(trimmed, files);
+            const text = parseQuery(trimmed).tokens.filter(token => token.type === 'text').map(token => token.value).join(' ');
+            return text ? this.textSearchWithContent(text, candidates.map(result => result.file), currentVersion) : candidates;
         }
 
         // Otherwise, parse as tag query (synchronous, no content search needed)
@@ -535,17 +631,17 @@ export class SearchService {
 
             let matchSnippet: MatchSnippet | undefined;
 
-            try {
-                const content = await this.app.vault.cachedRead(file);
-                if (content) {
-                    const bodyContent = this.stripFrontmatter(content);
-                    const snippet = extractMatchSnippet(bodyContent, normalizedQuery);
-                    if (snippet) {
-                        matchSnippet = snippet;
+            if (file.extension === 'md') {
+                try {
+                    const content = await this.app.vault.cachedRead(file);
+                    if (content) {
+                        const bodyContent = this.stripFrontmatter(content);
+                        const snippet = extractMatchSnippet(bodyContent, normalizedQuery);
+                        if (snippet) matchSnippet = snippet;
                     }
+                } catch {
+                    // File may have been deleted/moved during search
                 }
-            } catch {
-                // File may have been deleted/moved during search
             }
 
             if (titleMatch || matchSnippet) {
@@ -614,7 +710,7 @@ export class SearchService {
             const fileTags = getFileTags(this.app, file);
 
             // A file matches if ANY OR-segment matches
-            const matches = segments.some((segment) => this.segmentMatches(segment, fileTags));
+            const matches = segments.some((segment) => this.segmentMatches(segment, fileTags, file));
 
             if (matches) {
                 results.push({
@@ -758,10 +854,10 @@ export class SearchService {
         return results;
     }
 
-    async searchFilteredWithContent(filterQuery: string, textQuery: string): Promise<SearchResult[]> {
+    private async searchFilteredWithContentRaw(filterQuery: string, textQuery: string): Promise<SearchResult[]> {
         this.searchVersion++;
         const currentVersion = this.searchVersion;
-        const candidates = this.tagSearch(filterQuery, this.app.vault.getMarkdownFiles());
+        const candidates = this.tagSearch(filterQuery, this.getSearchableFiles());
         const normalizedText = normalizeTextQuery(textQuery);
         const lowerText = normalizedText.toLowerCase();
         if (!lowerText) return candidates;
@@ -772,7 +868,7 @@ export class SearchService {
             const titleMatch = result.title.toLowerCase().includes(lowerText)
                 || result.path.toLowerCase().includes(lowerText);
             let matchSnippet: MatchSnippet | undefined;
-            if (!titleMatch) {
+            if (!titleMatch && result.file.extension === 'md') {
                 try {
                     const body = this.stripFrontmatter(await this.app.vault.cachedRead(result.file));
                     matchSnippet = extractMatchSnippet(body, normalizedText) ?? undefined;
@@ -794,13 +890,18 @@ export class SearchService {
      * A segment matches if ALL positive tags match (prefix or exact)
      * AND NO negative tags match.
      */
-    private segmentMatches(segment: QueryToken[], fileTags: string[]): boolean {
+    private segmentMatches(segment: QueryToken[], fileTags: string[], file: TFile): boolean {
         if (segment.length === 0) return false;
 
         for (const token of segment) {
             const tokenVal = token.value.toLowerCase();
 
-            if (token.type === 'tag') {
+            if (token.type === 'directory') {
+                const directory = normalizePath(token.value).replace(/\/$/, '').toLowerCase();
+                if (directory === '') {
+                    if (file.parent?.path !== '/') return false;
+                } else if (!file.path.toLowerCase().startsWith(directory + '/')) return false;
+            } else if (token.type === 'tag') {
                 // Positive tag: must match at least one file tag (prefix or exact)
                 const found = fileTags.some((ft) => tagMatches(ft, tokenVal));
                 if (!found) return false;
@@ -813,4 +914,20 @@ export class SearchService {
 
         return true;
     }
+}
+
+/** Case-insensitive, non-overlapping literal occurrences in note content. */
+export function findSearchMatches(content: string, terms: string[]): { start: number; end: number }[] {
+    const matches = new Map<number, { start: number; end: number }>();
+    const lower = content.toLowerCase();
+    for (const term of terms) {
+        if (!term) continue;
+        const needle = term.toLowerCase();
+        let start = lower.indexOf(needle);
+        while (start !== -1) {
+            matches.set(start, { start, end: start + term.length });
+            start = lower.indexOf(needle, start + term.length);
+        }
+    }
+    return [...matches.values()].sort((a, b) => a.start - b.start);
 }

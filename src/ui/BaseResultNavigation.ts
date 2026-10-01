@@ -22,6 +22,11 @@ export class BaseResultNavigation {
 
     constructor(private readonly containerEl: HTMLElement, private readonly emptyMessageText: string) {}
 
+    private get scrollEl(): HTMLElement {
+        const view = this.containerEl.querySelector<HTMLElement>('.bases-view');
+        return view && view.scrollHeight > view.clientHeight ? view : this.containerEl;
+    }
+
     get isSupported(): boolean {
         return this.layout !== null;
     }
@@ -51,7 +56,7 @@ export class BaseResultNavigation {
         if (queryChanged) {
             this.activeIdentity = null;
             this.pendingPosition = null;
-            this.containerEl.scrollTop = 0;
+            this.scrollEl.scrollTop = 0;
         }
         this.collectEntries();
         if (this.pendingPosition) {
@@ -77,7 +82,7 @@ export class BaseResultNavigation {
     }
 
     private collectEntries(): void {
-        const viewport = this.containerEl.getBoundingClientRect();
+        const viewport = this.scrollEl.getBoundingClientRect();
         const cards = Array.from(this.containerEl.querySelectorAll<HTMLElement>('.bases-cards-item[draggable="true"]'));
         this.layout = this.containerEl.querySelector('.bases-view[data-view-type="cards"]') ? 'cards'
             : this.containerEl.querySelector('.bases-view[data-view-type="table"]') ? 'table' : null;
@@ -95,7 +100,7 @@ export class BaseResultNavigation {
                 element.dataset.seamBaseGeneratedId = element.id;
             }
             return [{ element, activationElement: this.layout === 'cards' ? element : title,
-                identity, layout: this.layout, top: rect.top - viewport.top + this.containerEl.scrollTop,
+                identity, layout: this.layout, top: rect.top - viewport.top + this.scrollEl.scrollTop,
                 left: rect.left - viewport.left, height: rect.height }];
         }).sort((a, b) => a.top - b.top || a.left - b.left);
     }
@@ -124,10 +129,10 @@ export class BaseResultNavigation {
         // to materialize it, then resolve selection when the observer refreshes.
         const pitch = rows.length > 1 ? rows[1] - rows[0] : active.height + (this.layout === 'cards' ? 12 : 0);
         const top = active.top + offset * pitch;
-        const contentHeight = this.containerEl.scrollHeight;
+        const contentHeight = this.scrollEl.scrollHeight;
         if (top >= 0 && top < contentHeight - 1) {
-            this.pendingPosition = { top, left: direction === 'down' ? 0 : this.containerEl.clientWidth };
-            this.containerEl.scrollTop = Math.max(0, top - (direction === 'up' ? 0 : this.containerEl.clientHeight - active.height));
+            this.pendingPosition = { top, left: direction === 'down' ? 0 : this.scrollEl.clientWidth };
+            this.scrollEl.scrollTop = Math.max(0, top - (direction === 'up' ? 0 : this.scrollEl.clientHeight - active.height));
         }
         return true;
     }
@@ -230,14 +235,14 @@ export class BaseResultNavigation {
     }
 
     private scrollEntryIntoView(element: HTMLElement): void {
-        const viewport = this.containerEl.getBoundingClientRect();
+        const viewport = this.scrollEl.getBoundingClientRect();
         const rect = element.getBoundingClientRect();
         if (rect.height <= 0) return;
         // Tall cards align at the top, rather than jumping between their edges.
-        if (rect.height > this.containerEl.clientHeight || rect.top < viewport.top) {
-            this.containerEl.scrollTop += rect.top - viewport.top;
+        if (rect.height > this.scrollEl.clientHeight || rect.top < viewport.top) {
+            this.scrollEl.scrollTop += rect.top - viewport.top;
         } else if (rect.bottom > viewport.bottom) {
-            this.containerEl.scrollTop += rect.bottom - viewport.bottom;
+            this.scrollEl.scrollTop += rect.bottom - viewport.bottom;
         }
     }
 }

@@ -19,13 +19,17 @@ export function parseQuery(input: string): ParsedQuery {
         .replace(/\|\|/g, ' || ')
         .replace(/(^|\s)\|(\s|$)/g, ' || ');
 
-    const rawTokens = normalized.split(/\s+/).filter((t) => t.length > 0);
+    const rawTokens = normalized.match(/dir:"[^"]*"|\S+/g) ?? [];
     const tokens: QueryToken[] = [];
     let isValid = true;
 
     for (let i = 0; i < rawTokens.length; i++) {
         const t = rawTokens[i];
-        if (t.startsWith('-#')) {
+        if (t.toLowerCase().startsWith('dir:')) {
+            const value = t.slice(4).replace(/^"|"$/g, '');
+            if (!value) isValid = false;
+            tokens.push({ type: 'directory', value });
+        } else if (t.startsWith('-#')) {
             tokens.push({ type: 'negativeTag', value: t.substring(2) });
         } else if (t.startsWith('!#')) {
             tokens.push({ type: 'negativeTag', value: t.substring(2) });
@@ -45,8 +49,8 @@ export function parseQuery(input: string): ParsedQuery {
             } else {
                 const prev = tokens[i - 1].type;
                 const next = tokens[i + 1].type;
-                const validPrev = prev === 'tag' || prev === 'negativeTag' || prev === 'text';
-                const validNext = next === 'tag' || next === 'negativeTag' || next === 'text';
+                const validPrev = prev === 'tag' || prev === 'negativeTag' || prev === 'text' || prev === 'directory';
+                const validNext = next === 'tag' || next === 'negativeTag' || next === 'text' || next === 'directory';
                 if (!validPrev || !validNext) {
                     isValid = false;
                 }

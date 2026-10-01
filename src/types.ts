@@ -132,6 +132,8 @@ export interface SearchResult {
     tags: string[];
     snippet?: string;
     matchSnippet?: MatchSnippet;
+    matchCount?: number;
+    searchTerms?: string[];
 }
 
 export interface MatchSnippet {
@@ -140,7 +142,7 @@ export interface MatchSnippet {
     matchEnd: number;
 }
 
-export type QueryTokenType = 'tag' | 'negativeTag' | 'or' | 'text';
+export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text';
 
 export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code';
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
@@ -206,11 +208,13 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base';
+    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory';
     icon?: string;
     file?: TFile;
     tags?: string[];
     matchSnippet?: MatchSnippet;
+    matchCount?: number;
+    searchTerms?: string[];
     taskCompletionPercent?: number;
     tagMode?: 'include' | 'exclude';
     specialSearch?: SpecialSearch;

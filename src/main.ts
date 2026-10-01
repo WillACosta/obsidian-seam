@@ -1,4 +1,4 @@
-import { Notice, Platform, Plugin, TAbstractFile, TFile } from 'obsidian';
+import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian';
 import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
@@ -59,15 +59,21 @@ export default class SeamPlugin extends Plugin {
 
         // 3. Register commands
         this.addCommand({
-            id: 'open-palette',
-            name: t().cmdOpenPalette,
-            callback: () => this.openPalette(),
+            id: 'create-quick-note',
+            name: t().cmdCreateQuickNote,
+            callback: () => { void this.createQuickNote(); },
         });
 
         this.addCommand({
             id: 'create-new-note',
             name: t().cmdCreateNewNote,
             callback: () => this.openQuickAdd(),
+        });
+
+        this.addCommand({
+            id: 'open-palette',
+            name: t().cmdOpenPalette,
+            callback: () => this.openPalette(),
         });
 
         this.addCommand({
@@ -286,6 +292,60 @@ export default class SeamPlugin extends Plugin {
         window.setTimeout(() => palette.showQuickAdd(), 0);
     }
 
+    private async ensureQuickNoteFolder(path: string): Promise<string> {
+        const folderPath = normalizePath(path.trim().replace(/^\/+|\/+$/g, ''));
+        if (!folderPath) return '';
+
+        const existing = this.app.vault.getAbstractFileByPath(folderPath);
+        if (existing instanceof TFolder) return folderPath;
+        if (existing) throw new Error(`A file already exists at "${folderPath}".`);
+
+        const parentPath = folderPath.split('/').slice(0, -1).join('/');
+        if (parentPath) await this.ensureQuickNoteFolder(parentPath);
+        await this.app.vault.createFolder(folderPath);
+        return folderPath;
+    }
+
+    private async createQuickNote(): Promise<void> {
+        try {
+            const folderPath = await this.ensureQuickNoteFolder(this.settings.fleetingFolder);
+            let content = '';
+            const templatePath = this.settings.fleetingNoteTemplate.trim();
+            if (templatePath) {
+                const normalizedTemplatePath = normalizePath(templatePath.replace(/\.md$/i, '') + '.md');
+                const template = this.app.vault.getAbstractFileByPath(normalizedTemplatePath);
+                if (template instanceof TFile) {
+                    try {
+                        content = await this.app.vault.cachedRead(template);
+                    } catch {
+                        // Continue with an empty note if the configured template cannot be read.
+                    }
+                }
+            }
+
+            let file: TFile | null = null;
+            for (let attempt = 0; attempt < 10 && !file; attempt++) {
+                const filename = `${crypto.randomUUID()}.md`;
+                const path = normalizePath(`${folderPath ? `${folderPath}/` : ''}${filename}`);
+                if (this.app.vault.getAbstractFileByPath(path)) continue;
+                try {
+                    file = await this.app.vault.create(path, content);
+                } catch (error) {
+                    // A collision between the existence check and create is retried with a new name.
+                    if (this.app.vault.getAbstractFileByPath(path)) continue;
+                    throw error;
+                }
+            }
+
+            if (!file) throw new Error('Could not generate an unused filename.');
+            await this.app.workspace.getLeaf(false).openFile(file);
+            new Notice(t().noticeQuickAddCreated(file.basename));
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            new Notice(t().noticeQuickAddFailed(message));
+        }
+    }
+
     private async archiveAll(): Promise<void> {
         const files = this.app.vault.getMarkdownFiles();
         let archivedCount = 0;
@@ -361,6 +421,14 @@ export default class SeamPlugin extends Plugin {
     private getPaletteCommands(): PaletteItem[] {
         const commands: PaletteItem[] = [
             {
+                id: 'cmd-quick-note',
+                title: t().cmdCreateQuickNote,
+                description: t().cmdCreateQuickNote,
+                type: 'command',
+                icon: 'file-plus-2',
+                action: () => this.createQuickNote(),
+            },
+            {
                 id: 'cmd-quick-add',
                 title: t().paletteQuickAddTitle,
                 description: t().paletteQuickAddDesc,
@@ -393,7 +461,7 @@ export default class SeamPlugin extends Plugin {
         // Contextual commands: only when a note is active
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
-            commands.splice(1, 0,
+            commands.splice(2, 0,
                 {
                     id: 'cmd-archive-current',
                     title: t().paletteArchiveCurrentTitle(activeFile.basename),
