@@ -85,6 +85,12 @@ Escolha quais tags temporárias e propriedades o Seam remove depois de mover uma
 
 Escolha uma nota modelo, como `Templates/Nota Efêmera`. Novas notas criadas pela paleta começarão com seu conteúdo e suas propriedades.
 
+### Notas de Fontes
+
+Traga anotações manuscritas, documentos e imagens para o seu fluxo de notas. Exporte os arquivos para `Sources/`, e o Seam cria uma nota vinculada ao original.
+
+Encontre suas fontes com `@sources` na Paleta Universal e leia PDFs com páginas contínuas.
+
 ### Compatibilidade Total com Dispositivos Móveis
 
 O Seam usa as APIs públicas do Obsidian e não depende de código exclusivo para desktop. Ele funciona no computador, iPhone, iPad e Android.

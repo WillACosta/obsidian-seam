@@ -1,4 +1,28 @@
 export const en = {
+    // Source notes
+    cmdCreateNoteFromAttachment: "Create note from attachment",
+    paletteSpecialSources: "Source notes",
+    settingsSourcesHeading: "Source notes",
+    settingsSourceAutomation: "Create source notes automatically",
+    settingsSourceAutomationDesc: "Create companion notes for documents in the source folder, using the automation delay and reconciliation interval.",
+    settingsSourcesFolder: "Source folder",
+    settingsSourcesFolderDesc: "Watch this folder and its subfolders for documents and images. Leave empty to use the vault root.",
+    settingsSourceTemplate: "Source note template",
+    settingsSourceTemplateDesc: "Optional Markdown template. Supports {{attachment}}, {{attachment_path}}, {{title}}, and {{date}}. The source tag, capture date, and original document link or embed are always included.",
+    sourceCommandDesc: "Create companion note for a document from sources",
+    sourcePickerPlaceholder: "Select a document from the source folder...",
+    sourcePickerEmpty: "No documents or images in the source folder.",
+    sourceInvalidFolder: "Use a vault-relative folder without dot segments.",
+    sourceAutomationDisabled: "Automatic source ingestion is disabled.",
+    sourceUnsupported: "Attachment is missing or outside the configured source folder.",
+    sourceTemplateMissing: "Source template not found. Check the source note template setting.",
+    sourceInvalidTemplate: "Source template frontmatter must be a YAML mapping.",
+    sourceAlreadyRegistered: "This attachment already has a source note.",
+    sourceCreated: "Created source note.",
+    sourceNoFilename: "Could not find an unused source note filename.",
+    sourceCreationFailed: "Could not create source note.",
+    sourceFolderConflict: (path: string) => `A file already exists at "${path}".`,
+
     // Commands
     cmdOpenPalette: 'Open Universal Palette',
     cmdArchiveCurrentNote: 'Archive current note',
@@ -215,7 +239,7 @@ export const en = {
 
     settingsAdvancedHeading: 'Advanced',
     settingsReconInterval: 'Reconciliation interval (minutes)',
-    settingsReconIntervalDesc: 'How often the plugin scans for missed action tags while Obsidian is running.',
+    settingsReconIntervalDesc: 'How often the plugin scans for missed action tags and source attachments while Obsidian is running.',
     settingsUpdatesHeading: 'Updates',
     settingsCurrentReleaseNotes: 'Release notes for this version',
     settingsCurrentReleaseNotesDesc: 'Read the release notes for the Seam version currently installed.',

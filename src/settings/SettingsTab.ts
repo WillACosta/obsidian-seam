@@ -39,6 +39,19 @@ export class SeamSettingsTab extends PluginSettingTab {
             ],
         }, {
             type: 'group',
+            heading: strings.settingsSourcesHeading,
+            items: [
+                { name: strings.settingsSourceAutomation, desc: strings.settingsSourceAutomationDesc, render: (setting) => {
+                    setting.addToggle(toggle => toggle.setValue(this.plugin.settings.sourceAutomation).onChange(async value => {
+                        this.plugin.settings.sourceAutomation = value;
+                        await this.plugin.saveSettings();
+                    }));
+                } },
+                this.folderDefinition(strings.settingsSourcesFolder, strings.settingsSourcesFolderDesc, 'Sources', 'sourcesFolder', 'folder'),
+                this.folderDefinition(strings.settingsSourceTemplate, strings.settingsSourceTemplateDesc, 'Templates/Source', 'sourceNoteTemplate', 'file'),
+            ],
+        }, {
+            type: 'group',
             heading: strings.settingsQuickAddHeading,
             items: [
                 { name: strings.settingsQuickAddChoices, desc: strings.settingsQuickAddChoicesDesc, render: (setting) => this.renderQuickAddSetting(setting) },
@@ -100,7 +113,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         name: string,
         desc: string,
         placeholder: string,
-        key: 'permanentFolder' | 'archiveFolder' | 'fleetingFolder' | 'fleetingNoteTemplate',
+        key: 'permanentFolder' | 'archiveFolder' | 'fleetingFolder' | 'fleetingNoteTemplate' | 'sourcesFolder' | 'sourceNoteTemplate',
         pathType: 'folder' | 'file',
     ) {
         return {

@@ -36,6 +36,8 @@ export class MockTFile extends MockTAbstractFile {
     }
 }
 
+export class MockTFolder extends MockTAbstractFile {}
+
 function mockMoment() {
     const date = new Date();
     return {
@@ -64,6 +66,10 @@ require.cache['obsidian'] = {
         },
         TAbstractFile: MockTAbstractFile,
         TFile: MockTFile,
+        TFolder: MockTFolder,
+        // JSON is a valid YAML subset; real YAML rendering is checked in Obsidian.
+        parseYaml: JSON.parse,
+        stringifyYaml: (value: unknown) => JSON.stringify(value, null, 2),
         moment: mockMoment,
         normalizePath: (path: string) => path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\.\//, ''),
     },

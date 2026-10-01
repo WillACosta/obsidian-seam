@@ -85,6 +85,12 @@ Choose which temporary tags and note properties Seam removes after a successful 
 
 Choose a template note, such as `Templates/Fleeting Note`. New notes created from the palette will start with its content and properties.
 
+### Source Notes
+
+Bring handwritten notes, documents, and images into your workflow. Export them to `Sources/`, and Seam creates a note linked to the original.
+
+Find your sources with `@sources` in the Universal Palette and read PDFs with continuous pages.
+
 ### First-Class Mobile Support
 
 Seam uses Obsidian's public APIs and no desktop-only code. It works on desktop, iPhone, iPad, and Android.

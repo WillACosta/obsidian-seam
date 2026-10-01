@@ -850,3 +850,10 @@ body.is-mobile .seam-palette-base-embed .bases-view {
 body.is-mobile .seam-palette-base-embed > p {
     margin: 0;
 }
+
+/* Continuous PDF pages in source notes, scoped by their frontmatter class. */
+.seam-source-pdf .pdf-embed .pdfViewer .page {
+    margin: 0 auto !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}

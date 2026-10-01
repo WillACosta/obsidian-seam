@@ -1,6 +1,30 @@
 import { Translations } from './en';
 
 export const ptBr: Translations = {
+    // Source notes
+    cmdCreateNoteFromAttachment: "Criar nota a partir de anexo",
+    paletteSpecialSources: "Notas de fontes",
+    settingsSourcesHeading: "Notas de fontes",
+    settingsSourceAutomation: "Criar notas de fontes automaticamente",
+    settingsSourceAutomationDesc: "Criar notas associadas a documentos na pasta de fontes, usando o atraso da automação e o intervalo de reconciliação.",
+    settingsSourcesFolder: "Pasta de fontes",
+    settingsSourcesFolderDesc: "Observar esta pasta e subpastas em busca de documentos e imagens. Deixe vazio para usar a raiz do cofre.",
+    settingsSourceTemplate: "Modelo de nota de fonte",
+    settingsSourceTemplateDesc: "Modelo Markdown opcional. Suporta {{attachment}}, {{attachment_path}}, {{title}} e {{date}}. A tag source, a data de captura e o link ou anexo original incorporado são sempre incluídos.",
+    sourceCommandDesc: "Criar nota associada a um documento da pasta de fontes",
+    sourcePickerPlaceholder: "Selecione um documento da pasta de fontes...",
+    sourcePickerEmpty: "Nenhum documento ou imagem na pasta de fontes.",
+    sourceInvalidFolder: "Use uma pasta relativa ao cofre sem segmentos de ponto.",
+    sourceAutomationDisabled: "A importação automática de fontes está desativada.",
+    sourceUnsupported: "O anexo não existe ou está fora da pasta de fontes configurada.",
+    sourceTemplateMissing: "Modelo de fonte não encontrado. Verifique a configuração do modelo de nota de fonte.",
+    sourceInvalidTemplate: "O frontmatter do modelo de fonte deve ser um mapeamento YAML.",
+    sourceAlreadyRegistered: "Este anexo já tem uma nota de fonte.",
+    sourceCreated: "Nota de fonte criada.",
+    sourceNoFilename: "Não foi possível encontrar um nome disponível para a nota de fonte.",
+    sourceCreationFailed: "Não foi possível criar a nota de fonte.",
+    sourceFolderConflict: (path: string) => `Já existe um arquivo em "${path}".`,
+
     // Commands
     cmdOpenPalette: 'Abrir Paleta Universal',
     cmdArchiveCurrentNote: 'Arquivar nota atual',
@@ -217,7 +241,7 @@ export const ptBr: Translations = {
 
     settingsAdvancedHeading: 'Avançado',
     settingsReconInterval: 'Intervalo de reconciliação (minutos)',
-    settingsReconIntervalDesc: 'Frequência com que o plugin verifica tags de ação perdidas enquanto o Obsidian está em execução.',
+    settingsReconIntervalDesc: 'Frequência com que o plugin verifica tags de ação perdidas e anexos de fontes enquanto o Obsidian está em execução.',
     settingsUpdatesHeading: 'Atualizações',
     settingsCurrentReleaseNotes: 'Notas desta versão',
     settingsCurrentReleaseNotesDesc: 'Leia as notas da versão do Seam instalada atualmente.',

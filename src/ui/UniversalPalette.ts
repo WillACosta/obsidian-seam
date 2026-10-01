@@ -914,6 +914,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             { search: 'todo', label: SPECIAL_SEARCH_LABELS.todo, description: t().paletteSpecialTodo },
             { search: 'done', label: SPECIAL_SEARCH_LABELS.done, description: t().paletteSpecialDone },
             { search: 'code', label: SPECIAL_SEARCH_LABELS.code, description: t().paletteSpecialCode },
+            { search: 'sources', label: SPECIAL_SEARCH_LABELS.sources, description: t().paletteSpecialSources },
         ];
         const needle = query.toLowerCase();
         const builtIns = options
@@ -962,7 +963,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private getActiveSpecialQueryToken(query: string): string | null {
         const custom = this.getCustomSearchForQuery(query.trim());
         if (custom) return query.trimStart().slice(0, custom.identifier.length);
-        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recent|untagged|docs|images|task|todo|done|code)(?=\s|$)/i);
+        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i);
         return match?.[0] ?? null;
     }
 

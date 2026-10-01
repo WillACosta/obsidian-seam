@@ -9,6 +9,9 @@ export interface SeamSettings {
     archiveFolder: string;
     fleetingFolder: string;
     fleetingNoteTemplate: string;
+    sourcesFolder: string;
+    sourceNoteTemplate: string;
+    sourceAutomation: boolean;
     archiveTag: string;
     permanentTag: string;
     archivedTag: string;
@@ -74,6 +77,9 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     archiveFolder: 'Archive',
     fleetingFolder: 'Fleeting',
     fleetingNoteTemplate: '',
+    sourcesFolder: 'Sources',
+    sourceNoteTemplate: '',
+    sourceAutomation: true,
     archiveTag: 'archive',
     permanentTag: 'permanent',
     archivedTag: 'archived',
@@ -104,12 +110,13 @@ export const DEFAULT_SETTINGS: SeamSettings = {
         { search: 'todo', pinned: false, hidden: false },
         { search: 'done', pinned: false, hidden: false },
         { search: 'code', pinned: false, hidden: false },
+        { search: 'sources', pinned: false, hidden: false },
     ],
     specialSearchOrder: [
         'builtin:today', 'builtin:yesterday',
         'builtin:recent', 'builtin:lastDays',
         'builtin:untagged', 'builtin:docs', 'builtin:images',
-        'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code',
+        'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code', 'builtin:sources',
     ],
     showTodoCompletionPercent: true,
     paletteRibbonMode: 'both',
@@ -144,7 +151,7 @@ export interface MatchSnippet {
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text';
 
-export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code';
+export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources';
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
     today: 'calendar-days',
     yesterday: 'history',
@@ -157,6 +164,7 @@ export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
     todo: 'square-check-big',
     done: 'list-checks',
     code: 'code',
+    sources: 'files',
 };
 
 export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
@@ -171,6 +179,7 @@ export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
     todo: '@todo',
     done: '@done',
     code: '@code',
+    sources: '@sources',
 };
 
 export interface QueryToken {

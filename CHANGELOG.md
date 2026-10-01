@@ -5,6 +5,27 @@ All notable changes to Seam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-10-01
+<!-- iterations: iteration_10 -->
+
+### Added
+- **Source notes**: Automatically create a `#source` note in the configured Fleeting folder for documents and images exported to `Sources/` or its subfolders, with a capture date and an embedded or linked original. Common formats include PDF, Word, OpenDocument, spreadsheets, presentations, text, CSV/TSV, EPUB, HTML, and Apple iWork files.
+- **Source note settings**: Configure the source folder, independently enable or disable automatic note creation, and use a custom Markdown template with `{{attachment}}`, `{{attachment_path}}`, `{{title}}`, and `{{date}}` placeholders.
+- **Create note from attachment**: Pick a document or image from the configured source folder to create and open its companion manually, even when automatic creation is disabled; open the existing companion when already registered.
+- **Source review search**: Find `#source` companion notes with built-in `@sources`, including notes moved to Permanent or Archive, and combine it with other supported Palette filters.
+- **Continuous PDF pages**: Generated PDF source notes include `cssclasses: [seam-source-pdf]` to remove viewer gaps, borders, and shadows between embedded pages while preserving custom template classes.
+
+### Changed
+- **Automation pipeline**: Source ingestion shares Seam's vault events, automation delay, startup scan, and periodic reconciliation while retaining its own enable setting and the existing tag-driven lifecycle.
+- **Source templates**: Use a minimal default containing `tags: [source]`, `captured`, the PDF class when applicable, and an Original section with a blank line before the document. Preserve custom template tags and properties; embed PDFs and supported images, and link other document types. Existing links and embeds provide duplicate detection without generated `source_attachment` or `source_app` properties.
+- **Source note wording and command order**: Label the settings group and search description “Source notes,” describe document creation in the subtitles, and keep Create note from attachment immediately after Create a new note in every Seam command listing.
+
+### Fixed
+- **Duplicate source registration**:
+  - **Root Cause**: Concurrent import requests, companions moved outside Fleeting, and asynchronous attachment link updates during renames can make a previously registered export appear new.
+  - **Fix**: Serialize automatic and manual registration, resolve existing links across the vault, track attachment rename paths, and disambiguate occupied note filenames without overwriting notes.
+  - **Verified Scenarios**: Automated concurrency, stale rename metadata, filename conflicts, and existing companion tests; live Permanent/Archive moves and attachment renaming without additional companions.
+
 ## [3.1.0] - 2026-10-01
 <!-- iterations: iteration_09 -->
 

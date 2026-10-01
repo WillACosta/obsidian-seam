@@ -3,6 +3,7 @@ import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
 import { hasTag } from './automation/actions/ArchiveAction';
+import { SourceAttachmentModal } from './ui/SourceAttachmentModal';
 import { Reconciler } from './automation/Reconciler';
 import { SearchService } from './search/SearchService';
 import { UniversalPalette } from './ui/UniversalPalette';
@@ -46,12 +47,12 @@ export default class SeamPlugin extends Plugin {
         this.automationQueue = new AutomationQueue(
             this.app,
             async (file: TFile) => {
-                if (!this.settings.automaticProcessing) return;
+                if (file.extension === 'md' && !this.settings.automaticProcessing) return;
                 await this.automationService.processFile(file);
             },
             this.settings.automationDelay,
         );
-        this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue);
+        this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue, this.automationService);
         this.searchService = new SearchService(this.app, this.settings);
 
         this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().cmdOpenPalette, () => this.openPalette());
@@ -68,6 +69,12 @@ export default class SeamPlugin extends Plugin {
             id: 'create-new-note',
             name: t().cmdCreateNewNote,
             callback: () => this.openQuickAdd(),
+        });
+
+        this.addCommand({
+            id: 'create-note-from-attachment',
+            name: t().cmdCreateNoteFromAttachment,
+            callback: () => new SourceAttachmentModal(this.app, this.automationService).open(),
         });
 
         this.addCommand({
@@ -134,6 +141,7 @@ export default class SeamPlugin extends Plugin {
             this.reconciliationIntervalId = null;
         }
         this.automationQueue.destroy();
+        this.automationService.destroy();
     }
 
     /**
@@ -145,7 +153,7 @@ export default class SeamPlugin extends Plugin {
         // Register vault event handlers
         this.registerEvent(
             this.app.vault.on('create', (file: TAbstractFile) => {
-                if (file instanceof TFile && file.extension === 'md') {
+                if (file instanceof TFile && (file.extension === 'md' || this.automationService.isSourceAttachment(file))) {
                     this.automationQueue.enqueue(file);
                 }
             }),
@@ -153,15 +161,16 @@ export default class SeamPlugin extends Plugin {
 
         this.registerEvent(
             this.app.vault.on('modify', (file: TAbstractFile) => {
-                if (file instanceof TFile && file.extension === 'md') {
+                if (file instanceof TFile && (file.extension === 'md' || this.automationService.isSourceAttachment(file))) {
                     this.automationQueue.enqueue(file);
                 }
             }),
         );
 
         this.registerEvent(
-            this.app.vault.on('rename', (file: TAbstractFile) => {
-                if (file instanceof TFile && file.extension === 'md') {
+            this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
+                if (file instanceof TFile && file.extension !== 'md') this.automationService.onSourceRename(file, oldPath);
+                if (file instanceof TFile && (file.extension === 'md' || this.automationService.isSourceAttachment(file))) {
                     this.automationQueue.enqueue(file);
                 }
             }),
@@ -261,7 +270,7 @@ export default class SeamPlugin extends Plugin {
         const intervalMs = this.settings.reconciliationIntervalMinutes * 60 * 1000;
         this.reconciliationIntervalId = this.registerInterval(
             window.setInterval(() => {
-                if (this.settings.automaticProcessing) {
+                if (this.settings.automaticProcessing || this.settings.sourceAutomation) {
                     void this.reconciler.scan();
                 }
             }, intervalMs),
@@ -436,6 +445,14 @@ export default class SeamPlugin extends Plugin {
                 icon: 'file-plus',
             },
             {
+                id: 'cmd-source-note',
+                title: t().cmdCreateNoteFromAttachment,
+                description: t().sourceCommandDesc,
+                type: 'command',
+                icon: 'files',
+                action: () => new SourceAttachmentModal(this.app, this.automationService).open(),
+            },
+            {
                 id: 'cmd-archive-all',
                 title: t().paletteArchiveAllTitle,
                 description: t().paletteArchiveAllDesc,
@@ -461,7 +478,7 @@ export default class SeamPlugin extends Plugin {
         // Contextual commands: only when a note is active
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
-            commands.splice(2, 0,
+            commands.splice(3, 0,
                 {
                     id: 'cmd-archive-current',
                     title: t().paletteArchiveCurrentTitle(activeFile.basename),
@@ -495,6 +512,7 @@ export default class SeamPlugin extends Plugin {
         if (typeof raw === 'object' && raw !== null) {
             const data = raw as Record<string, unknown>;
             const persistedData = { ...data };
+            delete persistedData.sourceApp;
             delete persistedData.specialSearchPipelines;
             delete persistedData.enableQueryPipelines;
             this.settings = Object.assign({}, DEFAULT_SETTINGS, persistedData);

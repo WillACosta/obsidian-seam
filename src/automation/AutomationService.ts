@@ -3,6 +3,7 @@ import { SeamSettings, AutomationResult, AutomationStatus, AutomationError } fro
 import { ArchiveAction, hasTag } from './actions/ArchiveAction';
 import { PermanentAction } from './actions/PermanentAction';
 import { t } from '../i18n';
+import { SourceIngestion } from './SourceIngestion';
 
 /**
  * Single authoritative automation service.
@@ -10,6 +11,7 @@ import { t } from '../i18n';
  * must route through this service.
  */
 export class AutomationService {
+    private sources: SourceIngestion;
     private archiveAction: ArchiveAction;
     private permanentAction: PermanentAction;
 
@@ -21,6 +23,7 @@ export class AutomationService {
         private app: App,
         private settings: SeamSettings,
     ) {
+        this.sources = new SourceIngestion(app, settings);
         this.archiveAction = new ArchiveAction();
         this.permanentAction = new PermanentAction();
     }
@@ -39,6 +42,12 @@ export class AutomationService {
                 action: 'none',
                 message: t().msgFileNoLongerExists,
             };
+        }
+
+        if (currentFile.extension !== 'md') {
+            const result = await this.sources.createCompanion(currentFile);
+            this.recordResult(currentFile.path, result);
+            return result;
         }
 
         const hasArchiveTag = hasTag(currentFile, this.app, this.settings.archiveTag);
@@ -152,7 +161,22 @@ export class AutomationService {
         return result;
     }
 
+    isSourceAttachment(file: TFile): boolean { return this.sources.isSource(file); }
+
+    onSourceRename(file: TFile, oldPath: string): void { this.sources.onRename(file, oldPath); }
+
+    getSourceAttachments(): TFile[] { return this.sources.getAttachments(); }
+
+    async createSourceCompanion(file: TFile): Promise<AutomationResult> {
+        const result = await this.sources.createCompanion(file, true);
+        this.recordResult(file.path, result);
+        return result;
+    }
+
+    destroy(): void { this.sources.destroy(); }
+
     updateSettings(settings: SeamSettings): void {
         this.settings = settings;
+        this.sources.updateSettings(settings);
     }
 }

@@ -1,6 +1,7 @@
 import { App, moment, normalizePath, TFile } from 'obsidian';
 import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } from '../types';
 import { parseQuery } from './QueryParser';
+import { DOCUMENT_EXTENSIONS, IMAGE_EXTENSIONS } from '../utils/attachments';
 
 /**
  * Extracts all tags from a file using Obsidian's MetadataCache.
@@ -63,14 +64,6 @@ export function noteHasTag(fileTag: string, targetTag: string): boolean {
     return f === t || f.startsWith(t + '/');
 }
 
-const DOCUMENT_EXTENSIONS = new Set([
-    'doc', 'docm', 'docx', 'dot', 'dotx', 'odt', 'pdf', 'rtf', 'tex', 'txt',
-    'csv', 'xls', 'xlsm', 'xlsx', 'xlt', 'ods', 'ppt', 'pptm', 'pptx', 'odp',
-]);
-const IMAGE_EXTENSIONS = new Set([
-    'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'tif', 'tiff', 'webp',
-]);
-
 /** Removes the optional surrounding quotes used for exact phrase searches. */
 export function normalizeTextQuery(query: string): string {
     const trimmed = query.trim();
@@ -91,7 +84,7 @@ export function parseSpecialSearch(query: string): { search: SpecialSearch | nul
             days: Number(lastDaysMatch[1]),
         };
     }
-    const match = trimmed.match(/^@(today|yesterday|recent|untagged|docs|images|task|todo|done|code)(?:\s+([\s\S]*))?$/i);
+    const match = trimmed.match(/^@(today|yesterday|recent|untagged|docs|images|task|todo|done|code|sources)(?:\s+([\s\S]*))?$/i);
     if (!match) return { search: null, textQuery: trimmed };
     return {
         search: match[1].toLowerCase() as SpecialSearch,
@@ -132,6 +125,8 @@ export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearc
             return typeof days === 'number' && file.stat.mtime >= Date.now() - days * 86_400_000;
         case 'untagged':
             return getFileTags(app, file).length === 0;
+        case 'sources':
+            return getFileTags(app, file).includes('source');
         case 'docs':
             return hasAttachmentType(app, file, DOCUMENT_EXTENSIONS);
         case 'images':
