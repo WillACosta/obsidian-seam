@@ -811,11 +811,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.seam-palette-task-completion-label,
-.seam-palette-task-completion-separator {
-  color: var(--text-faint);
-}
-
 .seam-palette-result-metadata {
     color: var(--text-muted);
     font-size: 0.8em;

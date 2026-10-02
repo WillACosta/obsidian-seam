@@ -496,6 +496,7 @@ export default class SeamPlugin extends Plugin {
                 })
                 : [];
             this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
+            this.settings.showFileExtensionAndMatchCount = Boolean(this.settings.showFileExtensionAndMatchCount);
             this.settings.showCommandsByDefault = Boolean(this.settings.showCommandsByDefault);
             const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences;
             const storedPreferences = Array.isArray(this.settings.specialSearchPreferences) ? this.settings.specialSearchPreferences : [];

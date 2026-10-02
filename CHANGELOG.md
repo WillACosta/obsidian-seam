@@ -2,59 +2,30 @@
 
 What's new and changed in each Seam release.
 
-## [3.2.0] - 2026-10-01
-<!-- iterations: iteration_10 -->
+## [3.0.0] - 2026-10-02
+<!-- iterations: iteration_08..iteration_10 -->
+
+!["Seam V3"](docs/images/v3/seam_v3.gif)
 
 ### Added
 
-- **Source notes**: Automatically create notes linked to documents and images in your source folder.
-- **Source settings**: Choose a folder and note template. Existing documents are included when you change folders or enable automation.
-- **Create note from attachment**: Create a source note manually from the Universal Palette.
-- **Source search**: Find your source notes with `@sources`, wherever you keep them.
-- **Continuous PDF pages**: Read embedded PDFs without gaps between pages.
+- **Special Search and custom queries**: Save and pin searches using the Seam search system or an Obsidian Base. Choose which built-in searches appear and reorder them.
+- **Obsidian Bases**: Browse Base views directly in the Universal Palette, including on mobile.
+- **Combined search**: Search notes and files by name, path, or extension; combine text, tags, saved searches, and `dir:` folder filters. Results show matching passages and match counts.
+
+!["Combined Search"](docs/images/v3/combined_search.gif)
+
+- **Special searches**: Find recent files, notes from a date range, today's or yesterday's Daily Note, and tasks. `@todo` results can show task completion percentages.
+- **Quick note command**: Create and open a note instantly using the configured Fleeting folder and template.
+
+!["Quick note"](docs/images/v3/quick_note.gif)
+
+- **Source notes**: Automatically create linked notes for supported documents and images in a chosen folder with your template, or create them from an attachment in the Universal Palette. Find them with `@sources`; embedded PDFs display as continuous pages. Existing files are included when source automation is enabled or the folder changes.
 
 ### Changed
 
-- **Palette commands**: Create note from attachment appears immediately after Create a new note.
-
-## [3.1.0] - 2026-10-01
-<!-- iterations: iteration_09 -->
-
-### Added
-
-- **Search match navigation**: Open notes at the first matching passage, with match counts in results.
-- **File search**: Find attachments and other vault files by name, path, or extension.
-- **Folder filters**: Use `dir:` to narrow searches to a folder.
-- **Combined searches**: Combine saved Seam searches with tags and folder filters.
-- **Split navigation**: Open a result in a vertical split with `Shift + Enter`.
-- **Quick note creation**: Create a note instantly using your Fleeting template.
-
-### Changed
-
-- **Search guidance**: Clearer prompts, shortcuts, and removable filter chips.
-- **Commands**: Shown when the search is empty or when you type `>`.
-- **Mobile Bases**: Browse tables and cards within the Palette's available space.
-
-## [3.0.0] - 2026-09-23
-<!-- iterations: iteration_08 -->
-
-### Added
-
-- **Custom Search**: Save searches for your favorite collections and pin them in the Universal Palette.
-- **Obsidian Bases**: Browse your Base tables and cards directly in the Palette.
-- **Search customization**: Pin, hide, and reorder special searches.
-- **Task progress**: See completion percentages in `@todo` results.
-- **Recent and daily searches**: Find recent files, notes from a chosen date range, and today's or yesterday's Daily Note.
-- **Palette access**: Choose where the ribbon button appears and assign a shortcut for creating notes.
-- **Command visibility**: Choose whether commands appear by default or only after typing `>`.
-
-### Changed
-
-- Requires Obsidian **1.13.0** or newer.
-- Seam settings are available through Obsidian's Settings search.
-- Recent files are now available through `@recent`.
-- Active special searches can be removed with one `Backspace` press.
-- The `@ocr` search is no longer available.
+- Seam now requires Obsidian **1.13.0** or newer.
+- Open search results in a vertical split with `Shift + Enter`.
 
 ## [2.0.1] - 2026-09-23
 
@@ -69,9 +40,9 @@ What's new and changed in each Seam release.
 
 ### Added
 
-- **Quick Add**: Create capture shortcuts with your preferred templates and folders.
+- **Quick Capture**: Create capture shortcuts with your preferred templates and folders.
 
-!["Quick Add V2"](./docs/images/v2.0.0/quick_add_choices.png)
+!["Quick Capture V2"](./docs/images/v2.0.0/quick_add_choices.png)
 
 - **Special searches**: Find documents, images, tasks, code, and untagged notes. Search exact phrases with double quotes.
 
@@ -90,7 +61,7 @@ What's new and changed in each Seam release.
 ### Changed
 
 - **Universal Palette**: Clearer search hints and command navigation.
-- **Quick Add settings**: Filter, reorder, duplicate, and customize your capture choices.
+- **Quick Capture settings**: Filter, reorder, duplicate, and customize your capture choices.
 
 ## [1.0.4] - 2026-09-15
 

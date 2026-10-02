@@ -22,6 +22,7 @@ export interface SeamSettings {
     moveCleanupTags: string;
     moveCleanupProperties: string;
     showIcons: boolean;
+    showFileExtensionAndMatchCount: boolean;
     showCommandsByDefault: boolean;
     quickAddChoices: QuickAddChoice[];
     persistQuickAddDrafts: boolean;
@@ -90,6 +91,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     moveCleanupTags: '#permanent, #todo',
     moveCleanupProperties: 'status',
     showIcons: true,
+    showFileExtensionAndMatchCount: true,
     showCommandsByDefault: true,
     quickAddChoices: [],
     persistQuickAddDrafts: false,

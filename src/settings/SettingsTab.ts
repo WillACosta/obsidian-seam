@@ -24,7 +24,7 @@ export class SeamSettingsTab extends PluginSettingTab {
 
     /**
      * Uses Obsidian's declarative settings entry point so the tab participates in
-     * settings search while retaining Seam's custom Quick Add editor.
+     * settings search while retaining Seam's custom Quick Capture editor.
      */
     getSettingDefinitions(): SettingDefinitionItem[] {
         const strings = t();
@@ -91,6 +91,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             heading: strings.settingsInterfaceHeading,
             items: [
                 { name: strings.settingsShowIcons, desc: strings.settingsShowIconsDesc, render: (setting) => this.renderShowIconsSetting(setting) },
+                { name: strings.settingsShowFileExtensionAndMatchCount, desc: strings.settingsShowFileExtensionAndMatchCountDesc, render: (setting) => this.renderShowFileExtensionAndMatchCountSetting(setting) },
                 { name: strings.settingsShowCommandsByDefault, desc: strings.settingsShowCommandsByDefaultDesc, render: (setting) => this.renderShowCommandsByDefaultSetting(setting) },
                 { name: strings.settingsPaletteRibbon, desc: strings.settingsPaletteRibbonDesc, render: (setting) => this.renderPaletteRibbonSetting(setting) },
                 { name: strings.settingsPaletteHotkey, desc: strings.settingsPaletteHotkeyDesc, render: (setting) => this.renderHotkeySetting(setting, `${this.plugin.manifest.id}:open-palette`) },
@@ -588,6 +589,15 @@ export class SeamSettingsTab extends PluginSettingTab {
             .setValue(this.plugin.settings.showIcons)
             .onChange(async (value) => {
                 this.plugin.settings.showIcons = value;
+                await this.plugin.saveSettings();
+            }));
+    }
+
+    private renderShowFileExtensionAndMatchCountSetting(setting: Setting): void {
+        setting.addToggle((toggle) => toggle
+            .setValue(this.plugin.settings.showFileExtensionAndMatchCount)
+            .onChange(async (value) => {
+                this.plugin.settings.showFileExtensionAndMatchCount = value;
                 await this.plugin.saveSettings();
             }));
     }

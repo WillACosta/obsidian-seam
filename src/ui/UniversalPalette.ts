@@ -287,6 +287,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 }
                 this.inputEl.value = '';
                 this.addSelectedTag(tag, Boolean(match[1]));
+                return;
+            }
+            const directoryTagMatch = val.match(/^(.*\bdir:(?:"[^"]*"|[^\s]+)\s+)(!?#[^\s#]+)\s+$/i);
+            if (directoryTagMatch) {
+                const [, queryPrefix, tagToken] = directoryTagMatch;
+                this.composedQueryPrefix = `${queryPrefix.trimEnd()} `;
+                const excluded = tagToken.startsWith('!');
+                const tagKey = `${excluded ? '!' : ''}#${tagToken.replace(/^!?#/, '').toLowerCase()}`;
+                if (!this.composedTagKeys.includes(tagKey)) this.composedTagKeys.push(tagKey);
+                this.addSelectedTag(tagToken.replace(/^!?#/, ''), excluded);
             }
             window.requestAnimationFrame(() => this.syncQueryInputMirrorScroll());
         });
@@ -391,7 +401,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
             return;
         }
-        if (value.type === 'directory' || (value.type === 'tag' && (/\bdir:/i.test(this.inputEl.value) || this.getSpecialQueryTokens(this.inputEl.value).length > 0))) {
+        if (value.type === 'tag' && /\bdir:/i.test(fullInput)) {
+            const prefix = fullInput.replace(/!?#[^\s]*$/, '').trimEnd();
+            this.composedQueryPrefix = `${prefix} `;
+            const excluded = value.tagMode === 'exclude';
+            const key = `${excluded ? '!' : ''}#${value.title.toLowerCase()}`;
+            if (!this.composedTagKeys.includes(key)) this.composedTagKeys.push(key);
+            this.addSelectedTag(value.title, excluded);
+            this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
+            return;
+        }
+        if (value.type === 'directory' || (value.type === 'tag' && this.getSpecialQueryTokens(this.inputEl.value).length > 0)) {
             const token = value.type === 'directory' ? `dir:${value.title.includes(' ') ? JSON.stringify(value.title) : value.title}` : `${value.tagMode === 'exclude' ? '!' : ''}#${value.title}`;
             this.inputEl.value = this.inputEl.value.replace(/(?:dir:"[^"]*|dir:\S*|!?#\S*)$/i, token) + ' ';
             this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
@@ -516,7 +536,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                     [...combined.flatMap(entry => entry.custom?.mode === 'tags' ? [entry.custom.filterQuery] : []), ...(chipQuery ? [chipQuery] : [])],
                     inlineTagQuery,
                     textQuery,
-                ).then(results => this.lastQuery === trimmed ? this.mapSearchResults(results, textQuery || inlineTagQuery || chipQuery) : []);
+                ).then(results => this.lastQuery === trimmed
+                    ? this.mapSearchResults(results, textQuery || inlineTagQuery || chipQuery, combined.some(entry => entry.special?.search === 'todo'))
+                    : []);
             }
             const custom = customSearch;
             if (custom) {
@@ -733,6 +755,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private mapSearchResults(
         results: ReturnType<SearchService['search']>,
         query: string,
+        showTodoCompletion = false,
     ): PaletteItem[] {
         const items: PaletteItem[] = results.map((r) => {
             const parentPath =
@@ -747,7 +770,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 matchSnippet: r.matchSnippet,
                 matchCount: r.matchCount,
                 searchTerms: r.searchTerms,
-                taskCompletionPercent: this.settings.showTodoCompletionPercent && parseSpecialSearch(query).search === 'todo'
+                taskCompletionPercent: this.settings.showTodoCompletionPercent && showTodoCompletion
                     ? this.getTaskCompletionPercent(r.file)
                     : undefined,
             };
@@ -1115,12 +1138,21 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const titleRow = el.createDiv({ cls: 'seam-palette-note-title-row' });
             const titleEl = titleRow.createDiv({ cls: 'seam-palette-title' });
             renderHighlightedText(titleEl, item.title, highlightQuery);
-            titleRow.createSpan({ cls: 'seam-palette-result-metadata', text: `.${item.file?.extension ?? 'md'}${item.matchCount !== undefined ? ` • ${item.matchCount} ${item.matchCount === 1 ? 'match' : 'matches'}` : ''}` });
+            const matchCount = this.settings.showFileExtensionAndMatchCount && item.matchCount !== undefined
+                ? ` • ${item.matchCount} ${item.matchCount === 1 ? 'match' : 'matches'}`
+                : '';
+            if (this.settings.showFileExtensionAndMatchCount) {
+                titleRow.createSpan({
+                    cls: 'seam-palette-result-metadata',
+                    text: `.${item.file?.extension ?? 'md'}${item.taskCompletionPercent === undefined ? matchCount : ''}`,
+                });
+            }
             if (item.taskCompletionPercent !== undefined) {
                 const completion = titleRow.createDiv({ cls: 'seam-palette-task-completion' });
                 completion.createSpan({ cls: 'seam-palette-task-completion-label', text: t().paletteTodoCompletionLabel });
                 completion.createSpan({ cls: 'seam-palette-task-completion-separator', text: '•' });
                 completion.createSpan({ cls: 'seam-palette-task-completion-value', text: `${item.taskCompletionPercent}%` });
+                if (matchCount) titleRow.createSpan({ cls: 'seam-palette-result-metadata', text: matchCount.trim() });
             }
 
             if (item.description) {

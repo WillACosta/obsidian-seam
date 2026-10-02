@@ -31,6 +31,7 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.moveCleanupTags, '#permanent, #todo');
         assert.equal(DEFAULT_SETTINGS.moveCleanupProperties, 'status');
         assert.equal(DEFAULT_SETTINGS.showIcons, true);
+        assert.equal(DEFAULT_SETTINGS.showFileExtensionAndMatchCount, true);
         assert.equal(DEFAULT_SETTINGS.showCommandsByDefault, true);
         assert.deepEqual(DEFAULT_SETTINGS.quickAddChoices, []);
         assert.equal(DEFAULT_SETTINGS.persistQuickAddDrafts, false);
