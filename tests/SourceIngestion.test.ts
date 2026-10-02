@@ -49,6 +49,57 @@ function fixture() {
 }
 
 describe('Source ingestion', () => {
+    it('enqueues existing documents when an enabled source folder changes in place', async () => {
+        const f = fixture();
+        f.add('Sources/old.pdf');
+        const first = f.add('Imports/class.pdf');
+        const second = f.add('Imports/Nested/lecture.docx');
+        f.add('Imports/app.exe');
+        f.add('Imports elsewhere/outside.pdf');
+        const service = new AutomationService(f.app, f.settings);
+        const queued: TFile[] = [];
+        const queue = { enqueue: (file: TFile) => queued.push(file) } as AutomationQueue;
+        const reconciler = new Reconciler(f.app, f.settings, queue, service);
+
+        f.settings.sourcesFolder = 'Imports';
+        service.updateSettings(f.settings);
+        reconciler.updateSettings(f.settings);
+        assert.deepEqual(queued.map(file => file.path), [first.path, second.path]);
+        for (const file of queued) assert.equal((await service.processFile(file)).status, 'success');
+        assert.ok(f.app.vault.getAbstractFileByPath('Fleeting/class.md'));
+        assert.ok(f.app.vault.getAbstractFileByPath('Fleeting/lecture.md'));
+
+        queued.length = 0;
+        f.settings.showIcons = !f.settings.showIcons;
+        reconciler.updateSettings(f.settings);
+        assert.deepEqual(queued, [], 'Unrelated settings must not restart source processing');
+    });
+
+    it('defers source scans while disabled and scans the current folder when enabled', () => {
+        const f = fixture();
+        f.settings.sourceAutomation = false;
+        const source = f.add('Imports/class.pdf');
+        const service = new AutomationService(f.app, f.settings);
+        const queued: string[] = [];
+        const queue = { enqueue: (file: TFile) => queued.push(file.path) } as AutomationQueue;
+        const reconciler = new Reconciler(f.app, f.settings, queue, service);
+
+        f.settings.sourcesFolder = 'Imports';
+        service.updateSettings(f.settings);
+        reconciler.updateSettings(f.settings);
+        assert.deepEqual(queued, []);
+
+        f.settings.sourceAutomation = true;
+        service.updateSettings(f.settings);
+        reconciler.updateSettings(f.settings);
+        assert.deepEqual(queued, [source.path]);
+
+        queued.length = 0;
+        f.settings.sourceAutomation = false;
+        reconciler.updateSettings(f.settings);
+        assert.deepEqual(queued, []);
+    });
+
     it('uses folder boundaries, subfolders and supported extensions', () => {
         const f = fixture();
         for (const path of ['Sources/a.pdf', 'Sources/nested/A.PNG', 'Sources/a.exe', 'Sources2/a.pdf', 'Elsewhere/a.png']) f.add(path);

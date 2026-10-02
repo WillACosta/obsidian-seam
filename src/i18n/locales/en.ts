@@ -26,7 +26,6 @@ export const en = {
     // Commands
     cmdOpenPalette: 'Open Universal Palette',
     cmdArchiveCurrentNote: 'Archive current note',
-    cmdArchiveAll: 'Archive all notes with #archive',
     cmdMoveToPermanent: 'Move to Permanent',
     cmdProcessPending: 'Process pending automations',
     cmdShowStatus: 'Show automation status',
@@ -36,8 +35,6 @@ export const en = {
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Create new note: "${title}"`,
     paletteCreateNoteDesc: (folder: string) => `Create new note in ${folder}/`,
-    paletteArchiveAllTitle: 'Archive all notes with #archive',
-    paletteArchiveAllDesc: 'Process all notes tagged with #archive',
     paletteArchiveCurrentTitle: (basename: string) => `Archive "${basename}"`,
     paletteArchiveCurrentDesc: (folder: string, basename: string) => `Move "${basename}" to ${folder}/`,
     palettePermanentCurrentTitle: (basename: string) => `Move "${basename}" to Permanent`,
@@ -68,6 +65,9 @@ export const en = {
     paletteHelpOpenNewTab: 'open in a new tab',
     paletteHelpOpen: 'open',
     paletteHelpOpenSplit: 'open in split view',
+    paletteHelpCreate: 'create',
+    paletteHelpCreateNewTab: 'create in a new tab',
+    paletteHelpCreateSplit: 'create in split view',
     paletteSpecialToday: "Today's daily note",
     paletteSpecialYesterday: "Yesterday's daily note",
     paletteSpecialRecent: 'The 10 most recently modified notes',
@@ -99,10 +99,6 @@ export const en = {
     noticeArchiveFailed: (reason: string) => `Archive failed: ${reason}`,
     noticeMovedToPermanent: (folder: string, basename: string) => `Moved to ${folder}: ${basename}`,
     noticeMoveFailed: (reason: string) => `Move failed: ${reason}`,
-    noticeArchivedCount: (count: number) => `Archived ${count} note${count !== 1 ? 's' : ''}.`,
-    noticeArchivedCountWithErrors: (count: number, errors: number) =>
-        `Archived ${count} note${count !== 1 ? 's' : ''}. ${errors} error${errors !== 1 ? 's' : ''}.`,
-    noticeNoNotesWithArchive: 'No notes with #archive found.',
     noticeProcessedPending: 'Processed pending automations.',
     statusTitle: 'Seam Automation',
     statusPending: (count: number) => `Pending: ${count}`,

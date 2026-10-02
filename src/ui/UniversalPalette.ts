@@ -66,6 +66,7 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
  * in a single floating modal built on Obsidian's SuggestModal.
  */
 export class UniversalPalette extends SuggestModal<PaletteItem> {
+    private createSuggestionActive = false;
     private lastQuery = '';
     private selectedTags: string[] = [];
     private excludedTags: string[] = [];
@@ -114,6 +115,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (item?.type === 'note' && item.file) {
                 this.close();
                 void openSearchResult(this.app, item, 'tab');
+            } else if (item?.type === 'create') {
+                this.close();
+                void this.createNote(this.inputEl.value.trim(), 'tab');
             } else if (item?.type === 'tag') {
                 this.selectSuggestion(item, evt);
             }
@@ -121,6 +125,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         });
         const openInSplit = (evt: KeyboardEvent): boolean => {
             const item = this.getSelectedItem();
+            if (item?.type === 'create') {
+                evt.preventDefault();
+                this.close();
+                void this.createNote(this.inputEl.value.trim(), 'split');
+                return false;
+            }
             if (item?.type !== 'note' || !item.file || this.baseNavigationEnabled) return true;
             evt.preventDefault();
             this.close();
@@ -445,6 +455,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         query = this.composedQueryPrefix + query;
         const trimmed = query.trim();
         this.lastQuery = trimmed;
+        this.createSuggestionActive = false;
         if (this.mode === 'search') {
             const specialQueries = this.getSpecialQueryTokens(query);
             const placeholder = specialQueries.some(entry => entry.custom?.mode === 'base') ? ''
@@ -632,9 +643,23 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
 
         const items = this.mapSearchResults(results, query);
-        return query.startsWith('@') || query.includes('#')
-            ? items
-            : this.withCommandSuggestions(items, query);
+        if (query.startsWith('@') || query.includes('#')) return items;
+
+        if (items.length === 0 && query.trim()) {
+            items.push({
+                id: `create-note-${query}`,
+                title: t().paletteCreateNoteTitle(query),
+                description: '',
+                type: 'create',
+                icon: 'file-plus',
+                action: () => this.createNote(query),
+            });
+        }
+
+        this.createSuggestionActive = items.some(item => item.type === 'create');
+        this.updateInstructions(query);
+
+        return this.withCommandSuggestions(items, query);
     }
 
     private withCommandSuggestions(items: PaletteItem[], query: string): PaletteItem[] {
@@ -742,11 +767,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      * Creates a new note in the fleeting folder and opens it.
      * If a template is configured, uses its content as the initial note body.
      */
-    private async createNote(title: string): Promise<void> {
-        await this.createQuickAddNote(title, null);
+    private async createNote(title: string, openBehavior: false | 'tab' | 'split' = false): Promise<void> {
+        await this.createQuickAddNote(title, null, undefined, openBehavior);
     }
 
-    private async createQuickAddNote(title: string, choice: QuickAddChoice | null, forcedConflictBehavior?: QuickAddConflictBehavior): Promise<boolean> {
+    private async createQuickAddNote(title: string, choice: QuickAddChoice | null, forcedConflictBehavior?: QuickAddConflictBehavior, openBehavior: false | 'tab' | 'split' = false): Promise<boolean> {
         const selectedFolder = choice?.location === 'specific' ? choice.folderPath : this.settings.fleetingFolder;
         const folderPath = normalizePath(selectedFolder);
 
@@ -767,7 +792,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (behavior === 'ask') {
                 return new Promise((resolve) => {
                     new NoteConflictModal(this.app, (selectedBehavior) => {
-                        void this.createQuickAddNote(title, choice, selectedBehavior)
+                        void this.createQuickAddNote(title, choice, selectedBehavior, openBehavior)
                             .then(resolve);
                     }).open();
                 });
@@ -799,8 +824,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 ? await this.app.vault.modify(existingFile, initialContent).then(() => existingFile)
                 : await this.app.vault.create(filePath, initialContent);
             if (!choice || choice.open) {
-                const leaf = choice?.openBehavior === 'split' ? this.app.workspace.getLeaf('split', 'vertical')
-                    : this.app.workspace.getLeaf(choice?.openBehavior === 'tab' ? 'tab' : false);
+                const target = choice?.openBehavior ?? openBehavior;
+                const leaf = target === 'split' ? this.app.workspace.getLeaf('split', 'vertical')
+                    : this.app.workspace.getLeaf(target === 'tab' ? 'tab' : false);
                 await leaf.openFile(file);
                 if (choice && !choice.focus) this.app.workspace.setActiveLeaf(leaf, { focus: false });
             }
@@ -863,6 +889,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         if (this.mode === 'search' && query.trim()) {
             const openNewTab = Platform.isMacOS ? '⌘↵' : 'Ctrl+↵';
+            if (this.createSuggestionActive) {
+                this.setInstructions([
+                    { command: '↵', purpose: t().paletteHelpCreate },
+                    { command: openNewTab, purpose: t().paletteHelpCreateNewTab },
+                    { command: '⇧↵', purpose: t().paletteHelpCreateSplit },
+                    { command: 'esc', purpose: t().paletteHelpDismiss },
+                ]);
+                return;
+            }
             this.setInstructions([
                 { command: '↑↓', purpose: t().paletteHelpNavigate },
                 { command: '↵', purpose: t().paletteHelpOpen },

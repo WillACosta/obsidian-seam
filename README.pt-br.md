@@ -60,6 +60,8 @@ Abra a **Paleta Universal**:
 - **Combine filtros**: Adicione vários chips de tags e remova-os com `Backspace` ou `×`.
 - **Abra em uma nova aba**: Pressione `Cmd + Enter` no macOS ou `Ctrl + Enter` no Windows e Linux.
 
+<!-- Screenshot V3: busca com filtros de pasta e tags combinados. -->
+
 !["Busca por tags"](./docs/images/tag_search.png)
 
 ## Principais Funcionalidades
@@ -77,6 +79,12 @@ Pesquise e execute ações em um só lugar:
 - Crie uma nota efêmera quando nenhum resultado corresponder à busca.
 - Digite `>` para executar comandos do Seam.
 
+### Buscas Personalizadas
+
+Deixe suas buscas favoritas sempre à mão. Crie atalhos para projetos, listas de leitura ou qualquer coleção de notas e fixe-os na Paleta Universal. Explore suas Bases do Obsidian em tabelas ou cartões no mesmo lugar.
+
+<!-- Screenshot V3: busca personalizada fixada e uma Base em tabela ou cartões na Paleta Universal. -->
+
 ### Limpeza Automática ao Mover
 
 Escolha quais tags temporárias e propriedades o Seam remove depois de mover uma nota. Por exemplo, você pode limpar `#todo`, `#review` ou a propriedade `status`.
@@ -91,11 +99,15 @@ Traga anotações manuscritas, documentos e imagens para o seu fluxo de notas. E
 
 Encontre suas fontes com `@sources` na Paleta Universal e leia PDFs com páginas contínuas.
 
+<!-- Screenshot V3: nota de fonte com um PDF manuscrito e páginas contínuas. -->
+
 ### Compatibilidade Total com Dispositivos Móveis
 
 O Seam usa as APIs públicas do Obsidian e não depende de código exclusivo para desktop. Ele funciona no computador, iPhone, iPad e Android.
 
 ## Configurações
+
+<!-- Screenshot V3: configurações de buscas personalizadas e notas de fontes. -->
 
 !["Configurações do Seam"](./docs/images/settings.png)
 
@@ -107,6 +119,8 @@ Personalize o Seam em **Configurações → Plugins da comunidade → Seam**:
 - **Arquivamento**: Escolha se notas arquivadas recebem a tag `#archived`.
 - **Limpeza ao mover**: Escolha quais tags temporárias e propriedades remover depois de mover uma nota.
 - **Paleta Universal**: Defina um atalho de teclado e exiba ou oculte os ícones.
+- **Buscas personalizadas**: Salve e fixe suas buscas favoritas.
+- **Notas de fontes**: Escolha a pasta de documentos e um modelo para suas notas.
 - **Avançado**: Defina com que frequência o Seam procura notas que possam ter sido ignoradas.
 
 ## Instalação

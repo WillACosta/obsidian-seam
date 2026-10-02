@@ -28,7 +28,6 @@ export const ptBr: Translations = {
     // Commands
     cmdOpenPalette: 'Abrir Paleta Universal',
     cmdArchiveCurrentNote: 'Arquivar nota atual',
-    cmdArchiveAll: 'Arquivar todas as notas com #archive',
     cmdMoveToPermanent: 'Mover para Permanente',
     cmdProcessPending: 'Processar automações pendentes',
     cmdShowStatus: 'Mostrar status da automação',
@@ -38,8 +37,6 @@ export const ptBr: Translations = {
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Criar nova nota: "${title}"`,
     paletteCreateNoteDesc: (folder: string) => `Criar nova nota em ${folder}/`,
-    paletteArchiveAllTitle: 'Arquivar todas as notas com #archive',
-    paletteArchiveAllDesc: 'Processar todas as notas com a tag #archive',
     paletteArchiveCurrentTitle: (basename: string) => `Arquivar "${basename}"`,
     paletteArchiveCurrentDesc: (folder: string, basename: string) => `Mover "${basename}" para ${folder}/`,
     palettePermanentCurrentTitle: (basename: string) => `Mover "${basename}" para Permanente`,
@@ -70,6 +67,9 @@ export const ptBr: Translations = {
     paletteHelpOpenNewTab: 'abrir em nova aba',
     paletteHelpOpen: 'abrir',
     paletteHelpOpenSplit: 'abrir em painel dividido',
+    paletteHelpCreate: 'criar',
+    paletteHelpCreateNewTab: 'criar em nova aba',
+    paletteHelpCreateSplit: 'criar em painel dividido',
     paletteSpecialToday: 'Nota diária de hoje',
     paletteSpecialYesterday: 'Nota diária de ontem',
     paletteSpecialRecent: 'As 10 notas modificadas mais recentemente',
@@ -101,10 +101,6 @@ export const ptBr: Translations = {
     noticeArchiveFailed: (reason: string) => `Falha ao arquivar: ${reason}`,
     noticeMovedToPermanent: (folder: string, basename: string) => `Movido para ${folder}: ${basename}`,
     noticeMoveFailed: (reason: string) => `Falha ao mover: ${reason}`,
-    noticeArchivedCount: (count: number) => `Arquivada(s) ${count} nota${count !== 1 ? 's' : ''}.`,
-    noticeArchivedCountWithErrors: (count: number, errors: number) =>
-        `Arquivada(s) ${count} nota${count !== 1 ? 's' : ''}. ${errors} erro${errors !== 1 ? 's' : ''}.`,
-    noticeNoNotesWithArchive: 'Nenhuma nota encontrada com #archive.',
     noticeProcessedPending: 'Automações pendentes processadas.',
     statusTitle: 'Automação Seam',
     statusPending: (count: number) => `Pendentes: ${count}`,

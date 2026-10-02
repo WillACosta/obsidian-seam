@@ -84,12 +84,6 @@ export default class SeamPlugin extends Plugin {
         });
 
         this.addCommand({
-            id: 'archive-all',
-            name: t().cmdArchiveAll,
-            callback: () => this.archiveAll(),
-        });
-
-        this.addCommand({
             id: 'process-pending',
             name: t().cmdProcessPending,
             callback: () => this.processPending(),
@@ -355,33 +349,6 @@ export default class SeamPlugin extends Plugin {
         }
     }
 
-    private async archiveAll(): Promise<void> {
-        const files = this.app.vault.getMarkdownFiles();
-        let archivedCount = 0;
-        let errorCount = 0;
-
-        for (const file of files) {
-            if (hasTag(file, this.app, this.settings.archiveTag)) {
-                const result = await this.automationService.processFile(file);
-                if (result.status === 'success') {
-                    archivedCount++;
-                } else if (result.status === 'error' || result.status === 'conflict') {
-                    errorCount++;
-                }
-            }
-        }
-
-        if (archivedCount > 0 || errorCount > 0) {
-            const message =
-                errorCount > 0
-                    ? t().noticeArchivedCountWithErrors(archivedCount, errorCount)
-                    : t().noticeArchivedCount(archivedCount);
-            new Notice(message);
-        } else {
-            new Notice(t().noticeNoNotesWithArchive);
-        }
-    }
-
     /**
      * Archives the current active note by processing it through automation.
      */
@@ -451,13 +418,6 @@ export default class SeamPlugin extends Plugin {
                 type: 'command',
                 icon: 'files',
                 action: () => new SourceAttachmentModal(this.app, this.automationService).open(),
-            },
-            {
-                id: 'cmd-archive-all',
-                title: t().paletteArchiveAllTitle,
-                description: t().paletteArchiveAllDesc,
-                type: 'command',
-                action: () => this.archiveAll(),
             },
             {
                 id: 'cmd-process-pending',

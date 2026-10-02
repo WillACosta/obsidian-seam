@@ -60,7 +60,7 @@ Open the **Universal Palette**:
 - **Combine filters**: Add multiple tag chips and remove them with `Backspace` or `×`.
 - **Open in a new tab**: Press `Cmd + Enter` on macOS or `Ctrl + Enter` on Windows and Linux.
 
-!["Tag searching"](./docs/images/tag_search.png)
+!["Combined search"](./docs/images/combined_search.png)
 
 ## Key Features
 
@@ -77,6 +77,12 @@ Search and act from one place:
 - Create a fleeting note when no result matches.
 - Type `>` to run Seam commands.
 
+### Custom Search
+
+Keep your favorite searches one step away. Create shortcuts for projects, reading lists, or any collection of notes, and pin them in the Universal Palette. Explore your Obsidian Bases as tables or cards in the same place.
+
+!["Custom queries"](./docs/images/custom_queries.png)
+
 ### Automatic Cleanup on Move
 
 Choose which temporary tags and note properties Seam removes after a successful move. For example, you can clear `#todo`, `#review`, or a `status` property.
@@ -90,6 +96,8 @@ Choose a template note, such as `Templates/Fleeting Note`. New notes created fro
 Bring handwritten notes, documents, and images into your workflow. Export them to `Sources/`, and Seam creates a note linked to the original.
 
 Find your sources with `@sources` in the Universal Palette and read PDFs with continuous pages.
+
+!["Sources ingestion"](./docs/images/sources.png)
 
 ### First-Class Mobile Support
 
@@ -107,6 +115,8 @@ Customize Seam under **Settings → Community Plugins → Seam**:
 - **Archive behavior**: Choose whether archived notes receive the `#archived` tag.
 - **Move cleanup**: Choose which temporary tags and properties to remove after a move.
 - **Universal Palette**: Assign a keyboard shortcut and show or hide icons.
+- **Custom Search**: Save and pin your favorite searches.
+- **Source notes**: Choose your document folder and note template.
 - **Advanced**: Set how often Seam checks for notes it may have missed.
 
 ## Installation
@@ -144,7 +154,7 @@ Seam follows Obsidian's language setting. It currently supports:
 - **English (US)**
 - **Portuguese (BR)**
 
-Other languages use English by default.
+Other languages use English by defaultCombined search.
 
 ### Contributing Translations
 
