@@ -23,7 +23,8 @@ export const en = {
     sourceCreationFailed: "Could not create source note.",
     sourceFolderConflict: (path: string) => `A file already exists at "${path}".`,
 
-    // Commands
+    // Ribbon & commands
+    ribbonOpenSeam: 'Open Seam',
     cmdOpenPalette: 'Open Universal Palette',
     cmdArchiveCurrentNote: 'Archive current note',
     cmdMoveToPermanent: 'Move to Permanent',
@@ -48,7 +49,7 @@ export const en = {
     paletteAddFleeting: 'Add Fleeting',
 
     // Universal Palette UI
-    palettePlaceholder: 'Search files, #tags, @special, dir:, or >commands...',
+    palettePlaceholder: 'Search files, #tags, @special, dir:, or > commands...',
     paletteTagPlaceholder: 'Add a #tag filter...',
     paletteSeamSearchPlaceholder: 'Search files or add #tags...',
     paletteHelpText: () => '↑↓ navigate · ↵ select · esc dismiss · > commands',

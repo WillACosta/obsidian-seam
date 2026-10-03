@@ -18,12 +18,14 @@ describe('i18n / Localization', () => {
     it('falls back to English by default when outside Obsidian', () => {
         setTestLocale(null);
         assert.equal(detectLocale(), 'en');
+        assert.equal(t().ribbonOpenSeam, 'Open Seam');
         assert.equal(t().cmdOpenPalette, 'Open Universal Palette');
     });
 
     it('switches to Portuguese (BR) when testLocale is set to pt-br', () => {
         setTestLocale('pt-br');
         assert.equal(detectLocale(), 'pt-br');
+        assert.equal(t().ribbonOpenSeam, 'Abrir o Seam');
         assert.equal(t().cmdOpenPalette, 'Abrir Paleta Universal');
         assert.equal(t().cmdArchiveCurrentNote, 'Arquivar nota atual');
         assert.equal(t().settingsTitle, 'Configurações do Seam');

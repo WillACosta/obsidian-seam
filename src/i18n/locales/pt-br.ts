@@ -25,7 +25,8 @@ export const ptBr: Translations = {
     sourceCreationFailed: "Não foi possível criar a nota de fonte.",
     sourceFolderConflict: (path: string) => `Já existe um arquivo em "${path}".`,
 
-    // Commands
+    // Ribbon & commands
+    ribbonOpenSeam: 'Abrir o Seam',
     cmdOpenPalette: 'Abrir Paleta Universal',
     cmdArchiveCurrentNote: 'Arquivar nota atual',
     cmdMoveToPermanent: 'Mover para Permanente',
@@ -50,7 +51,7 @@ export const ptBr: Translations = {
     paletteAddFleeting: 'Adicionar Fleeting',
 
     // Universal Palette UI
-    palettePlaceholder: 'Busque arquivos, #tags, @special, dir: ou >comandos...',
+    palettePlaceholder: 'Busque arquivos, #tags, @special, dir: ou > comandos...',
     paletteTagPlaceholder: 'Adicione um filtro #tag...',
     paletteSeamSearchPlaceholder: 'Busque arquivos ou adicione #tags...',
     paletteHelpText: () => '↑↓ navegar · ↵ selecionar · esc fechar · > comandos',

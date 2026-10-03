@@ -55,7 +55,7 @@ export default class SeamPlugin extends Plugin {
         this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue, this.automationService);
         this.searchService = new SearchService(this.app, this.settings);
 
-        this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().cmdOpenPalette, () => this.openPalette());
+        this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().ribbonOpenSeam, () => this.openPalette());
         this.refreshPaletteRibbon();
 
         // 3. Register commands
