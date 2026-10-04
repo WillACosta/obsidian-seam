@@ -2,6 +2,31 @@
 
 What's new and changed in each Seam release.
 
+## [3.0.1] - 2026-10-04
+<!-- iterations: iteration_08..iteration_10 -->
+
+!["Seam V3"](docs/images/v3.0.0/seam_v3.gif)
+
+### Added
+
+- **Special Search and custom queries**: Save and pin searches using the Seam search system or an Obsidian Base. Choose which built-in searches appear and reorder them.
+- **Obsidian Bases**: Browse Base views directly in the Universal Palette, including on mobile.
+- **Combined search**: Search notes and files by name, path, or extension; combine text, tags, saved searches, and `/` folder filters. Results show matching passages and match counts.
+
+!["Combined Search"](docs/images/v3.0.0/combined_search.gif)
+
+- **Special searches**: Find recent files, notes from a date range, today's or yesterday's Daily Note, and tasks. `@todo` results can show task completion percentages.
+- **Quick note command**: Create and open a note instantly using the configured Fleeting folder and template.
+
+!["Quick note"](docs/images/v3.0.0/quick_note.gif)
+
+- **Source notes**: Automatically create linked notes for supported documents and images in a chosen folder with your template, or create them from an attachment in the Universal Palette. Find them with `@sources`; embedded PDFs display as continuous pages. Existing files are included when source automation is enabled or the folder changes.
+
+### Changed
+
+- Seam now requires Obsidian **1.13.0** or newer.
+- Open search results in a vertical split with `Shift + Enter`.
+
 ## [3.0.0] - 2026-10-04
 <!-- iterations: iteration_08..iteration_10 -->
 

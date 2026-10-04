@@ -1,6 +1,6 @@
 {
   "name": "obsidian-seam",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Tag-driven note organization with automatic archiving and a Universal Palette.",
   "license": "GPL-3.0-or-later",
   "packageManager": "pnpm@11.24.0",
@@ -23,6 +23,7 @@
     "@typescript-eslint/parser": "^8.70.0",
     "esbuild": "^0.17.0",
     "eslint": "^10.10.0",
+    "moment": "2.29.4",
     "obsidian": "latest",
     "tslib": "^2.4.0",
     "tsx": "^4.23.12",
