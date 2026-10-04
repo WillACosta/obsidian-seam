@@ -36,9 +36,9 @@ describe('i18n / Localization', () => {
         assert.equal(t().paletteCreateNoteTitle('My Note'), 'Create new note: "My Note"');
         assert.equal(t().paletteCreateNoteDesc('Fleeting'), 'Create new note in Fleeting/');
         assert.equal(t().noticeArchived('Project X'), 'Archived: Project X');
-        assert.equal(t().noticeArchivedCount(1), 'Archived 1 note.');
-        assert.equal(t().noticeArchivedCount(3), 'Archived 3 notes.');
-        assert.equal(t().noticeArchivedCountWithErrors(2, 1), 'Archived 2 notes. 1 error.');
+        assert.equal(t().paletteFleetingCurrentTitle('Project X'), 'Move "Project X" to Fleeting');
+        assert.equal(t().noticeMovedToFleeting('Fleeting', 'Project X'), 'Moved to Fleeting: Project X');
+        assert.equal(t().noticeMovedToFleeting('', 'Project X'), 'Moved to vault root: Project X');
         assert.equal(t().paletteFilterByTag('ai'), 'Filter by tag: #ai');
         assert.equal(t().msgArchivedTo('Archive/Note.md'), 'Archived to Archive/Note.md');
         assert.equal(t().settingsPaletteHotkeyAssigned('⌘ K'), 'Assigned hotkey: ⌘ K');
@@ -49,9 +49,9 @@ describe('i18n / Localization', () => {
         assert.equal(t().paletteCreateNoteTitle('Minha Nota'), 'Criar nova nota: "Minha Nota"');
         assert.equal(t().paletteCreateNoteDesc('Fleeting'), 'Criar nova nota em Fleeting/');
         assert.equal(t().noticeArchived('Projeto X'), 'Arquivado: Projeto X');
-        assert.equal(t().noticeArchivedCount(1), 'Arquivada(s) 1 nota.');
-        assert.equal(t().noticeArchivedCount(3), 'Arquivada(s) 3 notas.');
-        assert.equal(t().noticeArchivedCountWithErrors(2, 1), 'Arquivada(s) 2 notas. 1 erro.');
+        assert.equal(t().paletteFleetingCurrentTitle('Projeto X'), 'Mover "Projeto X" para Fleeting');
+        assert.equal(t().noticeMovedToFleeting('Fleeting', 'Projeto X'), 'Movido para Fleeting: Projeto X');
+        assert.equal(t().noticeMovedToFleeting('', 'Projeto X'), 'Movido para a raiz do vault: Projeto X');
         assert.equal(t().paletteFilterByTag('ia'), 'Filtrar por tag: #ia');
         assert.equal(t().msgArchivedTo('Archive/Nota.md'), 'Arquivado em Archive/Nota.md');
         assert.equal(t().settingsPaletteHotkeyAssigned('⌘ K'), 'Atalho atribuído: ⌘ K');
