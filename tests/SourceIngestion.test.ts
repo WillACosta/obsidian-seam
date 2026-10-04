@@ -302,6 +302,6 @@ describe('Source ingestion', () => {
         assert.equal(matchesSpecialSearch(f.app, source, 'sources'), true);
         assert.equal(matchesSpecialSearch(f.app, other, 'sources'), false);
         const search = new SearchService(f.app, f.settings);
-        assert.deepEqual((await search.searchCombinedSpecialWithContent([{ search: 'sources' }], ['#class'], 'dir:Permanent', '')).map(result => result.path), [source.path]);
+        assert.deepEqual((await search.searchCombinedSpecialWithContent([{ search: 'sources' }], ['#class'], '/Permanent', '')).map(result => result.path), [source.path]);
     });
 });

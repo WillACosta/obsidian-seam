@@ -19,14 +19,14 @@ export function parseQuery(input: string): ParsedQuery {
         .replace(/\|\|/g, ' || ')
         .replace(/(^|\s)\|(\s|$)/g, ' || ');
 
-    const rawTokens = normalized.match(/dir:"[^"]*"|\S+/g) ?? [];
+    const rawTokens = normalized.match(/(?:dir:|\/)"[^"]*"|\S+/g) ?? [];
     const tokens: QueryToken[] = [];
     let isValid = true;
 
     for (let i = 0; i < rawTokens.length; i++) {
         const t = rawTokens[i];
-        if (t.toLowerCase().startsWith('dir:')) {
-            const value = t.slice(4).replace(/^"|"$/g, '');
+        if (t.startsWith('/') || t.toLowerCase().startsWith('dir:')) {
+            const value = t.slice(t.startsWith('/') ? 1 : 4).replace(/^"|"$/g, '');
             if (!value) isValid = false;
             tokens.push({ type: 'directory', value });
         } else if (t.startsWith('-#')) {
@@ -59,4 +59,9 @@ export function parseQuery(input: string): ParsedQuery {
     }
 
     return { tokens, isValid };
+}
+
+/** Matches a folder filter at a query-token boundary, including saved legacy filters. */
+export function hasDirectoryFilter(query: string): boolean {
+    return /(?:^|\s)(?:\/|dir:)/i.test(query);
 }

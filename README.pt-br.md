@@ -137,7 +137,7 @@ Use estes tokens na Paleta Universal para filtrar buscas ou acessar outros modos
 |:---|:---|:---|
 | `#tag` | Filtra notas por tag. | `#leitura` |
 | `!#tag` ou `-#tag` | Exclui notas com uma tag. | `!#arquivado` |
-| `dir:` | Filtra notas por pasta. Coloque entre aspas os caminhos com espaços. | `dir:Fleeting` · `dir:"Arquivo de Projetos"` |
+| `/` | Filtra notas por pasta. Coloque entre aspas os caminhos com espaços. | `/Fleeting` · `/"Arquivo de Projetos"` |
 | `@` | Executa uma busca especial integrada ou personalizada. | `@today` · `@sources` · `@livros` |
 | `OR` ou `||` | Busca por um termo ou pelo outro. | `#leitura OR #pesquisa` |
 | `>` | Mostra e executa comandos do Seam. | `>archive` |

@@ -12,23 +12,26 @@ describe('Directory filtering and match counts', () => {
         metadataCache: { getFileCache: () => ({ tags: [{ tag: '#ai' }] }) },
     } as never;
     it('parses quoted paths, exclusions and directory OR branches', () => {
-        const parsed = parseQuery('dir:"My Notes" #ai !#archived OR dir:Permanent');
+        const parsed = parseQuery('/"My Notes" #ai !#archived OR /Permanent');
         assert.equal(parsed.isValid, true);
         assert.deepEqual(parsed.tokens[0], { type: 'directory', value: 'My Notes' });
-        assert.equal(parseQuery('dir:').isValid, false);
+        assert.equal(parseQuery('/').isValid, false);
+        assert.deepEqual(parseQuery('dir:Permanent').tokens, [{ type: 'directory', value: 'Permanent' }]);
     });
     it('matches the folder and descendants without matching similarly named folders', async () => {
         const service = new SearchService(app, DEFAULT_SETTINGS);
-        assert.deepEqual(service.search('dir:Fleeting #ai').map(result => result.path), files.slice(0, 2).map(file => file.path));
-        const results = await service.searchFilteredWithContent('dir:Fleeting #ai !#archived', 'AI');
+        assert.deepEqual(service.search('/Fleeting #ai').map(result => result.path), files.slice(0, 2).map(file => file.path));
+        const results = await service.searchFilteredWithContent('/Fleeting #ai !#archived', 'AI');
         assert.equal(results.length, 2);
         assert.equal(results[0].matchCount, 4);
         assert.deepEqual(results[0].searchTerms, ['AI']);
     });
     it('supports directory-only and OR queries', () => {
         const service = new SearchService(app, DEFAULT_SETTINGS);
+        assert.equal(service.search('/Fleeting').length, 2);
+        assert.equal(service.search('/Fleeting OR /Permanent').length, 3);
+        assert.deepEqual(service.search('/"Fleeting elsewhere"').map(result => result.path), [files[2].path]);
         assert.equal(service.search('dir:Fleeting').length, 2);
-        assert.equal(service.search('dir:Fleeting OR dir:Permanent').length, 3);
     });
     it('counts literal case-insensitive matches even when the filename matches', async () => {
         const service = new SearchService(app, DEFAULT_SETTINGS);
@@ -54,7 +57,7 @@ describe('Directory filtering and match counts', () => {
         const service = new SearchService({ vault, metadataCache: { getFileCache: () => ({}) } } as never, DEFAULT_SETTINGS);
         assert.deepEqual((await service.searchWithContent('Report')).map(result => result.path), [note.path, pdf.path]);
         assert.deepEqual((await service.searchWithContent('.xlsx')).map(result => result.path), [sheet.path]);
-        assert.deepEqual((await service.searchWithContent('dir:Fleeting')).map(result => result.path), [image.path, note.path, pdf.path]);
+        assert.deepEqual((await service.searchWithContent('/Fleeting')).map(result => result.path), [image.path, note.path, pdf.path]);
         assert.deepEqual(readPaths, [note.path, note.path, note.path]);
     });
 

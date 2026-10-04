@@ -6,7 +6,7 @@ import { NoteTitleModal } from './NoteTitleModal';
 import { NoteConflictModal } from './NoteConflictModal';
 import { getTagInputContext, getTagSuggestions } from './TagFilterSuggest';
 import { openSearchResult } from '../search/OpenSearchResult';
-import { parseQuery } from '../search/QueryParser';
+import { hasDirectoryFilter, parseQuery } from '../search/QueryParser';
 import { BaseResultNavigation } from './BaseResultNavigation';
 
 /**
@@ -289,7 +289,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 this.addSelectedTag(tag, Boolean(match[1]));
                 return;
             }
-            const directoryTagMatch = val.match(/^(.*\bdir:(?:"[^"]*"|[^\s]+)\s+)(!?#[^\s#]+)\s+$/i);
+            const directoryTagMatch = val.match(/^(.*(?:^|\s)(?:\/|dir:)(?:"[^"]*"|[^\s]+)\s+)(!?#[^\s#]+)\s+$/i);
             if (directoryTagMatch) {
                 const [, queryPrefix, tagToken] = directoryTagMatch;
                 this.composedQueryPrefix = `${queryPrefix.trimEnd()} `;
@@ -401,7 +401,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
             return;
         }
-        if (value.type === 'tag' && /\bdir:/i.test(fullInput)) {
+        if (value.type === 'tag' && hasDirectoryFilter(fullInput)) {
             const prefix = fullInput.replace(/!?#[^\s]*$/, '').trimEnd();
             this.composedQueryPrefix = `${prefix} `;
             const excluded = value.tagMode === 'exclude';
@@ -412,8 +412,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return;
         }
         if (value.type === 'directory' || (value.type === 'tag' && this.getSpecialQueryTokens(this.inputEl.value).length > 0)) {
-            const token = value.type === 'directory' ? `dir:${value.title.includes(' ') ? JSON.stringify(value.title) : value.title}` : `${value.tagMode === 'exclude' ? '!' : ''}#${value.title}`;
-            this.inputEl.value = this.inputEl.value.replace(/(?:dir:"[^"]*|dir:\S*|!?#\S*)$/i, token) + ' ';
+            const token = value.type === 'directory' ? `/${value.title.includes(' ') ? JSON.stringify(value.title) : value.title}` : `${value.tagMode === 'exclude' ? '!' : ''}#${value.title}`;
+            this.inputEl.value = this.inputEl.value.replace(/(?:(?:\/|dir:)"[^"]*|(?:\/|dir:)\S*|!?#\S*)$/i, token) + ' ';
             this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
             if (value.type === 'directory') this.selectedDirectoryToken = token;
             else this.selectedInlineTagTokens.add(token);
@@ -480,7 +480,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const specialQueries = this.getSpecialQueryTokens(query);
             const placeholder = specialQueries.some(entry => entry.custom?.mode === 'base') ? ''
                 : specialQueries.length > 0 ? t().paletteSeamSearchPlaceholder
-                    : /\bdir:/i.test(query) || getTagInputContext(query) || this.selectedTags.length > 0 || this.excludedTags.length > 0
+                    : hasDirectoryFilter(query) || getTagInputContext(query) || this.selectedTags.length > 0 || this.excludedTags.length > 0
                         ? t().paletteTagPlaceholder : t().palettePlaceholder;
             this.setPlaceholder(placeholder);
         }
@@ -495,11 +495,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         if (this.mode === 'quick-add') return this.getQuickAddChoices(trimmed);
 
-        const directoryInput = query.match(/(?:^|\s)dir:(?:"([^"]*)|([^\s]*))$/i);
+        const directoryInput = query.match(/(?:^|\s)(?:\/|dir:)(?:"([^"]*)|([^\s]*))$/i);
         if (directoryInput) {
             const prefix = (directoryInput[1] ?? directoryInput[2]).toLowerCase();
             return this.app.vault.getAllLoadedFiles()
-                .filter((file): file is TFolder => file instanceof TFolder)
+                .filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path) && file.path !== '/')
                 .filter(folder => folder.path.toLowerCase().includes(prefix))
                 .map(folder => ({ id: `dir-${folder.path}`, title: folder.path, description: '', type: 'directory' as const, icon: 'folder' }));
         }
@@ -514,7 +514,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 const baseQueries = combined.filter(entry => entry.custom?.mode === 'base');
                 const remaining = trimmed.split(/\s+/).filter(token => !combined.some(entry => entry.token.toLowerCase() === token.toLowerCase())).join(' ').trim();
                 if (baseQueries.length > 0) {
-                    if (combined.length !== 1 || this.selectedTags.length || this.excludedTags.length || /(?:^|\s)(?:!?#[^\s]+|dir:|@[^\s]+)/i.test(remaining)) return [];
+                    if (combined.length !== 1 || this.selectedTags.length || this.excludedTags.length || /(?:^|\s)(?:!?#[^\s]+|\/|dir:|@[^\s]+)/i.test(remaining)) return [];
                     const base = baseQueries[0].custom!;
                     const items = this.getCustomBaseItem(base, remaining);
                     if (items.length === 0) this.disposeBaseRender();
@@ -526,11 +526,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 const inlineTagQuery = filterTokens.map(token => {
                     if (token.type === 'tag') return `#${token.value}`;
                     if (token.type === 'negativeTag') return `!#${token.value}`;
-                    if (token.type === 'directory') return `dir:${JSON.stringify(token.value)}`;
+                    if (token.type === 'directory') return `/${JSON.stringify(token.value)}`;
                     return 'OR';
                 }).join(' ');
                 const chipQuery = [...this.selectedTags.map(tag => `#${tag}`), ...this.excludedTags.map(tag => `!#${tag}`)].join(' ');
-                const textQuery = remaining.split(/\s+/).filter(token => token && !/^(?:!?#[^\s]+|dir:|@[^\s]+|\|\|?|or)$/i.test(token)).join(' ');
+                const textQuery = parsedRemaining.tokens.filter(token => token.type === 'text').map(token => token.value).join(' ');
                 return this.searchService.searchCombinedSpecialWithContent(
                     combined.flatMap(entry => entry.special ? [{ search: entry.special.search, days: entry.special.days }] : []),
                     [...combined.flatMap(entry => entry.custom?.mode === 'tags' ? [entry.custom.filterQuery] : []), ...(chipQuery ? [chipQuery] : [])],
@@ -571,7 +571,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return this.handleTagQuery(query);
         }
 
-        if (/\bdir:/i.test(query)) {
+        if (hasDirectoryFilter(query)) {
             const fullQuery = query + ' ' + this.selectedTags.map(tag => '#' + tag).join(' ') + ' ' + this.excludedTags.map(tag => '!#' + tag).join(' ');
             return this.searchService.searchWithContent(fullQuery).then(results => this.lastQuery === trimmed ? this.mapSearchResults(results, trimmed) : []);
         }
@@ -883,7 +883,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.setInstructions([
                 { command: '#', purpose: t().paletteHelpTag },
                 { command: '@', purpose: t().paletteHelpSpecialSearch },
-                { command: 'dir:', purpose: t().paletteHelpDirectory },
+                { command: '/', purpose: t().paletteHelpDirectory },
                 { command: '>', purpose: t().paletteHelpCommands },
                 { command: 'esc', purpose: t().paletteHelpDismiss },
             ]);
@@ -1037,7 +1037,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return;
         }
         const token = this.getActiveSpecialQueryToken(query);
-        const directory = token ? null : /(?:^|\s)(dir:(?:"[^"]*"|[^\s]+))(?=\s|$)/i.exec(query);
+        const directory = token ? null : /(?:^|\s)((?:\/|dir:)(?:"[^"]*"|[^\s]+))(?=\s|$)/i.exec(query);
         prompt?.toggleClass('seam-palette-special-search-active', Boolean(token));
         prompt?.toggleClass('seam-palette-directory-search-active', Boolean(directory));
         if (!this.queryInputMirrorEl) return;
@@ -1399,7 +1399,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return lastToken.replace(/^!?#/, '');
         }
 
-        if (/\bdir:/i.test(query)) {
+        if (hasDirectoryFilter(query)) {
             const tokens = parseQuery(query).tokens;
             return tokens.filter(token => token.type === 'text').map(token => token.value).join(' ')
                 || tokens.find(token => token.type === 'tag')?.value || '';

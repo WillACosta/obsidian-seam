@@ -1,6 +1,6 @@
 import { App, moment, normalizePath, TFile } from 'obsidian';
 import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } from '../types';
-import { parseQuery } from './QueryParser';
+import { hasDirectoryFilter, parseQuery } from './QueryParser';
 import { DOCUMENT_EXTENSIONS, IMAGE_EXTENSIONS } from '../utils/attachments';
 
 /**
@@ -412,7 +412,7 @@ export class SearchService {
         }
 
         // If query contains no # characters, treat as text search
-        if (!trimmed.includes('#') && !/\bdir:/i.test(trimmed)) {
+        if (!trimmed.includes('#') && !hasDirectoryFilter(trimmed)) {
             return this.textSearch(specialQuery.textQuery, files);
         }
 
@@ -593,11 +593,11 @@ export class SearchService {
         }
 
         // If query contains no # characters, treat as text search with content
-        if (!trimmed.includes('#') && !/\bdir:/i.test(trimmed)) {
+        if (!trimmed.includes('#') && !hasDirectoryFilter(trimmed)) {
             return this.textSearchWithContent(specialQuery.textQuery, files, currentVersion);
         }
 
-        if (/\bdir:/i.test(trimmed)) {
+        if (hasDirectoryFilter(trimmed)) {
             const candidates = this.tagSearch(trimmed, files);
             const text = parseQuery(trimmed).tokens.filter(token => token.type === 'text').map(token => token.value).join(' ');
             return text ? this.textSearchWithContent(text, candidates.map(result => result.file), currentVersion) : candidates;

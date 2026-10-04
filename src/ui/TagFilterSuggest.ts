@@ -38,11 +38,11 @@ export class TagFilterSuggest extends AbstractInputSuggest<TagSuggestion> {
     }
 
     getSuggestions(query: string): TagSuggestion[] {
-        const directory = query.match(/(?:^|\s)dir:(?:"([^"]*)|([^\s]*))$/i);
+        const directory = query.match(/(?:^|\s)(?:\/|dir:)(?:"([^"]*)|([^\s]*))$/i);
         if (directory) {
             const prefix = (directory[1] ?? directory[2]).toLowerCase();
             return this.app.vault.getAllLoadedFiles()
-                .filter((file): file is TFolder => file instanceof TFolder)
+                .filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path) && file.path !== '/')
                 .filter(folder => folder.path.toLowerCase().includes(prefix))
                 .slice(0, this.limit)
                 .map(folder => ({ tag: folder.path, excluded: false, directory: true }));
@@ -62,7 +62,7 @@ export class TagFilterSuggest extends AbstractInputSuggest<TagSuggestion> {
     selectSuggestion(value: TagSuggestion, evt: MouseEvent | KeyboardEvent): void {
         const current = this.getValue();
         if (value.directory) {
-            const next = current.replace(/dir:(?:"[^"]*|\S*)$/i, `dir:${value.tag.includes(' ') ? JSON.stringify(value.tag) : value.tag}`) + ' ';
+            const next = current.replace(/(?:\/|dir:)(?:"[^"]*|\S*)$/i, `/${value.tag.includes(' ') ? JSON.stringify(value.tag) : value.tag}`) + ' ';
             this.setValue(next);
             this.onChange?.(next);
             this.close();

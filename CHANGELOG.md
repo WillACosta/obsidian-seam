@@ -11,7 +11,7 @@ What's new and changed in each Seam release.
 
 - **Special Search and custom queries**: Save and pin searches using the Seam search system or an Obsidian Base. Choose which built-in searches appear and reorder them.
 - **Obsidian Bases**: Browse Base views directly in the Universal Palette, including on mobile.
-- **Combined search**: Search notes and files by name, path, or extension; combine text, tags, saved searches, and `dir:` folder filters. Results show matching passages and match counts.
+- **Combined search**: Search notes and files by name, path, or extension; combine text, tags, saved searches, and `/` folder filters. Results show matching passages and match counts.
 
 !["Combined Search"](docs/images/v3/combined_search.gif)
 

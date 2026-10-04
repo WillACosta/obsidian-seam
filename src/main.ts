@@ -1,4 +1,5 @@
 import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian';
+import { isFileInFolder } from './utils/isFileInFolder';
 import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
@@ -101,7 +102,7 @@ export default class SeamPlugin extends Plugin {
             name: t().cmdArchiveCurrentNote,
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
-                if (!file || file.extension !== 'md') return false;
+                if (!file || file.extension !== 'md' || isFileInFolder(file, this.settings.archiveFolder)) return false;
                 if (checking) return true;
                 void this.archiveCurrentNote(file);
                 return true;
@@ -113,9 +114,21 @@ export default class SeamPlugin extends Plugin {
             name: t().cmdMoveToPermanent,
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
-                if (!file || file.extension !== 'md') return false;
+                if (!file || file.extension !== 'md' || isFileInFolder(file, this.settings.permanentFolder)) return false;
                 if (checking) return true;
                 void this.moveCurrentNoteToPermanent(file);
+                return true;
+            },
+        });
+
+        this.addCommand({
+            id: 'move-to-fleeting',
+            name: t().cmdMoveToFleeting,
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md' || isFileInFolder(file, this.settings.fleetingFolder)) return false;
+                if (checking) return true;
+                void this.moveCurrentNoteToFleeting(file);
                 return true;
             },
         });
@@ -373,6 +386,16 @@ export default class SeamPlugin extends Plugin {
         }
     }
 
+    /** Moves the current active note to the configured Fleeting folder. */
+    private async moveCurrentNoteToFleeting(file: TFile): Promise<void> {
+        const result = await this.automationService.moveFileToFleeting(file);
+        if (result.status === 'success') {
+            new Notice(t().noticeMovedToFleeting(this.settings.fleetingFolder, file.basename));
+        } else {
+            new Notice(t().noticeMoveFailed(result.message));
+        }
+    }
+
     private async processPending(): Promise<void> {
         await this.automationQueue.flush();
         this.reconciler.scan();
@@ -438,8 +461,9 @@ export default class SeamPlugin extends Plugin {
         // Contextual commands: only when a note is active
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
-            commands.splice(3, 0,
-                {
+            const actions: PaletteItem[] = [];
+            if (!isFileInFolder(activeFile, this.settings.archiveFolder)) {
+                actions.push({
                     id: 'cmd-archive-current',
                     title: t().paletteArchiveCurrentTitle(activeFile.basename),
                     description: t().paletteArchiveCurrentDesc(
@@ -448,8 +472,10 @@ export default class SeamPlugin extends Plugin {
                     ),
                     type: 'action',
                     action: () => this.archiveCurrentNote(activeFile),
-                },
-                {
+                });
+            }
+            if (!isFileInFolder(activeFile, this.settings.permanentFolder)) {
+                actions.push({
                     id: 'cmd-move-permanent',
                     title: t().palettePermanentCurrentTitle(activeFile.basename),
                     description: t().palettePermanentCurrentDesc(
@@ -458,8 +484,21 @@ export default class SeamPlugin extends Plugin {
                     ),
                     type: 'action',
                     action: () => this.moveCurrentNoteToPermanent(activeFile),
-                },
-            );
+                });
+            }
+            if (!isFileInFolder(activeFile, this.settings.fleetingFolder)) {
+                actions.push({
+                    id: 'cmd-move-fleeting',
+                    title: t().paletteFleetingCurrentTitle(activeFile.basename),
+                    description: t().paletteFleetingCurrentDesc(
+                        this.settings.fleetingFolder,
+                        activeFile.basename,
+                    ),
+                    type: 'action',
+                    action: () => this.moveCurrentNoteToFleeting(activeFile),
+                });
+            }
+            commands.splice(3, 0, ...actions);
         }
 
         return commands;

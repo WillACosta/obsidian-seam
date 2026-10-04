@@ -29,6 +29,11 @@ export function getPermanentCleanupTags(settings: SeamSettings): string[] {
     );
 }
 
+/** Moving back to Fleeting clears the same action and archived-state tags. */
+export function getFleetingCleanupTags(settings: SeamSettings): string[] {
+    return getPermanentCleanupTags(settings);
+}
+
 /**
  * Resolves the tags to remove when archiving a note.
  * Always removes the archive action tag and the permanent tag,

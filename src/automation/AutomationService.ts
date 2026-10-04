@@ -2,6 +2,7 @@ import { App, TFile } from 'obsidian';
 import { SeamSettings, AutomationResult, AutomationStatus, AutomationError } from '../types';
 import { ArchiveAction, hasTag } from './actions/ArchiveAction';
 import { PermanentAction } from './actions/PermanentAction';
+import { FleetingAction } from './actions/FleetingAction';
 import { t } from '../i18n';
 import { SourceIngestion } from './SourceIngestion';
 
@@ -14,6 +15,7 @@ export class AutomationService {
     private sources: SourceIngestion;
     private archiveAction: ArchiveAction;
     private permanentAction: PermanentAction;
+    private fleetingAction: FleetingAction;
 
     private processedCount = 0;
     private failedCount = 0;
@@ -26,6 +28,7 @@ export class AutomationService {
         this.sources = new SourceIngestion(app, settings);
         this.archiveAction = new ArchiveAction();
         this.permanentAction = new PermanentAction();
+        this.fleetingAction = new FleetingAction();
     }
 
     /**
@@ -158,6 +161,13 @@ export class AutomationService {
             force: true,
         });
         this.recordResult(currentFile.path, result);
+        return result;
+    }
+
+    /** Directly move an open note to Fleeting and apply the configured move cleanup. */
+    async moveFileToFleeting(file: TFile): Promise<AutomationResult> {
+        const result = await this.fleetingAction.apply(file, this.app, this.settings);
+        this.recordResult(file.path, result);
         return result;
     }
 

@@ -137,7 +137,7 @@ Use these tokens in the Universal Palette to narrow a search or switch modes:
 |:---|:---|:---|
 | `#tag` | Filter notes by tag. | `#reading` |
 | `!#tag` or `-#tag` | Exclude notes with a tag. | `!#archived` |
-| `dir:` | Filter notes by directory. Put paths with spaces in quotes. | `dir:Fleeting` · `dir:"Project Archive"` |
+| `/` | Filter notes by directory. Put paths with spaces in quotes. | `/Fleeting` · `/"Project Archive"` |
 | `@` | Run a built-in or custom Special Search. | `@today` · `@sources` · `@books` |
 | `OR` or `||` | Match either side of a search. | `#reading OR #research` |
 | `>` | Browse and run Seam commands. | `>archive` |
