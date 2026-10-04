@@ -89,7 +89,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private baseSourcePath = '';
     private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
         if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return;
-        if (!(event.target instanceof HTMLElement) || !event.target.matches('.prompt-input')) return;
+        const target = event.target as Node | null;
+        if (!target?.instanceOf?.(HTMLElement) || !target.matches('.prompt-input')) return;
         if (event.key === 'ArrowDown') this.handleBaseNavigationKey(event, 'down');
         else if (event.key === 'ArrowUp') this.handleBaseNavigationKey(event, 'up');
         else if (event.key === 'Enter') this.handleBaseNavigationEnter(event);
@@ -1033,7 +1034,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             prompt?.removeClass('seam-palette-special-search-active', 'seam-palette-directory-search-active');
             this.queryInputMirrorEl?.empty();
             this.inputEl.parentElement?.removeClass('seam-palette-input-before-chips');
-            if (this.inputEl.parentElement) this.inputEl.parentElement.style.width = '';
             return;
         }
         const token = this.getActiveSpecialQueryToken(query);
@@ -1254,6 +1254,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             });
         }
         el.appendChild(this.baseRenderHost);
+        this.inputEl.closest<HTMLElement>('.prompt')?.addClass('seam-palette-has-base-embed');
 
         el.addClass('seam-palette-base-navigation');
         if (!this.baseResultNavigation) {
@@ -1313,6 +1314,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.baseRenderComponent = null;
         this.baseRenderHost?.remove();
         this.baseRenderHost = null;
+        this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-has-base-embed');
         this.baseRenderKey = '';
         this.baseSourcePath = '';
         this.inputEl.removeAttribute('aria-activedescendant');
@@ -1322,7 +1324,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             const apply = (): void => {
                 const toolbar = embed.querySelector<HTMLElement>('.bases-toolbar, .bases-view-toolbar');
                 if (!toolbar) return;
-                const controls = Array.from(toolbar.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+                const controls = Array.from(toolbar.children).filter((child): child is HTMLElement => child.instanceOf(HTMLElement));
                 for (const control of controls) {
                     const label = [
                         control.getAttribute('aria-label'),
@@ -1330,7 +1332,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                         control.getAttribute('data-tooltip'),
                         control.textContent,
                     ].filter(Boolean).join(' ').trim().toLowerCase();
-                    control.style.display = label.includes('search') ? '' : 'none';
+                    control.toggleClass('seam-palette-base-toolbar-control-hidden', !label.includes('search'));
                 }
             };
         apply();
@@ -1340,10 +1342,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private openFileFromPaletteLink(event: MouseEvent, sourcePath: string): void {
-        const target = event.target instanceof Element
-            ? event.target.closest('a.internal-link, a[data-href], [data-href]')
+        const eventTarget = event.target as Node | null;
+        const target = eventTarget?.instanceOf?.(Element)
+            ? eventTarget.closest('a.internal-link, a[data-href], [data-href]')
             : null;
-        if (!(target instanceof HTMLElement)) return;
+        if (!target?.instanceOf(HTMLElement)) return;
         const href = target.getAttribute('data-href') || target.getAttribute('href');
         if (!href) return;
         let linkPath = href.replace(/^\.?\//, '');

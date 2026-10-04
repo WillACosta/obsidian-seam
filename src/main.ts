@@ -3,7 +3,6 @@ import { isFileInFolder } from './utils/isFileInFolder';
 import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
-import { hasTag } from './automation/actions/ArchiveAction';
 import { SourceAttachmentModal } from './ui/SourceAttachmentModal';
 import { Reconciler } from './automation/Reconciler';
 import { SearchService } from './search/SearchService';
@@ -526,7 +525,7 @@ export default class SeamPlugin extends Plugin {
                         icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'search',
                         mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
                         hidden: Boolean(search.hidden),
-                        pinned: Boolean(search.pinned) && !Boolean(search.hidden),
+                        pinned: Boolean(search.pinned) && !search.hidden,
                         basePath: typeof search.basePath === 'string' ? search.basePath : '',
                         baseView: typeof search.baseView === 'string' ? search.baseView : '',
                         filterQuery: typeof search.filterQuery === 'string' ? search.filterQuery : '',
@@ -541,7 +540,7 @@ export default class SeamPlugin extends Plugin {
             const storedPreferences = Array.isArray(this.settings.specialSearchPreferences) ? this.settings.specialSearchPreferences : [];
             this.settings.specialSearchPreferences = defaultPreferences.map((entry) => {
                 const stored = storedPreferences.find((item) => item?.search === entry.search);
-                return { search: entry.search, pinned: Boolean(stored?.pinned) && !Boolean(stored?.hidden), hidden: Boolean(stored?.hidden) };
+                return { search: entry.search, pinned: Boolean(stored?.pinned) && !stored?.hidden, hidden: Boolean(stored?.hidden) };
             });
             const validSearchOrderKeys = [
                 ...this.settings.customSpecialSearches.map((search) => `custom:${search.id}`),
@@ -667,7 +666,7 @@ export default class SeamPlugin extends Plugin {
         if (ribbon) {
             const shouldShow = this.settings.paletteRibbonMode === 'both'
                 || (this.settings.paletteRibbonMode === 'mobile' && Platform.isMobile);
-            ribbon.style.display = shouldShow ? '' : 'none';
+            ribbon.toggleClass('seam-ribbon-hidden', !shouldShow);
         }
     }
 }

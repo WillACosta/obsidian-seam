@@ -199,14 +199,12 @@ export class BaseResultNavigation {
             matcher.lastIndex = 0;
             if (!matcher.test(text)) continue;
             matcher.lastIndex = 0;
-            const fragment = ownerDocument.createDocumentFragment();
+            const fragment = createFragment();
             let lastIndex = 0;
             for (const match of text.matchAll(matcher)) {
                 const index = match.index ?? 0;
                 if (index > lastIndex) fragment.appendText(text.slice(lastIndex, index));
-                const highlight = ownerDocument.createElement('span');
-                highlight.addClass('seam-palette-base-highlight');
-                highlight.setText(match[0]);
+                const highlight = createSpan({ cls: 'seam-palette-base-highlight', text: match[0] });
                 fragment.appendChild(highlight);
                 lastIndex = index + match[0].length;
             }

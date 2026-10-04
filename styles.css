@@ -1,5 +1,9 @@
 /* Seam — Universal Palette styles */
 
+.seam-ribbon-hidden {
+    display: none;
+}
+
 .seam-palette-title-row {
     display: flex;
     align-items: center;
@@ -144,7 +148,11 @@
 }
 .seam-palette-base-hide-toolbar .bases-toolbar,
 .seam-palette-base-hide-toolbar .bases-header {
-    display: none !important;
+    display: none;
+}
+
+.seam-palette-base-embed .bases-toolbar .bases-toolbar-item.seam-palette-base-toolbar-control-hidden {
+    display: none;
 }
 
 .seam-palette-base-navigation .seam-palette-base-result-active {
@@ -153,7 +161,7 @@
 }
 
 .seam-palette-base-navigation .seam-palette-base-result-filtered {
-    display: none !important;
+    display: none;
 }
 
 .seam-palette-base-no-results {
@@ -228,45 +236,49 @@
     margin-left: 6px;
 }
 
-.prompt.seam-palette-special-search-active .prompt-input,
-.prompt.seam-palette-directory-search-active .prompt-input {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
+.prompt.seam-palette-special-search-active .seam-palette-input-container .prompt-input,
+.prompt.seam-palette-directory-search-active .seam-palette-input-container .prompt-input {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     caret-color: var(--text-normal);
-    opacity: 1 !important;
-    visibility: visible !important;
-    filter: none !important;
+    opacity: 1;
+    visibility: visible;
+    filter: none;
 }
 
-.prompt.seam-palette-special-search-active .prompt-input:hover,
-.prompt.seam-palette-directory-search-active .prompt-input:hover {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
-    background: transparent !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    filter: none !important;
+.prompt.seam-palette-special-search-active .seam-palette-input-container .prompt-input:hover,
+.prompt.seam-palette-directory-search-active .seam-palette-input-container .prompt-input:hover {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background: transparent;
+    opacity: 1;
+    visibility: visible;
+    filter: none;
 }
 
-.prompt.seam-palette-special-search-active .seam-palette-query-input-mirror,
-.prompt.seam-palette-directory-search-active .seam-palette-query-input-mirror {
-    opacity: 1 !important;
-    visibility: visible !important;
+.prompt.seam-palette-special-search-active .seam-palette-input-container .seam-palette-query-input-mirror,
+.prompt.seam-palette-directory-search-active .seam-palette-input-container .seam-palette-query-input-mirror {
+    opacity: 1;
+    visibility: visible;
 }
 
-.prompt .modal-close-button,
-.prompt .prompt-close-button,
-.prompt .modal-close-button:hover,
-.prompt .prompt-close-button:hover {
-    opacity: 1 !important;
-    visibility: visible !important;
+.prompt.seam-palette-special-search-active .modal-close-button,
+.prompt.seam-palette-directory-search-active .modal-close-button,
+.prompt.seam-palette-special-search-active .prompt-close-button,
+.prompt.seam-palette-directory-search-active .prompt-close-button,
+.prompt.seam-palette-special-search-active .modal-close-button:hover,
+.prompt.seam-palette-directory-search-active .modal-close-button:hover,
+.prompt.seam-palette-special-search-active .prompt-close-button:hover,
+.prompt.seam-palette-directory-search-active .prompt-close-button:hover {
+    opacity: 1;
+    visibility: visible;
 }
 
 .prompt .prompt-input-container.seam-palette-input-container .search-input-clear-button,
 .prompt .prompt-input-container.seam-palette-input-container .search-input-clear-button:hover {
-    color: var(--text-muted) !important;
-    opacity: 1 !important;
-    visibility: visible !important;
+    color: var(--text-muted);
+    opacity: 1;
+    visibility: visible;
 }
 
 .seam-palette-query-input-token {
@@ -818,7 +830,7 @@
 }
 
 /* Give native virtualized Bases a measurable viewport on mobile. */
-body.is-mobile .prompt:has(.seam-palette-base-embed) .prompt-results {
+body.is-mobile .prompt.seam-palette-has-base-embed .prompt-results {
     display: flex;
     flex: 1 1 auto;
     min-height: 0;
@@ -847,8 +859,8 @@ body.is-mobile .seam-palette-base-embed > p {
 }
 
 /* Continuous PDF pages in source notes, scoped by their frontmatter class. */
-.seam-source-pdf .pdf-embed .pdfViewer .page {
-    margin: 0 auto !important;
-    border: 0 !important;
-    box-shadow: none !important;
+body .seam-source-pdf .pdf-embed .pdfViewer .page {
+    margin: 0 auto;
+    border: 0;
+    box-shadow: none;
 }

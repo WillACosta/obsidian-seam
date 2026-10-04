@@ -351,7 +351,7 @@ export class SeamSettingsTab extends PluginSettingTab {
 
     private renderPaletteRibbonSetting(setting: Setting): void {
         setting.setDesc(t().settingsPaletteRibbonDesc);
-        setting.descEl.createEl('div', {
+        setting.descEl.createDiv({
             cls: 'setting-item-description seam-setting-reload-hint',
             text: t().settingsPaletteRibbonReloadHint,
         });
