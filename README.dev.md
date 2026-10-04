@@ -76,13 +76,12 @@ pnpm run changelog:generate 1.1.0 --from 6 --to 8 --update
 
 ## 4. Releasing a New Version (GitHub Actions)
 
-Releases are fully automated via the [Release Pipeline](.github/workflows/release.yml). Do not build or package release assets manually.
+Releases are automated by the [merged version PR workflow](.github/workflows/tag-version-pr.yml) and the [Release Pipeline](.github/workflows/release.yml). Do not build or package release assets manually.
 
 > **Version branch naming rule:** Create each new version branch as `feat/<major>.<minor>.<patch>`, for example `feat/3.0.0`.
-
 > **Release naming rule:** Seam release versions and Git tags must use plain semantic versions without a leading `v`, such as `3.0.0` (never `v3.0.0`). The GitHub release name must match the same unprefixed version. The plugin display name in `manifest.json` remains `Seam`.
 
-### Recommended Release Steps
+### Prepare the Version PR
 
 1. **Bump the version**:
    Update `"version"` in:
@@ -95,19 +94,13 @@ Releases are fully automated via the [Release Pipeline](.github/workflows/releas
    pnpm run changelog:generate <new-version> --update
    ```
 
-3. **Commit and Tag**:
-   ```bash
-   git commit -am "chore: release <new-version>"
-   git tag <new-version>
-   git push origin main --tags
-   ```
+3. **Open a PR** from `feat/<new-version>` into `main` with the version files and changelog committed. Merge it after review. Do not create the release tag manually.
 
 ### What GitHub Actions Does Automatically
-Once the tag is pushed (or triggered via GitHub's **Run workflow** button):
-1. Runs `pnpm test` and `pnpm build`.
-2. Validates version consistency across `manifest.json`, `package.json`, `versions.json`, and `CHANGELOG.md`.
-3. Extracts the exact release notes for that version from `CHANGELOG.md`.
-4. Creates the GitHub Release and attaches `main.js`, `manifest.json`, and `styles.css`.
+After a `feat/x.y.z` PR is merged into `main`, the merged version PR workflow:
+1. Verifies the branch name, merged commit, release files, typecheck, lint, tests, and build.
+2. Creates and pushes the unprefixed version tag on the merged commit.
+3. Starts the Release Pipeline for that tag. The Release Pipeline validates the version again, extracts release notes, and publishes the GitHub Release with `main.js`, `manifest.json`, and `styles.css`.
 
 ### Changelog Content Rule
 
