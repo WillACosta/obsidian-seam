@@ -103,6 +103,17 @@ export function parseIterationDoc(content) {
             continue;
         }
 
+        // Stop collecting when the iteration document reaches another h3
+        // section such as "Tests" that is not a changelog category.
+        if (line.match(/^###\s+/)) {
+            if (currentCategory && currentBullet) {
+                categories[currentCategory].push(currentBullet);
+                currentBullet = null;
+            }
+            currentCategory = null;
+            continue;
+        }
+
         // Check if leaving section (e.g. ## or another heading)
         if (line.match(/^##\s+/) || line.match(/^#[^#]/)) {
             if (currentCategory && currentBullet) {
@@ -530,4 +541,3 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
             }
     }
 }
-

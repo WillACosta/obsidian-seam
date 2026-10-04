@@ -36,6 +36,24 @@ export class MockTFile extends MockTAbstractFile {
     }
 }
 
+export class MockTFolder extends MockTAbstractFile {}
+
+function mockMoment() {
+    const date = new Date();
+    return {
+        subtract(amount: number, unit: string) {
+            if (unit === 'day' || unit === 'days') date.setDate(date.getDate() - amount);
+            return this;
+        },
+        format(pattern: string) {
+            const year = String(date.getFullYear());
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return pattern.replace(/YYYY/g, year).replace(/MM/g, month).replace(/DD/g, day);
+        },
+    };
+}
+
 require.cache['obsidian'] = {
     id: 'obsidian',
     filename: 'obsidian',
@@ -48,6 +66,12 @@ require.cache['obsidian'] = {
         },
         TAbstractFile: MockTAbstractFile,
         TFile: MockTFile,
+        TFolder: MockTFolder,
+        // JSON is a valid YAML subset; real YAML rendering is checked in Obsidian.
+        parseYaml: JSON.parse,
+        stringifyYaml: (value: unknown) => JSON.stringify(value, null, 2),
+        moment: mockMoment,
+        normalizePath: (path: string) => path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\.\//, ''),
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;

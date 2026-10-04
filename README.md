@@ -6,7 +6,7 @@
 
 Seam is a lightweight Obsidian plugin that organizes notes through tags. Inspired by the [Zettelkasten](https://zettelkasten.de/introduction/) method and apps like Apple Notes and Bear, it uses a simple workflow built around `Fleeting`, `Permanent`, and `Archive`. Add `#permanent` or `#archive` to move a note, and use the Universal Palette to search your vault. Spend less time managing files and more time writing.
 
-!["Obsidian Seam Showcase"](docs/images/seam_showcase.gif)
+!["Seam Showcase"](docs/images/seam_showcase.gif)
 
 ## Why Seam?
 
@@ -17,6 +17,7 @@ Seam keeps organization simple and stays out of your way:
 | ❌ Move files between folders by hand | ✅ Add `#permanent` to file a note automatically |
 | ❌ Leave completed notes mixed with active work | ✅ Add `#archive` to move them out of the way |
 | ❌ Switch between different search tools | ✅ Search notes, content, tags, and commands in one palette |
+| ❌ Use separate tools for search, quick capture, and source notes | ✅ Explore Special Search, create notes with Quick Capture, and keep Source notes linked from the same workflow |
 | ❌ Maintain a deep folder hierarchy | ✅ Use a simple workflow guided by tags |
 | ❌ Depend on desktop-only features | ✅ Use Seam on desktop and mobile |
 
@@ -60,7 +61,7 @@ Open the **Universal Palette**:
 - **Combine filters**: Add multiple tag chips and remove them with `Backspace` or `×`.
 - **Open in a new tab**: Press `Cmd + Enter` on macOS or `Ctrl + Enter` on Windows and Linux.
 
-!["Tag searching"](./docs/images/tag_search.png)
+!["Combined search"](./docs/images/combined_search.png)
 
 ## Key Features
 
@@ -77,6 +78,15 @@ Search and act from one place:
 - Create a fleeting note when no result matches.
 - Type `>` to run Seam commands.
 
+### Custom Search
+
+Keep your favorite searches one step away. Create shortcuts for projects, reading lists, or any collection of notes, and pin them in the Universal Palette. Choose how each query finds notes:
+
+- **Seam search system**: Combine tags, directory filters, and text search in a reusable query.
+- **Bases**: Use a Base and its views to explore results as tables or cards in the Universal Palette.
+
+!["Custom queries"](./docs/images/custom_queries.png)
+
 ### Automatic Cleanup on Move
 
 Choose which temporary tags and note properties Seam removes after a successful move. For example, you can clear `#todo`, `#review`, or a `status` property.
@@ -84,6 +94,14 @@ Choose which temporary tags and note properties Seam removes after a successful 
 ### Fleeting Note Templates
 
 Choose a template note, such as `Templates/Fleeting Note`. New notes created from the palette will start with its content and properties.
+
+### Source Notes
+
+Bring handwritten notes, documents, and images into your workflow. Export them to `Sources/`, and Seam creates a note linked to the original.
+
+Find your sources with `@sources` in the Universal Palette and read PDFs with continuous pages.
+
+!["Sources ingestion"](./docs/images/sources.png)
 
 ### First-Class Mobile Support
 
@@ -93,15 +111,7 @@ Seam uses Obsidian's public APIs and no desktop-only code. It works on desktop, 
 
 !["Seam settings"](./docs/images/settings.png)
 
-Customize Seam under **Settings → Community Plugins → Seam**:
-
-- **Folders**: Set your preferred paths for `Fleeting/`, `Permanent/`, and `Archive/` folders.
-- **Fleeting template**: Choose a template for notes created from the palette.
-- **Automation**: Turn automatic processing on or off and choose when it runs.
-- **Archive behavior**: Choose whether archived notes receive the `#archived` tag.
-- **Move cleanup**: Choose which temporary tags and properties to remove after a move.
-- **Universal Palette**: Assign a keyboard shortcut and show or hide icons.
-- **Advanced**: Set how often Seam checks for notes it may have missed.
+Customize Seam under **Settings → Community Plugins → Seam**.
 
 ## Installation
 
@@ -119,17 +129,18 @@ Customize Seam under **Settings → Community Plugins → Seam**:
 3. Copy the downloaded files into that folder.
 4. Reload Obsidian and enable **Seam** under **Settings → Community plugins**.
 
-## Keyboard Shortcuts & Commands
+## Seam Filtering Syntax
 
-| Command | Shortcut / Action | Description |
+Use these tokens in the Universal Palette to narrow a search or switch modes:
+
+| Token | What it does | Example |
 |:---|:---|:---|
-| **Open Universal Palette** | Assigned shortcut or command palette | Search notes, tags, content, and commands |
-| **Open in new tab** | `Cmd + Enter` / `Ctrl + Enter` | Open the selected note in a new tab |
-| **Filter by tag** | `#<tag>` | Filter notes with interactive tag chips |
-| **Command mode** | `>` | Browse and run Seam commands |
-| **Archive current note** | Command palette | Archive the open Markdown note |
-| **Move to Permanent** | Command palette | Move the open Markdown note to `Permanent/` |
-| **Archive all notes** | Command palette | Process every note tagged with `#archive` |
+| `#tag` | Filter notes by tag. | `#reading` |
+| `!#tag` or `-#tag` | Exclude notes with a tag. | `!#archived` |
+| `/` | Filter notes by directory. Put paths with spaces in quotes. | `/Fleeting` · `/"Project Archive"` |
+| `@` | Run a built-in or custom Special Search. | `@today` · `@sources` · `@books` |
+| `OR` or `||` | Match either side of a search. | `#reading OR #research` |
+| `>` | Browse and run Seam commands. | `>archive` |
 
 ## Languages
 
@@ -138,7 +149,7 @@ Seam follows Obsidian's language setting. It currently supports:
 - **English (US)**
 - **Portuguese (BR)**
 
-Other languages use English by default.
+Other languages use English by defaultCombined search.
 
 ### Contributing Translations
 

@@ -2,12 +2,16 @@ import { TFile } from 'obsidian';
 
 export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000';
 export type UpdateAnnouncementMode = 'major' | 'all' | 'never';
+export type PaletteRibbonMode = 'both' | 'mobile' | 'hidden';
 
 export interface SeamSettings {
     permanentFolder: string;
     archiveFolder: string;
     fleetingFolder: string;
     fleetingNoteTemplate: string;
+    sourcesFolder: string;
+    sourceNoteTemplate: string;
+    sourceAutomation: boolean;
     archiveTag: string;
     permanentTag: string;
     archivedTag: string;
@@ -18,11 +22,25 @@ export interface SeamSettings {
     moveCleanupTags: string;
     moveCleanupProperties: string;
     showIcons: boolean;
+    showFileExtensionAndMatchCount: boolean;
+    showCommandsByDefault: boolean;
     quickAddChoices: QuickAddChoice[];
     persistQuickAddDrafts: boolean;
     reconciliationIntervalMinutes: number;
     updateAnnouncementMode: UpdateAnnouncementMode;
     lastAnnouncedVersion: string;
+    customSpecialSearches: CustomSpecialSearch[];
+    showSpecialSearchDescriptions: boolean;
+    specialSearchPreferences: SpecialSearchPreference[];
+    specialSearchOrder: string[];
+    showTodoCompletionPercent: boolean;
+    paletteRibbonMode: PaletteRibbonMode;
+}
+
+export interface SpecialSearchPreference {
+    search: SpecialSearch;
+    pinned: boolean;
+    hidden: boolean;
 }
 
 export type QuickAddLocation = 'default' | 'specific';
@@ -42,11 +60,27 @@ export interface QuickAddChoice {
     conflictBehavior: QuickAddConflictBehavior;
 }
 
+export interface CustomSpecialSearch {
+    id: string;
+    identifier: string;
+    icon: string;
+    mode: 'base' | 'tags';
+    basePath: string;
+    baseView: string;
+    expandModal?: boolean;
+    filterQuery: string;
+    pinned: boolean;
+    hidden: boolean;
+}
+
 export const DEFAULT_SETTINGS: SeamSettings = {
     permanentFolder: 'Permanent',
     archiveFolder: 'Archive',
     fleetingFolder: 'Fleeting',
     fleetingNoteTemplate: '',
+    sourcesFolder: 'Sources',
+    sourceNoteTemplate: '',
+    sourceAutomation: true,
     archiveTag: 'archive',
     permanentTag: 'permanent',
     archivedTag: 'archived',
@@ -57,11 +91,37 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     moveCleanupTags: '#permanent, #todo',
     moveCleanupProperties: 'status',
     showIcons: true,
+    showFileExtensionAndMatchCount: true,
+    showCommandsByDefault: true,
     quickAddChoices: [],
     persistQuickAddDrafts: false,
     reconciliationIntervalMinutes: 15,
     updateAnnouncementMode: 'major',
     lastAnnouncedVersion: '',
+    customSpecialSearches: [],
+    showSpecialSearchDescriptions: true,
+    specialSearchPreferences: [
+        { search: 'today', pinned: false, hidden: false },
+        { search: 'yesterday', pinned: false, hidden: false },
+        { search: 'recent', pinned: false, hidden: false },
+        { search: 'lastDays', pinned: false, hidden: false },
+        { search: 'untagged', pinned: false, hidden: false },
+        { search: 'docs', pinned: false, hidden: false },
+        { search: 'images', pinned: false, hidden: false },
+        { search: 'task', pinned: false, hidden: false },
+        { search: 'todo', pinned: false, hidden: false },
+        { search: 'done', pinned: false, hidden: false },
+        { search: 'code', pinned: false, hidden: false },
+        { search: 'sources', pinned: false, hidden: false },
+    ],
+    specialSearchOrder: [
+        'builtin:today', 'builtin:yesterday',
+        'builtin:recent', 'builtin:lastDays',
+        'builtin:untagged', 'builtin:docs', 'builtin:images',
+        'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code', 'builtin:sources',
+    ],
+    showTodoCompletionPercent: true,
+    paletteRibbonMode: 'both',
 };
 
 export type AutomationResultStatus = 'success' | 'conflict' | 'error' | 'skipped';
@@ -81,6 +141,8 @@ export interface SearchResult {
     tags: string[];
     snippet?: string;
     matchSnippet?: MatchSnippet;
+    matchCount?: number;
+    searchTerms?: string[];
 }
 
 export interface MatchSnippet {
@@ -89,9 +151,38 @@ export interface MatchSnippet {
     matchEnd: number;
 }
 
-export type QueryTokenType = 'tag' | 'negativeTag' | 'or' | 'text';
+export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text';
 
-export type SpecialSearch = 'untagged' | 'docs' | 'images' | 'ocr' | 'task' | 'todo' | 'done' | 'code';
+export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources';
+export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
+    today: 'calendar-days',
+    yesterday: 'history',
+    recent: 'clock-3',
+    lastDays: 'calendar-days',
+    untagged: 'tag',
+    docs: 'file-text',
+    images: 'image',
+    task: 'list-checks',
+    todo: 'square-check-big',
+    done: 'list-checks',
+    code: 'code',
+    sources: 'files',
+};
+
+export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
+    today: '@today',
+    yesterday: '@yesterday',
+    recent: '@recent',
+    lastDays: '@lastXdays',
+    untagged: '@untagged',
+    docs: '@docs',
+    images: '@images',
+    task: '@task',
+    todo: '@todo',
+    done: '@done',
+    code: '@code',
+    sources: '@sources',
+};
 
 export interface QueryToken {
     type: QueryTokenType;
@@ -128,12 +219,21 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special';
+    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory';
     icon?: string;
     file?: TFile;
     tags?: string[];
     matchSnippet?: MatchSnippet;
+    matchCount?: number;
+    searchTerms?: string[];
+    taskCompletionPercent?: number;
     tagMode?: 'include' | 'exclude';
     specialSearch?: SpecialSearch;
+    specialSearchInput?: string;
+    customSearchId?: string;
+    basePath?: string;
+    baseView?: string;
+    baseContent?: string;
+    baseSearchText?: string;
     action?: () => void | Promise<void>;
 }

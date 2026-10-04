@@ -1,6 +1,6 @@
 {
   "name": "obsidian-seam",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "Tag-driven note organization with automatic archiving and a Universal Palette.",
   "license": "GPL-3.0-or-later",
   "packageManager": "pnpm@11.24.0",
@@ -14,7 +14,8 @@
     "changelog:extract": "node scripts/changelog.mjs extract",
     "changelog:generate": "node scripts/changelog.mjs generate",
     "changelog:validate": "node scripts/changelog.mjs validate",
-    "release:check": "node scripts/changelog.mjs validate"
+    "release:check": "node scripts/changelog.mjs validate",
+    "install:local": "pnpm build && pnpm symlink && obsidian vault='seam_test_vault' plugin:reload id=seam"
   },
   "devDependencies": {
     "@types/node": "^16.11.6",

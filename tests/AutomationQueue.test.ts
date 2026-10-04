@@ -34,6 +34,25 @@ function createMockApp(activePath: string | null = null, files: Record<string, M
 }
 
 describe('AutomationQueue', () => {
+    it('processes an imported attachment without an active file or a navigation event', async () => {
+        const processed: string[] = [];
+        const attachment = new MockTFile('Sources/Import.pdf');
+        const { app } = createMockApp(null, { [attachment.path]: attachment });
+        const queue = new AutomationQueue(app, async (file) => {
+            processed.push(file.path);
+        }, 'on-switch');
+
+        try {
+            queue.enqueue(attachment as unknown as TFile);
+            assert.equal(queue.isPending(attachment.path), true);
+            await new Promise(resolve => setTimeout(resolve, 2100));
+            assert.deepEqual(processed, [attachment.path]);
+            assert.equal(queue.isPending(attachment.path), false);
+        } finally {
+            queue.destroy();
+        }
+    });
+
     it('holds processing while note is active in on-switch mode', async () => {
         const processed: string[] = [];
         const { app, setActiveFile } = createMockApp('Notes/Idea.md');

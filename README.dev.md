@@ -79,7 +79,6 @@ pnpm run changelog:generate 1.1.0 --from 6 --to 8 --update
 Releases are automated by the [merged version PR workflow](.github/workflows/tag-version-pr.yml) and the [Release Pipeline](.github/workflows/release.yml). Do not build or package release assets manually.
 
 > **Version branch naming rule:** Create each new version branch as `feat/<major>.<minor>.<patch>`, for example `feat/3.0.0`.
-
 > **Release naming rule:** Seam release versions and Git tags must use plain semantic versions without a leading `v`, such as `3.0.0` (never `v3.0.0`). The GitHub release name must match the same unprefixed version. The plugin display name in `manifest.json` remains `Seam`.
 
 ### Prepare the Version PR
@@ -102,3 +101,7 @@ After a `feat/x.y.z` PR is merged into `main`, the merged version PR workflow:
 1. Verifies the branch name, merged commit, release files, typecheck, lint, tests, and build.
 2. Creates and pushes the unprefixed version tag on the merged commit.
 3. Starts the Release Pipeline for that tag. The Release Pipeline validates the version again, extracts release notes, and publishes the GitHub Release with `main.js`, `manifest.json`, and `styles.css`.
+
+### Changelog Content Rule
+
+Changelog entries should focus on user-facing changes and fixes that affect plugin usage or have a significant impact. Do not expose routine development details or minor internal fixes in release notes.

@@ -6,7 +6,7 @@
 
 Seam é um plugin leve para Obsidian que organiza notas por meio de tags. Inspirado no método [Zettelkasten](https://zettelkasten.de/introduction/) e em aplicativos como Apple Notes e Bear, ele usa um fluxo simples entre `Fleeting`, `Permanent` e `Archive`. Adicione `#permanent` ou `#archive` para mover uma nota e use a Paleta Universal para pesquisar em seu cofre. Passe menos tempo gerenciando arquivos e mais tempo escrevendo.
 
-!["Apresentação do Obsidian Seam"](docs/images/seam_showcase.gif)
+!["Apresentação Seam"](docs/images/seam_showcase.gif)
 
 ## Por que o Seam?
 
@@ -17,6 +17,7 @@ O Seam simplifica a organização e não interrompe seu trabalho:
 | ❌ Mover arquivos manualmente entre pastas | ✅ Adicione `#permanent` para organizar uma nota |
 | ❌ Misturar notas concluídas com trabalhos ativos | ✅ Adicione `#archive` para tirá-las do caminho |
 | ❌ Alternar entre várias ferramentas de busca | ✅ Pesquise notas, conteúdo, tags e comandos em uma paleta |
+| ❌ Usar ferramentas diferentes para buscar e criar notas rápidas | ✅ Faça buscas especiais, crie notas com o Quick Capture e mantenha notas de documentos vinculadas ao original |
 | ❌ Manter uma estrutura complexa de pastas | ✅ Use um fluxo simples guiado por tags |
 | ❌ Depender de recursos exclusivos para desktop | ✅ Use o Seam no computador ou no celular |
 
@@ -24,7 +25,7 @@ O Seam simplifica a organização e não interrompe seu trabalho:
 
 ### 1. Capture sem Fricção (Notas Efêmeras / Fleeting)
 
-Abra a **Paleta Universal** pela paleta de comandos ou com o atalho que você escolher. Digite o título de uma nota e, se ela ainda não existir, pressione `Enter` para criá-la em `Fleeting/`. Você também pode usar um modelo com suas propriedades e seções preferidas.
+Abra a **Paleta Universal** pela paleta de comandos do Obsidian ou com o atalho que você escolher. Digite o título de uma nota e, se ela ainda não existir, pressione `Enter` para criá-la em `Fleeting/`. Você também pode usar um modelo com suas propriedades e seções preferidas.
 
 ```
 Paleta Universal → "Reunião com Equipe de Design" → [Criar nova nota]
@@ -60,7 +61,7 @@ Abra a **Paleta Universal**:
 - **Combine filtros**: Adicione vários chips de tags e remova-os com `Backspace` ou `×`.
 - **Abra em uma nova aba**: Pressione `Cmd + Enter` no macOS ou `Ctrl + Enter` no Windows e Linux.
 
-!["Busca por tags"](./docs/images/tag_search.png)
+!["Busca combinada"](./docs/images/combined_search.png)
 
 ## Principais Funcionalidades
 
@@ -77,6 +78,15 @@ Pesquise e execute ações em um só lugar:
 - Crie uma nota efêmera quando nenhum resultado corresponder à busca.
 - Digite `>` para executar comandos do Seam.
 
+### Buscas Personalizadas
+
+Deixe suas buscas favoritas sempre à mão. Crie atalhos para projetos, listas de leitura ou qualquer coleção de notas e fixe-os na Paleta Universal. Ao criar uma consulta, escolha como ela deve encontrar as notas:
+
+- **Sistema de busca do Seam**: Combine tags, filtros por pasta e busca por texto em uma consulta reutilizável.
+- **Bases**: Use uma Base e suas visualizações para explorar os resultados em tabelas ou cartões na Paleta Universal.
+
+!["Buscas personalizadas e Bases"](./docs/images/custom_queries.png)
+
 ### Limpeza Automática ao Mover
 
 Escolha quais tags temporárias e propriedades o Seam remove depois de mover uma nota. Por exemplo, você pode limpar `#todo`, `#review` ou a propriedade `status`.
@@ -84,6 +94,14 @@ Escolha quais tags temporárias e propriedades o Seam remove depois de mover uma
 ### Modelos para Notas Efêmeras
 
 Escolha uma nota modelo, como `Templates/Nota Efêmera`. Novas notas criadas pela paleta começarão com seu conteúdo e suas propriedades.
+
+### Notas de Fontes
+
+Traga anotações manuscritas, documentos e imagens para o seu fluxo de notas. Exporte os arquivos para `Sources/`, e o Seam cria uma nota vinculada ao original.
+
+Encontre suas fontes com `@sources` na Paleta Universal e leia PDFs com páginas contínuas.
+
+!["Nota de fonte com PDF"](./docs/images/sources.png)
 
 ### Compatibilidade Total com Dispositivos Móveis
 
@@ -93,15 +111,7 @@ O Seam usa as APIs públicas do Obsidian e não depende de código exclusivo par
 
 !["Configurações do Seam"](./docs/images/settings.png)
 
-Personalize o Seam em **Configurações → Plugins da comunidade → Seam**:
-
-- **Pastas**: Defina seus caminhos preferidos para as pastas `Fleeting/`, `Permanent/` e `Archive/`.
-- **Modelo de nota efêmera**: Escolha um modelo para notas criadas pela paleta.
-- **Automação**: Ative ou desative o processamento automático e escolha quando ele será executado.
-- **Arquivamento**: Escolha se notas arquivadas recebem a tag `#archived`.
-- **Limpeza ao mover**: Escolha quais tags temporárias e propriedades remover depois de mover uma nota.
-- **Paleta Universal**: Defina um atalho de teclado e exiba ou oculte os ícones.
-- **Avançado**: Defina com que frequência o Seam procura notas que possam ter sido ignoradas.
+Personalize o Seam em **Configurações → Plugins da comunidade → Seam**.
 
 ## Instalação
 
@@ -119,17 +129,18 @@ Personalize o Seam em **Configurações → Plugins da comunidade → Seam**:
 3. Copie os arquivos baixados para dentro dessa pasta.
 4. Recarregue o Obsidian e ative o **Seam** em **Configurações → Plugins da comunidade**.
 
-## Atalhos de Teclado e Comandos
+## Como filtrar no Seam
 
-| Comando | Atalho / Ação | Descrição |
+Use estes tokens na Paleta Universal para filtrar buscas ou acessar outros modos:
+
+| Token | O que faz | Exemplo |
 |:---|:---|:---|
-| **Abrir Paleta Universal** | Atalho definido ou paleta de comandos | Pesquise notas, tags, conteúdo e comandos |
-| **Abrir em nova aba** | `Cmd + Enter` / `Ctrl + Enter` | Abra a nota selecionada em uma nova aba |
-| **Filtrar por tag** | `#<tag>` | Filtre notas com chips de tags interativos |
-| **Modo de comandos** | `>` | Navegue e execute comandos do Seam |
-| **Arquivar nota atual** | Paleta de comandos | Arquive a nota Markdown aberta |
-| **Mover para Permanente** | Paleta de comandos | Mova a nota aberta para `Permanent/` |
-| **Arquivar todas as notas** | Paleta de comandos | Processe todas as notas marcadas com `#archive` |
+| `#tag` | Filtra notas por tag. | `#leitura` |
+| `!#tag` ou `-#tag` | Exclui notas com uma tag. | `!#arquivado` |
+| `/` | Filtra notas por pasta. Coloque entre aspas os caminhos com espaços. | `/Fleeting` · `/"Arquivo de Projetos"` |
+| `@` | Executa uma busca especial integrada ou personalizada. | `@today` · `@sources` · `@livros` |
+| `OR` ou `||` | Busca por um termo ou pelo outro. | `#leitura OR #pesquisa` |
+| `>` | Mostra e executa comandos do Seam. | `>archive` |
 
 ## Idiomas
 
@@ -157,6 +168,10 @@ O Seam é gratuito e de código aberto. Se ele economiza seu tempo, considere ap
 **Pix**<br>
 
 !["QRCode PIX"](./docs/images/qrcode.svg)
+
+## Desenvolvimento
+
+Para instruções de desenvolvimento, diretrizes de desenvolvimento orientado por especificações (SDD) e procedimentos de release, consulte o [README.dev.md](README.dev.md).
 
 ## Licença
 

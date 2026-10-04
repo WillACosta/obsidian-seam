@@ -31,11 +31,16 @@ describe('Settings & Defaults', () => {
         assert.equal(DEFAULT_SETTINGS.moveCleanupTags, '#permanent, #todo');
         assert.equal(DEFAULT_SETTINGS.moveCleanupProperties, 'status');
         assert.equal(DEFAULT_SETTINGS.showIcons, true);
+        assert.equal(DEFAULT_SETTINGS.showFileExtensionAndMatchCount, true);
+        assert.equal(DEFAULT_SETTINGS.showCommandsByDefault, true);
         assert.deepEqual(DEFAULT_SETTINGS.quickAddChoices, []);
         assert.equal(DEFAULT_SETTINGS.persistQuickAddDrafts, false);
         assert.equal(DEFAULT_SETTINGS.reconciliationIntervalMinutes, 15);
         assert.equal(DEFAULT_SETTINGS.updateAnnouncementMode, 'major');
         assert.equal(DEFAULT_SETTINGS.lastAnnouncedVersion, '');
+        assert.equal(DEFAULT_SETTINGS.specialSearchPreferences.some((item) => item.search === 'today'), true);
+        assert.equal(DEFAULT_SETTINGS.specialSearchPreferences.some((item) => item.search === 'yesterday'), true);
+        assert.equal(DEFAULT_SETTINGS.showTodoCompletionPercent, true);
     });
 });
 
@@ -209,6 +214,14 @@ describe('Special Search Filters', () => {
         assert.equal(matchesSpecialSearch(tagged.app, tagged.file as never, 'untagged'), false);
     });
 
+    it('matches notes modified within a requested number of days', () => {
+        const { app } = makeApp({});
+        const recentFile = { path: 'Notes/recent.md', basename: 'recent', stat: { mtime: Date.now() - 86_400_000 } };
+        const oldFile = { path: 'Notes/old.md', basename: 'old', stat: { mtime: Date.now() - 10 * 86_400_000 } };
+        assert.equal(matchesSpecialSearch(app, recentFile as never, 'lastDays', 2), true);
+        assert.equal(matchesSpecialSearch(app, oldFile as never, 'lastDays', 2), false);
+    });
+
     it('matches document and image attachments', () => {
         const { app, file } = makeApp({
             links: [{ link: 'Attachments/report.pdf', original: '[report](Attachments/report.pdf)' }],
@@ -216,7 +229,6 @@ describe('Special Search Filters', () => {
         });
         assert.equal(matchesSpecialSearch(app, file as never, 'docs'), true);
         assert.equal(matchesSpecialSearch(app, file as never, 'images'), true);
-        assert.equal(matchesSpecialSearch(app, file as never, 'ocr'), true);
     });
 
     it('matches task, todo, done, and code metadata', () => {
@@ -236,7 +248,7 @@ describe('Special Search Filters', () => {
     });
 
     it('searches an exact quoted phrase in note content', async () => {
-        const file = { path: 'Notes/kicad.md', basename: 'kicad' };
+        const file = new MockTFile('Notes/kicad.md');
         const app = {
             vault: {
                 getMarkdownFiles: () => [file],
@@ -251,27 +263,50 @@ describe('Special Search Filters', () => {
         assert.deepEqual(results.map((result) => result.file.path), ['Notes/kicad.md']);
     });
 
-    it('searches @ocr text in attachment content without searching the note body', async () => {
-        const note = new MockTFile('Notes/reference.md');
-        const attachment = new MockTFile('Attachments/reference.txt');
+
+    it('filters a saved tag query by live title or note content', async () => {
+        const pcb = new MockTFile('Notes/PCB Design.md');
+        const keyboard = new MockTFile('Notes/Keyboard Design.md');
         const app = {
             vault: {
-                getMarkdownFiles: () => [note],
-                cachedRead: async (file: MockTFile) => file.path === attachment.path
-                    ? 'text extracted from the attachment'
-                    : 'text in the note body',
+                getMarkdownFiles: () => [pcb, keyboard],
+                cachedRead: async (file: MockTFile) => file.path === keyboard.path
+                    ? 'Includes a PCB assembly checklist.'
+                    : 'Board layout notes.',
             },
             metadataCache: {
-                getFileCache: () => ({ embeds: [{ link: attachment.path }] }),
-                getFirstLinkpathDest: () => attachment,
+                getFileCache: () => ({ tags: [{ tag: '#electronics' }] }),
             },
         } as never;
         const service = new SearchService(app, DEFAULT_SETTINGS);
 
-        const attachmentResults = await service.searchWithContent('@ocr "text extracted"');
-        const noteResults = await service.searchWithContent('@ocr "text in the note body"');
-        assert.deepEqual(attachmentResults.map((result) => result.file.path), ['Notes/reference.md']);
-        assert.deepEqual(noteResults, []);
+        const titleResults = await service.searchFilteredWithContent('#electronics', 'PCB');
+        assert.deepEqual(titleResults.map((result) => result.file.path), [pcb.path, keyboard.path]);
+        const noResults = await service.searchFilteredWithContent('#electronics', 'book');
+        assert.deepEqual(noResults, []);
+    });
+
+    it('finds today and yesterday using the Daily Notes default format', async () => {
+        const formatDate = (offset: number): string => {
+            const date = new Date();
+            date.setDate(date.getDate() - offset);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        };
+        const today = new MockTFile(`${formatDate(0)}.md`);
+        const yesterday = new MockTFile(`${formatDate(1)}.md`);
+        const app = {
+            vault: {
+                configDir: '.obsidian',
+                adapter: { exists: async () => false, read: async () => '' },
+                getMarkdownFiles: () => [today, yesterday],
+                cachedRead: async () => 'Daily planning',
+            },
+            metadataCache: { getFileCache: () => ({}) },
+        } as never;
+        const service = new SearchService(app, DEFAULT_SETTINGS);
+
+        assert.deepEqual((await service.searchWithContent('@today')).map((result) => result.file.path), [today.path]);
+        assert.deepEqual((await service.searchWithContent('@yesterday')).map((result) => result.file.path), [yesterday.path]);
     });
 });
 

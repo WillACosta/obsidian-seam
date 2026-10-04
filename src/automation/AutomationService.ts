@@ -2,7 +2,9 @@ import { App, TFile } from 'obsidian';
 import { SeamSettings, AutomationResult, AutomationStatus, AutomationError } from '../types';
 import { ArchiveAction, hasTag } from './actions/ArchiveAction';
 import { PermanentAction } from './actions/PermanentAction';
+import { FleetingAction } from './actions/FleetingAction';
 import { t } from '../i18n';
+import { SourceIngestion } from './SourceIngestion';
 
 /**
  * Single authoritative automation service.
@@ -10,8 +12,10 @@ import { t } from '../i18n';
  * must route through this service.
  */
 export class AutomationService {
+    private sources: SourceIngestion;
     private archiveAction: ArchiveAction;
     private permanentAction: PermanentAction;
+    private fleetingAction: FleetingAction;
 
     private processedCount = 0;
     private failedCount = 0;
@@ -21,8 +25,10 @@ export class AutomationService {
         private app: App,
         private settings: SeamSettings,
     ) {
+        this.sources = new SourceIngestion(app, settings);
         this.archiveAction = new ArchiveAction();
         this.permanentAction = new PermanentAction();
+        this.fleetingAction = new FleetingAction();
     }
 
     /**
@@ -39,6 +45,12 @@ export class AutomationService {
                 action: 'none',
                 message: t().msgFileNoLongerExists,
             };
+        }
+
+        if (currentFile.extension !== 'md') {
+            const result = await this.sources.createCompanion(currentFile);
+            this.recordResult(currentFile.path, result);
+            return result;
         }
 
         const hasArchiveTag = hasTag(currentFile, this.app, this.settings.archiveTag);
@@ -152,7 +164,29 @@ export class AutomationService {
         return result;
     }
 
+    /** Directly move an open note to Fleeting and apply the configured move cleanup. */
+    async moveFileToFleeting(file: TFile): Promise<AutomationResult> {
+        const result = await this.fleetingAction.apply(file, this.app, this.settings);
+        this.recordResult(file.path, result);
+        return result;
+    }
+
+    isSourceAttachment(file: TFile): boolean { return this.sources.isSource(file); }
+
+    onSourceRename(file: TFile, oldPath: string): void { this.sources.onRename(file, oldPath); }
+
+    getSourceAttachments(): TFile[] { return this.sources.getAttachments(); }
+
+    async createSourceCompanion(file: TFile): Promise<AutomationResult> {
+        const result = await this.sources.createCompanion(file, true);
+        this.recordResult(file.path, result);
+        return result;
+    }
+
+    destroy(): void { this.sources.destroy(); }
+
     updateSettings(settings: SeamSettings): void {
         this.settings = settings;
+        this.sources.updateSettings(settings);
     }
 }

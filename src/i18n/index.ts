@@ -32,8 +32,6 @@ export function detectLocale(): Locale {
         const obsidian = require('obsidian');
         if (typeof obsidian.getLanguage === 'function') {
             lang = obsidian.getLanguage();
-        } else if (typeof window !== 'undefined' && window.localStorage) {
-            lang = window.localStorage.getItem('language') || 'en';
         } else {
             const globalWithMoment = globalThis as unknown as GlobalWithMoment;
             if (typeof globalWithMoment.moment?.locale === 'function') {
@@ -42,9 +40,8 @@ export function detectLocale(): Locale {
         }
     } catch {
         try {
-            if (typeof window !== 'undefined' && window.localStorage) {
-                lang = window.localStorage.getItem('language') || 'en';
-            }
+            const globalWithMoment = globalThis as unknown as GlobalWithMoment;
+            lang = globalWithMoment.moment?.locale?.() || 'en';
         } catch {
             lang = 'en';
         }

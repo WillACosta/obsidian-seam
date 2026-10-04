@@ -2,7 +2,13 @@ import { AbstractInputSuggest, App, setIcon, TAbstractFile, TFile, TFolder } fro
 
 /** Public-API vault path suggester for settings that must support Obsidian < 1.13. */
 export class VaultPathSuggest extends AbstractInputSuggest<TAbstractFile> {
-    constructor(app: App, inputEl: HTMLInputElement, private kind: 'file' | 'folder', private onPathSelect?: (path: string) => void) {
+    constructor(
+        app: App,
+        inputEl: HTMLInputElement,
+        private kind: 'file' | 'folder',
+        private onPathSelect?: (path: string) => void,
+        private fileFilter?: (file: TFile) => boolean,
+    ) {
         super(app, inputEl);
     }
 
@@ -10,6 +16,7 @@ export class VaultPathSuggest extends AbstractInputSuggest<TAbstractFile> {
         const normalizedQuery = query.toLowerCase();
         return this.app.vault.getAllLoadedFiles()
             .filter((item) => this.kind === 'file' ? item instanceof TFile : item instanceof TFolder)
+            .filter((item) => !(item instanceof TFile) || !this.fileFilter || this.fileFilter(item))
             .filter((item) => item.path.toLowerCase().includes(normalizedQuery))
             .slice(0, this.limit);
     }

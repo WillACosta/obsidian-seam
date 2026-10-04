@@ -134,6 +134,22 @@ describe('QueryParser', () => {
             search: 'docs',
             textQuery: 'project brief',
         });
+        assert.deepEqual(parseSpecialSearch('@recent Hyperion'), {
+            search: 'recent',
+            textQuery: 'Hyperion',
+        });
+        assert.deepEqual(parseSpecialSearch('@today'), { search: 'today', textQuery: '' });
+        assert.deepEqual(parseSpecialSearch('@yesterday planning'), {
+            search: 'yesterday',
+            textQuery: 'planning',
+        });
+        assert.deepEqual(parseSpecialSearch('@last20Days project'), {
+            search: 'lastDays',
+            textQuery: 'project',
+            days: 20,
+        });
+        assert.deepEqual(parseSpecialSearch('@last0Days'), { search: null, textQuery: '@last0Days' });
+        assert.deepEqual(parseSpecialSearch('@ocr'), { search: null, textQuery: '@ocr' });
         assert.deepEqual(parseSpecialSearch('@unknown'), { search: null, textQuery: '@unknown' });
     });
 });

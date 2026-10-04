@@ -6,6 +6,20 @@
     gap: 8px;
 }
 
+.seam-palette-pinned-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    color: var(--text-accent);
+    flex-shrink: 0;
+}
+
+.seam-palette-pinned-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
 .seam-palette-command-icon {
     display: inline-flex;
     align-items: center;
@@ -72,7 +86,8 @@
     max-width: 100%;
 }
 
-.seam-palette-highlight {
+.seam-palette-highlight,
+.seam-palette-base-highlight {
     background-color: var(--text-highlight-bg);
     color: var(--text-normal);
     border-radius: 2px;
@@ -81,6 +96,70 @@
 
 .seam-palette-tag-item .seam-palette-title {
     color: var(--text-accent);
+}
+
+.seam-palette-special-search .seam-palette-title,
+.seam-palette-special-search .seam-palette-command-icon {
+    color: var(--text-normal);
+}
+
+/* Custom special-search results and Base previews */
+.seam-palette-base-item {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.prompt.seam-palette-custom-search-expanded {
+    width: min(90vw, 1400px);
+    max-width: min(90vw, 1400px);
+}
+
+@media (max-width: 600px) {
+    .prompt.seam-palette-custom-search-expanded {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+    }
+}
+
+.suggestion-item.seam-palette-base-item:hover,
+.suggestion-item.seam-palette-base-item.is-selected {
+    background-color: transparent;
+}
+
+.seam-palette-base-embed {
+    width: 100%;
+    max-width: 100%;
+    max-height: 55vh;
+    overflow: auto;
+}
+
+.seam-palette-base-embed .bases-view {
+    width: 100%;
+    max-width: 100%;
+}
+
+.seam-palette-base-hide-toolbar .bases-view-toolbar {
+    display: none;
+}
+.seam-palette-base-hide-toolbar .bases-toolbar,
+.seam-palette-base-hide-toolbar .bases-header {
+    display: none !important;
+}
+
+.seam-palette-base-navigation .seam-palette-base-result-active {
+    background-color: var(--background-modifier-hover);
+    border-radius: var(--radius-m);
+}
+
+.seam-palette-base-navigation .seam-palette-base-result-filtered {
+    display: none !important;
+}
+
+.seam-palette-base-no-results {
+    padding: 20px 12px;
+    color: var(--text-muted);
+    text-align: center;
 }
 
 /* Palette input container with chips */
@@ -105,15 +184,93 @@
     display: none;
 }
 
-.prompt-input-container.seam-palette-input-container .prompt-input {
+.seam-palette-input-shell {
     flex: 1 1 140px;
     min-width: 80px;
-    width: auto;
+    height: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.seam-palette-query-input-token.is-hidden {
+    display: none;
+}
+
+.prompt-input-container.seam-palette-input-container .prompt-input {
+    width: 100%;
+    min-width: 0;
     border: none;
     outline: none;
     background: transparent;
     padding: 0;
     height: 32px;
+    position: relative;
+    z-index: 1;
+}
+
+.seam-palette-query-input-mirror {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    white-space: pre;
+    overflow: hidden;
+    pointer-events: none;
+    color: var(--text-normal);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-medium);
+    font-weight: 400;
+    line-height: normal;
+}
+
+.seam-palette-query-placeholder {
+    color: var(--text-muted);
+    margin-left: 6px;
+}
+
+.prompt.seam-palette-special-search-active .prompt-input,
+.prompt.seam-palette-directory-search-active .prompt-input {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    caret-color: var(--text-normal);
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+}
+
+.prompt.seam-palette-special-search-active .prompt-input:hover,
+.prompt.seam-palette-directory-search-active .prompt-input:hover {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+}
+
+.prompt.seam-palette-special-search-active .seam-palette-query-input-mirror,
+.prompt.seam-palette-directory-search-active .seam-palette-query-input-mirror {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.prompt .modal-close-button,
+.prompt .prompt-close-button,
+.prompt .modal-close-button:hover,
+.prompt .prompt-close-button:hover {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.prompt .prompt-input-container.seam-palette-input-container .search-input-clear-button,
+.prompt .prompt-input-container.seam-palette-input-container .search-input-clear-button:hover {
+    color: var(--text-muted) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.seam-palette-query-input-token {
+    color: var(--interactive-accent);
 }
 
 /* Tag Chip Styles */
@@ -186,6 +343,124 @@
     cursor: pointer;
 }
 
+.seam-custom-searches-setting,
+.seam-custom-searches-control {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+
+.seam-custom-searches-panel {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 8px 0 16px;
+    padding: 12px 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+}
+
+.seam-custom-searches-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.seam-custom-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 4px 0;
+}
+
+.seam-custom-search-label {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.seam-custom-search-name {
+    color: var(--text-normal);
+    font-weight: normal;
+}
+
+.seam-custom-search-hidden .seam-custom-search-name {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.seam-custom-search-badge {
+    color: var(--text-muted);
+    font-size: var(--font-smaller);
+}
+
+.seam-custom-search-actions {
+    display: flex;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.seam-custom-search-action {
+    cursor: pointer;
+}
+
+.seam-custom-search-action svg {
+    width: 14px;
+    height: 14px;
+}
+
+.seam-custom-search-action:hover {
+    color: var(--text-accent);
+}
+
+.seam-custom-search-modal .setting-item-control {
+    width: 100%;
+}
+
+.seam-custom-search-text-setting {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.seam-custom-search-text-setting .setting-item-info,
+.seam-custom-search-text-setting .setting-item-control,
+.seam-custom-search-text-setting input {
+    width: 100%;
+}
+
+.seam-custom-search-text-setting .setting-item-info {
+    flex: 0 0 auto;
+}
+
+.seam-custom-search-modal .setting-item-control > input[type='text'] {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.seam-custom-search-panel-header {
+    margin-bottom: 16px;
+}
+
+.seam-custom-search-choice.seam-custom-search-pinned {
+    border: 2px dotted var(--interactive-accent);
+}
+
+.seam-custom-search-icon-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 6px;
+    color: var(--text-accent);
+}
+
+.seam-custom-search-icon-preview svg {
+    width: 18px;
+    height: 18px;
+}
+
 .seam-note-conflict-actions kbd {
     min-width: 1.3em;
     padding: 1px 4px;
@@ -243,7 +518,20 @@
     opacity: 0.6;
 }
 
+/* The Quick Add choices renderer is a full-width custom settings item. */
+.seam-quick-add-choices-setting {
+    display: block;
+}
+
+.seam-quick-add-choices-control {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+
 .seam-quick-add-panel {
+    width: 100%;
+    box-sizing: border-box;
     margin: 8px 0 16px;
     padding: 16px;
     border: 1px solid var(--background-modifier-border);
@@ -252,6 +540,7 @@
 
 .seam-quick-add-panel-header {
     margin-bottom: 12px;
+    text-align: left;
 }
 
 .seam-quick-add-panel-title {
@@ -272,10 +561,22 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: 280px;
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
     overscroll-behavior: contain;
     padding-right: 2px;
+    text-align: left;
+}
+
+.seam-quick-add-choices.is-overflowing {
+    max-height: calc(5 * 42px);
+    overflow-y: auto;
+}
+
+.seam-custom-search-panel-footer .setting-item-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .seam-quick-add-choice {
@@ -430,8 +731,19 @@
     gap: 6px;
 }
 
+.seam-tag-filter-suggest-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.seam-update-modal {
+    width: min(960px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+}
+
 .seam-update-modal .modal-content {
-    max-height: min(78vh, 720px);
+    max-height: min(86vh, 820px);
     overflow-y: auto;
 }
 
@@ -448,6 +760,13 @@
 
 .seam-update-modal-support p {
     margin-top: 0;
+}
+
+.seam-update-modal-content img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
 }
 
 .seam-kofi-button {
@@ -470,4 +789,66 @@
     display: flex;
     justify-content: flex-end;
     padding-top: 14px;
+}
+.seam-palette-note-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.seam-palette-note-title-row > .seam-palette-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.seam-palette-task-completion {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+.seam-palette-result-metadata {
+    color: var(--text-muted);
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+/* Give native virtualized Bases a measurable viewport on mobile. */
+body.is-mobile .prompt:has(.seam-palette-base-embed) .prompt-results {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+body.is-mobile .seam-palette-base-item {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+}
+body.is-mobile .seam-palette-base-embed {
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    max-height: none;
+}
+body.is-mobile .seam-palette-base-embed > p,
+body.is-mobile .seam-palette-base-embed .internal-embed,
+body.is-mobile .seam-palette-base-embed .bases-view {
+    height: 100%;
+    min-height: 0;
+}
+body.is-mobile .seam-palette-base-embed > p {
+    margin: 0;
+}
+
+/* Continuous PDF pages in source notes, scoped by their frontmatter class. */
+.seam-source-pdf .pdf-embed .pdfViewer .page {
+    margin: 0 auto !important;
+    border: 0 !important;
+    box-shadow: none !important;
 }

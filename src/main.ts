@@ -1,8 +1,10 @@
-import { Notice, Plugin, TAbstractFile, TFile } from 'obsidian';
-import { DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
+import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian';
+import { isFileInFolder } from './utils/isFileInFolder';
+import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
 import { AutomationService } from './automation/AutomationService';
 import { hasTag } from './automation/actions/ArchiveAction';
+import { SourceAttachmentModal } from './ui/SourceAttachmentModal';
 import { Reconciler } from './automation/Reconciler';
 import { SearchService } from './search/SearchService';
 import { UniversalPalette } from './ui/UniversalPalette';
@@ -33,8 +35,9 @@ export default class SeamPlugin extends Plugin {
     private automationService!: AutomationService;
     private automationQueue!: AutomationQueue;
     private reconciler!: Reconciler;
-    private searchService!: SearchService;
+    searchService!: SearchService;
     private reconciliationIntervalId: number | null = null;
+    private paletteRibbonEl: HTMLElement | null = null;
 
     async onload(): Promise<void> {
         // 1. Load persisted settings
@@ -45,25 +48,40 @@ export default class SeamPlugin extends Plugin {
         this.automationQueue = new AutomationQueue(
             this.app,
             async (file: TFile) => {
-                if (!this.settings.automaticProcessing) return;
+                if (file.extension === 'md' && !this.settings.automaticProcessing) return;
                 await this.automationService.processFile(file);
             },
             this.settings.automationDelay,
         );
-        this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue);
+        this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue, this.automationService);
         this.searchService = new SearchService(this.app, this.settings);
 
+        this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().ribbonOpenSeam, () => this.openPalette());
+        this.refreshPaletteRibbon();
+
         // 3. Register commands
+        this.addCommand({
+            id: 'create-quick-note',
+            name: t().cmdCreateQuickNote,
+            callback: () => { void this.createQuickNote(); },
+        });
+
+        this.addCommand({
+            id: 'create-new-note',
+            name: t().cmdCreateNewNote,
+            callback: () => this.openQuickAdd(),
+        });
+
+        this.addCommand({
+            id: 'create-note-from-attachment',
+            name: t().cmdCreateNoteFromAttachment,
+            callback: () => new SourceAttachmentModal(this.app, this.automationService).open(),
+        });
+
         this.addCommand({
             id: 'open-palette',
             name: t().cmdOpenPalette,
             callback: () => this.openPalette(),
-        });
-
-        this.addCommand({
-            id: 'archive-all',
-            name: t().cmdArchiveAll,
-            callback: () => this.archiveAll(),
         });
 
         this.addCommand({
@@ -78,19 +96,13 @@ export default class SeamPlugin extends Plugin {
             callback: () => this.showStatus(),
         });
 
-        this.addCommand({
-            id: 'show-recent-files',
-            name: t().cmdShowRecentFiles,
-            callback: () => this.openRecentFiles(),
-        });
-
         // Commands that operate on the current open note
         this.addCommand({
             id: 'archive-current-note',
             name: t().cmdArchiveCurrentNote,
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
-                if (!file || file.extension !== 'md') return false;
+                if (!file || file.extension !== 'md' || isFileInFolder(file, this.settings.archiveFolder)) return false;
                 if (checking) return true;
                 void this.archiveCurrentNote(file);
                 return true;
@@ -102,9 +114,21 @@ export default class SeamPlugin extends Plugin {
             name: t().cmdMoveToPermanent,
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
-                if (!file || file.extension !== 'md') return false;
+                if (!file || file.extension !== 'md' || isFileInFolder(file, this.settings.permanentFolder)) return false;
                 if (checking) return true;
                 void this.moveCurrentNoteToPermanent(file);
+                return true;
+            },
+        });
+
+        this.addCommand({
+            id: 'move-to-fleeting',
+            name: t().cmdMoveToFleeting,
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md' || isFileInFolder(file, this.settings.fleetingFolder)) return false;
+                if (checking) return true;
+                void this.moveCurrentNoteToFleeting(file);
                 return true;
             },
         });
@@ -124,6 +148,7 @@ export default class SeamPlugin extends Plugin {
             this.reconciliationIntervalId = null;
         }
         this.automationQueue.destroy();
+        this.automationService.destroy();
     }
 
     /**
@@ -135,7 +160,7 @@ export default class SeamPlugin extends Plugin {
         // Register vault event handlers
         this.registerEvent(
             this.app.vault.on('create', (file: TAbstractFile) => {
-                if (file instanceof TFile && file.extension === 'md') {
+                if (file instanceof TFile && (file.extension === 'md' || this.automationService.isSourceAttachment(file))) {
                     this.automationQueue.enqueue(file);
                 }
             }),
@@ -143,15 +168,16 @@ export default class SeamPlugin extends Plugin {
 
         this.registerEvent(
             this.app.vault.on('modify', (file: TAbstractFile) => {
-                if (file instanceof TFile && file.extension === 'md') {
+                if (file instanceof TFile && (file.extension === 'md' || this.automationService.isSourceAttachment(file))) {
                     this.automationQueue.enqueue(file);
                 }
             }),
         );
 
         this.registerEvent(
-            this.app.vault.on('rename', (file: TAbstractFile) => {
-                if (file instanceof TFile && file.extension === 'md') {
+            this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
+                if (file instanceof TFile && file.extension !== 'md') this.automationService.onSourceRename(file, oldPath);
+                if (file instanceof TFile && (file.extension === 'md' || this.automationService.isSourceAttachment(file))) {
                     this.automationQueue.enqueue(file);
                 }
             }),
@@ -251,7 +277,7 @@ export default class SeamPlugin extends Plugin {
         const intervalMs = this.settings.reconciliationIntervalMinutes * 60 * 1000;
         this.reconciliationIntervalId = this.registerInterval(
             window.setInterval(() => {
-                if (this.settings.automaticProcessing) {
+                if (this.settings.automaticProcessing || this.settings.sourceAutomation) {
                     void this.reconciler.scan();
                 }
             }, intervalMs),
@@ -271,36 +297,68 @@ export default class SeamPlugin extends Plugin {
         palette.open();
     }
 
-    private openRecentFiles(): void {
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, this.getPaletteCommands());
+    private openQuickAdd(): void {
+        const palette = new UniversalPalette(
+            this.app,
+            this.settings,
+            this.searchService,
+            this.getPaletteCommands(),
+        );
         palette.open();
-        window.setTimeout(() => palette.showRecentFiles(), 0);
+        window.setTimeout(() => palette.showQuickAdd(), 0);
     }
 
-    private async archiveAll(): Promise<void> {
-        const files = this.app.vault.getMarkdownFiles();
-        let archivedCount = 0;
-        let errorCount = 0;
+    private async ensureQuickNoteFolder(path: string): Promise<string> {
+        const folderPath = normalizePath(path.trim().replace(/^\/+|\/+$/g, ''));
+        if (!folderPath) return '';
 
-        for (const file of files) {
-            if (hasTag(file, this.app, this.settings.archiveTag)) {
-                const result = await this.automationService.processFile(file);
-                if (result.status === 'success') {
-                    archivedCount++;
-                } else if (result.status === 'error' || result.status === 'conflict') {
-                    errorCount++;
+        const existing = this.app.vault.getAbstractFileByPath(folderPath);
+        if (existing instanceof TFolder) return folderPath;
+        if (existing) throw new Error(`A file already exists at "${folderPath}".`);
+
+        const parentPath = folderPath.split('/').slice(0, -1).join('/');
+        if (parentPath) await this.ensureQuickNoteFolder(parentPath);
+        await this.app.vault.createFolder(folderPath);
+        return folderPath;
+    }
+
+    private async createQuickNote(): Promise<void> {
+        try {
+            const folderPath = await this.ensureQuickNoteFolder(this.settings.fleetingFolder);
+            let content = '';
+            const templatePath = this.settings.fleetingNoteTemplate.trim();
+            if (templatePath) {
+                const normalizedTemplatePath = normalizePath(templatePath.replace(/\.md$/i, '') + '.md');
+                const template = this.app.vault.getAbstractFileByPath(normalizedTemplatePath);
+                if (template instanceof TFile) {
+                    try {
+                        content = await this.app.vault.cachedRead(template);
+                    } catch {
+                        // Continue with an empty note if the configured template cannot be read.
+                    }
                 }
             }
-        }
 
-        if (archivedCount > 0 || errorCount > 0) {
-            const message =
-                errorCount > 0
-                    ? t().noticeArchivedCountWithErrors(archivedCount, errorCount)
-                    : t().noticeArchivedCount(archivedCount);
-            new Notice(message);
-        } else {
-            new Notice(t().noticeNoNotesWithArchive);
+            let file: TFile | null = null;
+            for (let attempt = 0; attempt < 10 && !file; attempt++) {
+                const filename = `${crypto.randomUUID()}.md`;
+                const path = normalizePath(`${folderPath ? `${folderPath}/` : ''}${filename}`);
+                if (this.app.vault.getAbstractFileByPath(path)) continue;
+                try {
+                    file = await this.app.vault.create(path, content);
+                } catch (error) {
+                    // A collision between the existence check and create is retried with a new name.
+                    if (this.app.vault.getAbstractFileByPath(path)) continue;
+                    throw error;
+                }
+            }
+
+            if (!file) throw new Error('Could not generate an unused filename.');
+            await this.app.workspace.getLeaf(false).openFile(file);
+            new Notice(t().noticeQuickAddCreated(file.basename));
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            new Notice(t().noticeQuickAddFailed(message));
         }
     }
 
@@ -323,6 +381,16 @@ export default class SeamPlugin extends Plugin {
         const result = await this.automationService.moveFileToPermanent(file);
         if (result.status === 'success') {
             new Notice(t().noticeMovedToPermanent(this.settings.permanentFolder, file.basename));
+        } else {
+            new Notice(t().noticeMoveFailed(result.message));
+        }
+    }
+
+    /** Moves the current active note to the configured Fleeting folder. */
+    private async moveCurrentNoteToFleeting(file: TFile): Promise<void> {
+        const result = await this.automationService.moveFileToFleeting(file);
+        if (result.status === 'success') {
+            new Notice(t().noticeMovedToFleeting(this.settings.fleetingFolder, file.basename));
         } else {
             new Notice(t().noticeMoveFailed(result.message));
         }
@@ -352,6 +420,14 @@ export default class SeamPlugin extends Plugin {
     private getPaletteCommands(): PaletteItem[] {
         const commands: PaletteItem[] = [
             {
+                id: 'cmd-quick-note',
+                title: t().cmdCreateQuickNote,
+                description: t().cmdCreateQuickNote,
+                type: 'command',
+                icon: 'file-plus-2',
+                action: () => this.createQuickNote(),
+            },
+            {
                 id: 'cmd-quick-add',
                 title: t().paletteQuickAddTitle,
                 description: t().paletteQuickAddDesc,
@@ -359,18 +435,12 @@ export default class SeamPlugin extends Plugin {
                 icon: 'file-plus',
             },
             {
-                id: 'cmd-recent-files',
-                title: t().paletteRecentFilesTitle,
-                description: t().paletteRecentFilesDesc,
+                id: 'cmd-source-note',
+                title: t().cmdCreateNoteFromAttachment,
+                description: t().sourceCommandDesc,
                 type: 'command',
-                icon: 'clock-3',
-            },
-            {
-                id: 'cmd-archive-all',
-                title: t().paletteArchiveAllTitle,
-                description: t().paletteArchiveAllDesc,
-                type: 'command',
-                action: () => this.archiveAll(),
+                icon: 'files',
+                action: () => new SourceAttachmentModal(this.app, this.automationService).open(),
             },
             {
                 id: 'cmd-process-pending',
@@ -391,8 +461,9 @@ export default class SeamPlugin extends Plugin {
         // Contextual commands: only when a note is active
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
-            commands.push(
-                {
+            const actions: PaletteItem[] = [];
+            if (!isFileInFolder(activeFile, this.settings.archiveFolder)) {
+                actions.push({
                     id: 'cmd-archive-current',
                     title: t().paletteArchiveCurrentTitle(activeFile.basename),
                     description: t().paletteArchiveCurrentDesc(
@@ -401,8 +472,10 @@ export default class SeamPlugin extends Plugin {
                     ),
                     type: 'action',
                     action: () => this.archiveCurrentNote(activeFile),
-                },
-                {
+                });
+            }
+            if (!isFileInFolder(activeFile, this.settings.permanentFolder)) {
+                actions.push({
                     id: 'cmd-move-permanent',
                     title: t().palettePermanentCurrentTitle(activeFile.basename),
                     description: t().palettePermanentCurrentDesc(
@@ -411,8 +484,21 @@ export default class SeamPlugin extends Plugin {
                     ),
                     type: 'action',
                     action: () => this.moveCurrentNoteToPermanent(activeFile),
-                },
-            );
+                });
+            }
+            if (!isFileInFolder(activeFile, this.settings.fleetingFolder)) {
+                actions.push({
+                    id: 'cmd-move-fleeting',
+                    title: t().paletteFleetingCurrentTitle(activeFile.basename),
+                    description: t().paletteFleetingCurrentDesc(
+                        this.settings.fleetingFolder,
+                        activeFile.basename,
+                    ),
+                    type: 'action',
+                    action: () => this.moveCurrentNoteToFleeting(activeFile),
+                });
+            }
+            commands.splice(3, 0, ...actions);
         }
 
         return commands;
@@ -424,7 +510,52 @@ export default class SeamPlugin extends Plugin {
         const raw: unknown = await this.loadData();
         if (typeof raw === 'object' && raw !== null) {
             const data = raw as Record<string, unknown>;
-            this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+            const persistedData = { ...data };
+            delete persistedData.sourceApp;
+            delete persistedData.specialSearchPipelines;
+            delete persistedData.enableQueryPipelines;
+            this.settings = Object.assign({}, DEFAULT_SETTINGS, persistedData);
+
+            this.settings.customSpecialSearches = Array.isArray(this.settings.customSpecialSearches)
+                ? this.settings.customSpecialSearches.map((search) => {
+                    const normalized = { ...search } as CustomSpecialSearch & { enableBaseResultNavigation?: unknown; showBaseToolbar?: unknown };
+                    delete normalized.enableBaseResultNavigation;
+                    delete normalized.showBaseToolbar;
+                    return {
+                        ...normalized,
+                        icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'search',
+                        mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
+                        hidden: Boolean(search.hidden),
+                        pinned: Boolean(search.pinned) && !Boolean(search.hidden),
+                        basePath: typeof search.basePath === 'string' ? search.basePath : '',
+                        baseView: typeof search.baseView === 'string' ? search.baseView : '',
+                        filterQuery: typeof search.filterQuery === 'string' ? search.filterQuery : '',
+                        expandModal: Boolean(search.expandModal),
+                    };
+                })
+                : [];
+            this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
+            this.settings.showFileExtensionAndMatchCount = Boolean(this.settings.showFileExtensionAndMatchCount);
+            this.settings.showCommandsByDefault = Boolean(this.settings.showCommandsByDefault);
+            const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences;
+            const storedPreferences = Array.isArray(this.settings.specialSearchPreferences) ? this.settings.specialSearchPreferences : [];
+            this.settings.specialSearchPreferences = defaultPreferences.map((entry) => {
+                const stored = storedPreferences.find((item) => item?.search === entry.search);
+                return { search: entry.search, pinned: Boolean(stored?.pinned) && !Boolean(stored?.hidden), hidden: Boolean(stored?.hidden) };
+            });
+            const validSearchOrderKeys = [
+                ...this.settings.customSpecialSearches.map((search) => `custom:${search.id}`),
+                ...this.settings.specialSearchPreferences.map((preference) => `builtin:${preference.search}`),
+            ];
+            const storedSearchOrder = Array.isArray(data.specialSearchOrder) ? data.specialSearchOrder as string[] : [];
+            this.settings.specialSearchOrder = [...new Set([
+                ...storedSearchOrder.filter((key) => validSearchOrderKeys.includes(key)),
+                ...validSearchOrderKeys,
+            ])];
+            this.settings.showTodoCompletionPercent = Boolean(this.settings.showTodoCompletionPercent);
+            this.settings.paletteRibbonMode = ['both', 'mobile', 'hidden'].includes(this.settings.paletteRibbonMode)
+                ? this.settings.paletteRibbonMode
+                : 'both';
 
             // Migration: the public Workspace API cannot place a split explicitly on the left.
             this.settings.quickAddChoices = Array.isArray(this.settings.quickAddChoices) ? this.settings.quickAddChoices.map((choice) => {
@@ -518,6 +649,7 @@ export default class SeamPlugin extends Plugin {
      * Called when settings change. Propagates new settings to all services.
      */
     onSettingsChange(): void {
+        this.refreshPaletteRibbon();
         this.automationService?.updateSettings(this.settings);
         this.automationQueue?.setDelayMode(this.settings.automationDelay);
         this.reconciler?.updateSettings(this.settings);
@@ -526,5 +658,16 @@ export default class SeamPlugin extends Plugin {
 
         // Re-seed tag suggestions when settings change
         void this.seedTagSuggestions();
+    }
+
+    private refreshPaletteRibbon(): void {
+        // addRibbonIcon is registered once during load; its element is updated
+        // by the settings toggle so changes take effect immediately.
+        const ribbon = this.paletteRibbonEl;
+        if (ribbon) {
+            const shouldShow = this.settings.paletteRibbonMode === 'both'
+                || (this.settings.paletteRibbonMode === 'mobile' && Platform.isMobile);
+            ribbon.style.display = shouldShow ? '' : 'none';
+        }
     }
 }
