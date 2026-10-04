@@ -111,7 +111,7 @@ Changelog entries should focus on user-facing changes and fixes that affect plug
 
 ## 5. Obsidian Plugin Review Guidelines
 
-Before opening a version PR, check the current [Obsidian plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines) and resolve every **Error**, **Warning**, and **Recommendation** in the automated review report. The 3.0.0 review identified these checks for Seam:
+Before opening a version PR, check the current [Obsidian plugin checklist](https://docs.obsidian.md/oo/plugin) and resolve every **Error**, **Warning**, and **Recommendation** in the automated review report. The 3.0.0 review identified these checks for Seam:
 
 - Put styling in `styles.css` and toggle Seam-specific classes from TypeScript. Do not assign element `style` properties directly. Avoid `!important` and broad `:has()` selectors; use scoped classes and sufficient selector specificity.
 - Use Obsidian's `createEl`, `createDiv`, `createSpan`, and `createFragment` helpers for DOM construction. Use `node.instanceOf(HTMLElement)` for DOM type checks across Obsidian windows.
