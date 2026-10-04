@@ -1,0 +1,108 @@
+name: Tag merged version PR
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: tag-version-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag-release:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'feat/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the merged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Verify version branch and merged commit
+        id: version
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          if [[ ! "$HEAD_REF" =~ ^feat/(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Version branches must use feat/x.y.z without a leading v."
+            exit 1
+          fi
+
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if [[ "$(git rev-parse HEAD)" != "$MERGE_SHA" ]] || ! git merge-base --is-ancestor "$MERGE_SHA" origin/main; then
+            echo "::error::The checked-out commit is not the merged commit on main."
+            exit 1
+          fi
+
+          echo "version=${HEAD_REF#feat/}" >> "$GITHUB_OUTPUT"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate release files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node -e 'const version = process.argv[1]; for (const file of ["manifest.json", "package.json"]) { const actual = require("./" + file).version; if (actual !== version) { console.error(`${file} version ${actual} does not match ${version}`); process.exitCode = 1; } }' "$VERSION"
+          pnpm run release:check "$VERSION"
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Create and push the version tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          existing=$(git ls-remote --tags origin "refs/tags/$VERSION" | cut -f1)
+          if [[ -n "$existing" ]]; then
+            if [[ "$existing" != "$MERGE_SHA" ]]; then
+              echo "::error::Tag $VERSION already points to another commit."
+              exit 1
+            fi
+          else
+            git tag "$VERSION" "$MERGE_SHA"
+            git push origin "refs/tags/$VERSION"
+          fi
+
+          pushed=$(git ls-remote --tags origin "refs/tags/$VERSION" | cut -f1)
+          if [[ "$pushed" != "$MERGE_SHA" ]]; then
+            echo "::error::The remote tag does not point to the merged commit."
+            exit 1
+          fi
+
+      # A tag pushed with GITHUB_TOKEN does not trigger the tag-push workflow.
+      - name: Start the release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: gh workflow run release.yml --ref "$VERSION" --field tag="$VERSION"
