@@ -43,6 +43,7 @@ export default class SeamPlugin extends Plugin {
     private queryHistory = new QueryHistory();
     private reconciliationIntervalId: number | null = null;
     private paletteRibbonEl: HTMLElement | null = null;
+    private activePalettes = new Set<UniversalPalette>();
 
     async onload(): Promise<void> {
         // 1. Load persisted settings
@@ -196,6 +197,8 @@ export default class SeamPlugin extends Plugin {
     }
 
     onunload(): void {
+        for (const palette of this.activePalettes) palette.close();
+        this.activePalettes.clear();
         if (this.reconciliationIntervalId !== null) {
             window.clearInterval(this.reconciliationIntervalId);
             this.reconciliationIntervalId = null;
@@ -339,6 +342,12 @@ export default class SeamPlugin extends Plugin {
 
     // ---- Commands ----
 
+    private openTrackedPalette(palette: UniversalPalette): void {
+        this.activePalettes.add(palette);
+        palette.onClosed = () => this.activePalettes.delete(palette);
+        palette.open();
+    }
+
     private async openPalette(): Promise<void> {
         await this.searchService.refreshDailyNoteSettings();
         const commands = await this.getPaletteCommands();
@@ -349,7 +358,7 @@ export default class SeamPlugin extends Plugin {
             commands,
             this.queryHistory,
         );
-        palette.open();
+        this.openTrackedPalette(palette);
     }
 
     private async openQuickAdd(): Promise<void> {
@@ -360,20 +369,20 @@ export default class SeamPlugin extends Plugin {
             await this.getPaletteCommands(),
             this.queryHistory,
         );
-        palette.open();
+        this.openTrackedPalette(palette);
         window.setTimeout(() => palette.showQuickAdd(), 0);
     }
 
     private async openNoteOutline(file: TFile): Promise<void> {
         await this.searchService.refreshDailyNoteSettings();
         const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.queryHistory);
-        palette.open();
+        this.openTrackedPalette(palette);
         palette.showNoteOutline(file);
     }
 
     private openNoteStatistics(file: TFile): void {
         const palette = new UniversalPalette(this.app, this.settings, this.searchService, [], this.queryHistory);
-        palette.open();
+        this.openTrackedPalette(palette);
         void palette.showNoteStatistics(file);
     }
 

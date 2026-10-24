@@ -146,6 +146,12 @@ Find files in your configured folders with `@fleeting` and `@permanent`, or brow
 
 Daily Notes appear with readable dates and a calendar subtitle. If `@today` or `@yesterday` has no Daily Note, select the offered action to create and open it from your configured template. While today's Daily Note is open, use **Move todo items to tomorrow's daily note** or **Pull todo items from yesterday's daily note** in Seam's commands. Each task command appears only when its source note has unfinished work. Seam follows the core Daily Notes folder, date format, and template. It moves unchecked (`[ ]`) and partially complete (`[/]`) tasks with their parent context, leaving completed tasks behind. If a partially complete parent remains with only completed children, its source checkbox becomes completed.
 
+### Daily Notes calendar
+
+Enter `@calendar` in the Universal Palette to browse Daily Notes. Dots mark dates with notes; click one to open it. Clicking an empty date selects it and offers **Create daily note**, using your Daily Notes folder, date format, and template. The calendar starts at the open Daily Note or today. `@today`, `@yesterday`, and `@calendar` stay together in the special-query list.
+
+Use Up/Down from the input to enter the calendar, then arrow keys to move by day/week. Page Up/Down changes months; add Shift to change years. Click the month/year heading, or reach it with Tab and press Enter, to choose a year and then a month. Enter opens or creates the selected day's note. Press `Esc` once to return to the input, then again to dismiss the Palette. Toolbar controls also support Tab and Enter/Space.
+
 ### Delete current note
 
 With a Markdown note open, choose **Delete current note** from Obsidian's commands or Seam's `>` commands. Seam uses Obsidian's delete confirmation setting and configured destination: system trash, the vault `.trash` folder, or permanent deletion. Cancelling the native confirmation leaves the note intact.

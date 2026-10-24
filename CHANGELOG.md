@@ -7,6 +7,7 @@ What's new and changed in each Seam release.
 
 ### Added
 
+- **Daily Notes calendar**: Browse `@calendar` in the Universal Palette, see dates with notes, jump between months/years, and open or create Daily Notes with your configured template. Supports keyboard navigation and keeps `@today`, `@yesterday`, and `@calendar` together.
 - **Delete current note**: Delete the open note from Obsidian or Seam commands, respecting Obsidian’s confirmation setting and configured system trash, vault `.trash`, or permanent deletion.
 - **Note outline**: Browse all headings in the current note, including nested headings, in the Universal Palette. Use arrow keys to navigate and Enter or a click to jump to a heading. Press Backspace with an empty input to return to Palette search.
 - **Note statistics**: Show words, characters, paragraphs, reading time, and modified/created dates for the current note in the Universal Palette, including unsaved editor text.

@@ -12,6 +12,9 @@ import { createDailyNote, getMissingDailyNote } from '../daily/DailyNotes';
 import { BaseResultNavigation } from './BaseResultNavigation';
 import { readNoteStatistics } from '../statistics/NoteStatistics';
 import { renderNoteStatistics } from './NoteStatisticsView';
+import { DailyNoteCalendar } from '../calendar/DailyNoteCalendar';
+import { readDailyNoteSettings } from '../daily/DailyNotes';
+import { groupDailySearches } from '../calendar/SpecialSearchOrder';
 import { getNoteOutline } from '../outline/NoteOutline';
 
 /**
@@ -71,6 +74,7 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
  * in a single floating modal built on Obsidian's SuggestModal.
  */
 export class UniversalPalette extends SuggestModal<PaletteItem> {
+    onClosed?: () => void;
     private createSuggestionActive = false;
     private lastQuery = '';
     private historyIndex = -1;
@@ -86,6 +90,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private mode: 'search' | 'quick-add' | 'statistics' | 'outline' = 'search';
     private outlineItems: PaletteItem[] = [];
     private outlinePreviousLimit: number | null = null;
+    private calendarView: DailyNoteCalendar | null = null;
+    private calendarHost: HTMLElement | null = null;
+    private calendarGeneration = 0;
     private statisticsHost: HTMLElement | null = null;
     private quickAddDraft = '';
     private selectedDirectoryToken: string | null = null;
@@ -99,6 +106,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private baseSourcePath = '';
     private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
         if (this.mode === 'statistics') return;
+        if (this.calendarView?.handleKey(event)) return;
+        if (this.calendarHost && !this.calendarView && (event.key === 'Enter' || event.key === ' ')) {
+            const target = event.target as Node | null;
+            const retry = target?.instanceOf(HTMLButtonElement) && this.calendarHost.contains(target) ? target : null;
+            if (retry) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                retry.click();
+                return;
+            }
+        }
         if (event.target === this.inputEl && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
             && (event.key === 'ArrowUp' || event.key === 'ArrowDown')
             && !this.cycleHistory(event, event.key === 'ArrowUp' ? 1 : -1)) {
@@ -129,7 +147,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // SuggestModal's default Enter handler does not preserve modifier state
         // when calling onChooseSuggestion, so we intercept at the scope level.
         this.scope.register(['Mod'], 'Enter', (evt: KeyboardEvent) => {
-            if (this.mode === 'statistics' || this.mode === 'outline') return false;
+            if (this.mode === 'statistics' || this.mode === 'outline' || this.calendarHost) return false;
             evt.preventDefault();
             const item = this.getSelectedItem();
             if (item?.type === 'note' && item.file) {
@@ -144,7 +162,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return false;
         });
         const openInSplit = (evt: KeyboardEvent): boolean => {
-            if (this.mode === 'statistics' || this.mode === 'outline') return false;
+            if (this.mode === 'statistics' || this.mode === 'outline' || this.calendarHost) return false;
             const item = this.getSelectedItem();
             if (item?.type === 'create') {
                 evt.preventDefault();
@@ -212,6 +230,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             ...this.excludedTags.map(tag => '!#' + tag),
         ].filter(Boolean).join(' '));
         window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
+        this.disposeCalendar();
         this.statisticsHost?.remove();
         this.statisticsHost = null;
         this.outlineItems = [];
@@ -223,6 +242,43 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.composedTagKeys = [];
         this.composedQueryPrefix = '';
         this.disposeBaseRender();
+        this.onClosed?.();
+    }
+
+    private disposeCalendar(): void {
+        this.calendarGeneration++;
+        this.calendarView?.unload();
+        this.calendarView = null;
+        this.calendarHost?.remove();
+        this.calendarHost = null;
+        this.modalEl.removeClass('seam-palette-calendar');
+    }
+
+    private showCalendar(): void {
+        if (this.calendarHost) return;
+        this.baseNavigationEnabled = false;
+        this.disposeBaseRender();
+        this.modalEl.addClass('seam-palette-calendar');
+        const host = this.modalEl.createDiv({ cls: 'seam-calendar', attr: { 'aria-label': t().paletteSpecialCalendar, 'aria-busy': 'true' } });
+        this.resultContainerEl.before(host);
+        this.calendarHost = host;
+        host.createEl('p', { text: t().calendarLoading });
+        const generation = ++this.calendarGeneration;
+        void readDailyNoteSettings(this.app).then(settings => {
+            if (generation !== this.calendarGeneration) return;
+            const leaf = this.app.workspace.getLeaf(false);
+            this.calendarView = new DailyNoteCalendar(this.app, host, this.inputEl, settings, {
+                changed: () => this.updateInstructions(''),
+                open: async file => { this.close(); await leaf.openFile(file); },
+            }, this.scope);
+            this.calendarView.load();
+        }).catch(() => {
+            if (generation !== this.calendarGeneration) return;
+            host.empty();
+            host.createEl('p', { text: t().calendarLoadFailed, attr: { role: 'alert' } });
+            const retry = host.createEl('button', { text: t().calendarRetry, attr: { type: 'button' } });
+            retry.addEventListener('click', () => { this.disposeCalendar(); this.refreshSuggestions(); });
+        }).finally(() => { host.removeAttribute('aria-busy'); });
     }
 
     /** Keep native suggestion navigation and clicking for the note's full heading hierarchy. */
@@ -505,7 +561,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      * Intercept suggestion selection to keep the modal open when a tag is selected.
      */
     selectSuggestion(value: PaletteItem, evt: MouseEvent | KeyboardEvent): void {
-        if (this.mode === 'statistics') return;
+        if (this.mode === 'statistics' || this.calendarHost) return;
         if (this.mode === 'outline') {
             if (value.type !== 'heading') return;
             this.close();
@@ -629,6 +685,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return this.outlineItems.filter(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
         }
         query = this.composedQueryPrefix + query;
+        if (this.mode === 'search' && query.trim().toLowerCase() === '@calendar' && !this.selectedTags.length && !this.excludedTags.length) {
+            this.lastQuery = '@calendar';
+            this.renderActiveSpecialQueryInput(query);
+            this.showCalendar();
+            this.updateInstructions('');
+            return [];
+        }
+        if (this.calendarHost) this.disposeCalendar();
         const trimmed = query.trim();
         this.lastQuery = trimmed;
         this.createSuggestionActive = false;
@@ -1055,6 +1119,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private updateInstructions(query: string): void {
+        if (this.calendarHost) {
+            const instructions = [{ command: '↑↓←→', purpose: t().paletteHelpNavigate }];
+            if (this.calendarView) instructions.push({ command: '↵', purpose: this.calendarView.picking ? t().paletteHelpSelect
+                : this.calendarView.hasNote ? t().paletteHelpOpen : t().paletteHelpCreate });
+            instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss });
+            this.setInstructions(instructions);
+            return;
+        }
         if (this.mode === 'outline') {
             const instructions = [
                 { command: '↑↓', purpose: t().paletteHelpNavigate },
@@ -1133,7 +1205,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     onNoSuggestion(): void {
-        if (this.mode === 'statistics') return;
+        if (this.mode === 'statistics' || this.calendarHost) return;
         if (this.mode === 'search' && !this.inputEl.value.trim()) {
             this.resultContainerEl.empty();
             return;
@@ -1154,6 +1226,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         const options: SpecialSearchOption[] = [
             { search: 'today', label: SPECIAL_SEARCH_LABELS.today, description: t().paletteSpecialToday },
             { search: 'yesterday', label: SPECIAL_SEARCH_LABELS.yesterday, description: t().paletteSpecialYesterday },
+            { search: 'calendar', label: SPECIAL_SEARCH_LABELS.calendar, description: t().paletteSpecialCalendar },
             { search: 'recent', label: SPECIAL_SEARCH_LABELS.recent, description: t().paletteSpecialRecent },
             { search: 'recentlyOpened', label: SPECIAL_SEARCH_LABELS.recentlyOpened, description: t().paletteSpecialRecentlyOpened },
             { search: 'fleeting', label: SPECIAL_SEARCH_LABELS.fleeting, description: t().paletteSpecialFleeting },
@@ -1200,9 +1273,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (item.specialSearch) return Boolean(this.settings.specialSearchPreferences.find((preference) => preference.search === item.specialSearch)?.pinned);
             return Boolean(this.settings.customSpecialSearches.find((search) => search.id === item.customSearchId)?.pinned);
         };
-        return [...builtIns, ...custom].sort((a, b) =>
+        return groupDailySearches([...builtIns, ...custom].sort((a, b) =>
             Number(isPinned(b)) - Number(isPinned(a)) || orderIndex(a) - orderIndex(b),
-        );
+        ));
     }
 
     private isExactActiveSpecialSearch(query: string): boolean {
@@ -1215,7 +1288,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private getActiveSpecialQueryToken(query: string): string | null {
         const custom = this.getCustomSearchForQuery(query.trim());
         if (custom) return query.trimStart().slice(0, custom.identifier.length);
-        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i);
+        const match = query.trimStart().match(/^@(last[1-9]\d*days|calendar|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i);
         return match?.[0] ?? null;
     }
 
@@ -1611,7 +1684,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     onChooseSuggestion(item: PaletteItem, _evt: MouseEvent | KeyboardEvent): void {
-        if (this.mode === 'statistics') return;
+        if (this.mode === 'statistics' || this.calendarHost) return;
         if (this.mode === 'outline') {
             if (item.type === 'heading') {
                 void Promise.resolve().then(() => item.action?.()).catch(() => new Notice(t().outlineJumpFailed));

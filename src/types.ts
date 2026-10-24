@@ -103,6 +103,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     specialSearchPreferences: [
         { search: 'today', pinned: false, hidden: false },
         { search: 'yesterday', pinned: false, hidden: false },
+        { search: 'calendar', pinned: false, hidden: false },
         { search: 'recent', pinned: false, hidden: false },
         { search: 'recentlyOpened', pinned: false, hidden: false },
         { search: 'fleeting', pinned: false, hidden: false },
@@ -118,7 +119,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
         { search: 'sources', pinned: false, hidden: false },
     ],
     specialSearchOrder: [
-        'builtin:today', 'builtin:yesterday',
+        'builtin:today', 'builtin:yesterday', 'builtin:calendar',
         'builtin:recent', 'builtin:recentlyOpened', 'builtin:fleeting', 'builtin:permanent', 'builtin:lastDays',
         'builtin:untagged', 'builtin:docs', 'builtin:images',
         'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code', 'builtin:sources',
@@ -156,8 +157,9 @@ export interface MatchSnippet {
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text';
 
-export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources' | 'recentlyOpened' | 'fleeting' | 'permanent';
+export type SpecialSearch = 'calendar' | 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources' | 'recentlyOpened' | 'fleeting' | 'permanent';
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
+    calendar: 'calendar-days',
     today: 'calendar-days',
     yesterday: 'history',
     recent: 'clock-3',
@@ -176,6 +178,7 @@ export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
 };
 
 export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
+    calendar: '@calendar',
     today: '@today',
     yesterday: '@yesterday',
     recent: '@recent',

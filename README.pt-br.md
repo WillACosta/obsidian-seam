@@ -146,6 +146,12 @@ Encontre arquivos nas pastas configuradas com `@fleeting` e `@permanent`, ou vej
 
 As Notas Diárias aparecem com datas legíveis e um subtítulo com calendário. Se `@today` ou `@yesterday` não encontrar a Nota Diária, selecione a ação oferecida para criá-la e abri-la com o modelo configurado. Com a Nota Diária de hoje aberta, use **Mover tarefas pendentes para a nota diária de amanhã** ou **Trazer tarefas pendentes da nota diária de ontem** nos comandos do Seam. Cada comando de tarefas aparece apenas quando sua nota de origem contém trabalho pendente. O Seam usa a pasta, o formato de data e o modelo do plugin nativo Notas Diárias. Tarefas não concluídas (`[ ]`) e parcialmente concluídas (`[/]`) são movidas com o contexto dos itens pais, preservando as concluídas na origem. Se um item pai parcialmente concluído permanecer apenas com filhos concluídos, ele será marcado como concluído na origem.
 
+### Calendário de Notas Diárias
+
+Digite `@calendar` na Paleta Universal para navegar pelas Notas Diárias. Pontos indicam datas com notas; clique para abri-las. Clicar numa data vazia seleciona o dia e oferece **Criar nota diária**, usando a pasta, o formato de data e o modelo configurados em Notas Diárias. O calendário começa na data da Nota Diária aberta ou no dia atual. `@today`, `@yesterday` e `@calendar` ficam juntos na lista de buscas especiais.
+
+Use as setas para cima/baixo no campo de busca para entrar no calendário; depois, navegue por dias/semanas com as setas. Page Up/Down muda o mês; com Shift, muda o ano. Clique no mês/ano ou alcance esse botão com Tab e Enter para escolher um ano e depois um mês. Enter abre ou cria a nota do dia selecionado. Pressione `Esc` uma vez para voltar ao campo e novamente para fechar a Paleta. Os controles também aceitam Tab e Enter/Espaço.
+
 ### Excluir nota atual
 
 Com uma nota Markdown aberta, escolha **Excluir nota atual** nos comandos do Obsidian ou nos comandos `>` do Seam. O Seam respeita a confirmação de exclusão e o destino configurado no Obsidian: lixeira do sistema, pasta `.trash` do cofre ou exclusão permanente. Cancelar a confirmação nativa mantém a nota intacta.

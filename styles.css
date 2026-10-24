@@ -1015,3 +1015,38 @@ body .seam-source-pdf .pdf-embed .pdfViewer .page {
     border: 0;
     box-shadow: none;
 }
+
+/* Daily Notes calendar inside the Universal Palette. */
+.prompt.seam-palette-calendar { width: 480px; }
+.prompt.seam-palette-calendar .prompt-results { display: none; }
+.seam-calendar { padding: 12px 20px 16px; overflow-y: auto; min-height: 0; }
+.seam-calendar-header { display: flex; align-items: center; gap: 4px; margin-bottom: 12px; }
+.seam-calendar-header button { color: var(--text-muted); }
+.seam-calendar-header .seam-calendar-title { margin-inline-end: auto; font-weight: var(--font-semibold); color: var(--text-normal); text-transform: capitalize; }
+.seam-calendar-weekdays, .seam-calendar-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.seam-calendar-weekdays { color: var(--text-muted); font-size: var(--font-ui-smaller); text-transform: uppercase; text-align: center; margin-bottom: 4px; }
+.seam-calendar-weekdays span { overflow: hidden; }
+.seam-calendar-grid [role="gridcell"] { min-width: 0; }
+.seam-calendar-day, .seam-calendar-period { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; width: 100%; min-height: 40px; padding: 4px 0; border-radius: var(--radius-s); color: var(--text-normal); }
+.seam-calendar-day:focus-visible, .seam-calendar-period:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
+.seam-calendar-day.is-other-month { color: var(--text-faint); }
+.seam-calendar-day > span:first-child { display: inline-flex; justify-content: center; align-items: center; min-width: 24px; min-height: 24px; }
+.seam-calendar-day[aria-current="date"] > span:first-child { border: 1px solid var(--interactive-accent); border-radius: 50%; color: var(--text-accent); }
+.seam-calendar-dots { display: flex; justify-content: center; min-height: 4px; }
+.seam-calendar-dot { display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); }
+.seam-calendar-picker-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
+.seam-calendar-period { min-height: 52px; }
+.seam-calendar-hint { color: var(--text-muted); font-size: var(--font-ui-smaller); margin: 12px 0; line-height: 1.5; }
+.seam-calendar-action { width: 100%; white-space: normal; height: auto; min-height: 34px; padding: 8px; }
+@media (max-width: 480px) {
+    .seam-calendar { padding-inline: 12px; }
+    .seam-calendar-header { gap: 0; }
+    .seam-calendar-header button { padding-inline: 6px; }
+}
+.prompt.seam-palette-calendar .seam-calendar-day,
+.prompt.seam-palette-calendar .seam-calendar-period,
+.prompt.seam-palette-calendar .seam-calendar-header button { background: transparent; box-shadow: none; border: none; }
+.prompt.seam-palette-calendar .seam-calendar-day:hover,
+.prompt.seam-palette-calendar .seam-calendar-period:hover,
+.prompt.seam-palette-calendar .seam-calendar-day.is-selected,
+.prompt.seam-palette-calendar .seam-calendar-period.is-selected { background: var(--background-modifier-hover); }

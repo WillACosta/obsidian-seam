@@ -44,6 +44,7 @@ require.cache['obsidian'] = {
     filename: 'obsidian',
     loaded: true,
     exports: {
+        Component: class {},
         Platform: {
             isMacOS: process.platform === 'darwin',
             isDesktop: true,

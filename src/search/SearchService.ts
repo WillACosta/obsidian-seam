@@ -117,6 +117,7 @@ export function hasAttachmentType(app: App, file: TFile, extensions: Set<string>
 
 /** Applies a special search using metadata available from Obsidian's public APIs. */
 export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearch, days?: number): boolean {
+    if (search === 'calendar') return false; // Calendar is a view, not a file filter.
     const cache = app.metadataCache.getFileCache(file);
     switch (search) {
         case 'today':
