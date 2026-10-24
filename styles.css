@@ -1,5 +1,27 @@
 /* Seam — Universal Palette styles */
 
+.seam-palette-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.seam-palette-heading-level {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.seam-palette-heading .seam-palette-title {
+    overflow-wrap: anywhere;
+}
+
+.seam-palette-heading[data-heading-level="2"] { padding-inline-start: 24px; }
+.seam-palette-heading[data-heading-level="3"] { padding-inline-start: 36px; }
+.seam-palette-heading[data-heading-level="4"] { padding-inline-start: 48px; }
+.seam-palette-heading[data-heading-level="5"] { padding-inline-start: 60px; }
+.seam-palette-heading[data-heading-level="6"] { padding-inline-start: 72px; }
+
 .prompt.seam-palette-statistics .prompt-input-container,
 .prompt.seam-palette-statistics .prompt-results {
     display: none;

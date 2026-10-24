@@ -7,6 +7,8 @@ What's new and changed in each Seam release.
 
 ### Added
 
+- **Delete current note**: Delete the open note from Obsidian or Seam commands, respecting Obsidian’s confirmation setting and configured system trash, vault `.trash`, or permanent deletion.
+- **Note outline**: Browse all headings in the current note, including nested headings, in the Universal Palette. Use arrow keys to navigate and Enter or a click to jump to a heading. Press Backspace with an empty input to return to Palette search.
 - **Note statistics**: Show words, characters, paragraphs, reading time, and modified/created dates for the current note in the Universal Palette, including unsaved editor text.
 - **Special searches**: Find your ten most recently opened files with `@recentlyOpened`, or browse the configured folders with `@fleeting` and `@permanent`. Combine them with other Seam filters.
 - **Daily task transfer**: Move unfinished tasks to tomorrow's Daily Note or pull them from yesterday. Preserve nested task context and completed work, and create missing notes using your Daily Notes folder, date format, and template.

@@ -12,6 +12,7 @@ import { createDailyNote, getMissingDailyNote } from '../daily/DailyNotes';
 import { BaseResultNavigation } from './BaseResultNavigation';
 import { readNoteStatistics } from '../statistics/NoteStatistics';
 import { renderNoteStatistics } from './NoteStatisticsView';
+import { getNoteOutline } from '../outline/NoteOutline';
 
 /**
  * Internal interface for the SuggestModal's chooser.
@@ -82,7 +83,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private composedQueryPrefix = '';
     private composedQueryPrefixEl: HTMLElement | null = null;
     private queryInputMirrorEl: HTMLElement | null = null;
-    private mode: 'search' | 'quick-add' | 'statistics' = 'search';
+    private mode: 'search' | 'quick-add' | 'statistics' | 'outline' = 'search';
+    private outlineItems: PaletteItem[] = [];
+    private outlinePreviousLimit: number | null = null;
     private statisticsHost: HTMLElement | null = null;
     private quickAddDraft = '';
     private selectedDirectoryToken: string | null = null;
@@ -126,7 +129,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // SuggestModal's default Enter handler does not preserve modifier state
         // when calling onChooseSuggestion, so we intercept at the scope level.
         this.scope.register(['Mod'], 'Enter', (evt: KeyboardEvent) => {
-            if (this.mode === 'statistics') return false;
+            if (this.mode === 'statistics' || this.mode === 'outline') return false;
             evt.preventDefault();
             const item = this.getSelectedItem();
             if (item?.type === 'note' && item.file) {
@@ -141,7 +144,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return false;
         });
         const openInSplit = (evt: KeyboardEvent): boolean => {
-            if (this.mode === 'statistics') return false;
+            if (this.mode === 'statistics' || this.mode === 'outline') return false;
             const item = this.getSelectedItem();
             if (item?.type === 'create') {
                 evt.preventDefault();
@@ -158,7 +161,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.scope.register(['Mod', 'Shift'], 'Enter', openInSplit);
         this.scope.register(['Shift'], 'Enter', openInSplit);
         this.scope.register([], 'Escape', (evt: KeyboardEvent) => {
-            if (this.mode === 'statistics') {
+            if (this.mode === 'statistics' || this.mode === 'outline') {
                 this.close();
                 return false;
             }
@@ -211,6 +214,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
         this.statisticsHost?.remove();
         this.statisticsHost = null;
+        this.outlineItems = [];
         this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-custom-search-expanded', 'seam-palette-special-search-active', 'seam-palette-directory-search-active');
         this.selectedTags = [];
         this.excludedTags = [];
@@ -219,6 +223,31 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.composedTagKeys = [];
         this.composedQueryPrefix = '';
         this.disposeBaseRender();
+    }
+
+    /** Keep native suggestion navigation and clicking for the note's full heading hierarchy. */
+    showNoteOutline(file: TFile): void {
+        this.mode = 'outline';
+        this.lastQuery = '';
+        this.baseNavigationEnabled = false;
+        this.disposeBaseRender();
+        this.selectedTags = [];
+        this.excludedTags = [];
+        this.composedTagKeys = [];
+        this.composedQueryPrefix = '';
+        this.renderChips();
+        this.modalEl.removeClass('seam-palette-custom-search-expanded', 'seam-palette-special-search-active', 'seam-palette-directory-search-active');
+        this.modalEl.addClass('seam-palette-outline');
+        this.outlineItems = getNoteOutline(this.app, file);
+        this.outlinePreviousLimit = this.limit;
+        this.limit = Math.max(1, this.outlineItems.length);
+        this.emptyStateText = t().outlineEmpty;
+        this.inputEl.value = '';
+        this.setPlaceholder(t().outlinePlaceholder(file.basename));
+        this.inputEl.setAttribute('aria-label', t().outlinePlaceholder(file.basename));
+        this.updateInstructions('');
+        this.refreshSuggestions();
+        this.inputEl.focus();
     }
 
     /** Replace search with a read-only report in the same Palette. */
@@ -477,6 +506,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      */
     selectSuggestion(value: PaletteItem, evt: MouseEvent | KeyboardEvent): void {
         if (this.mode === 'statistics') return;
+        if (this.mode === 'outline') {
+            if (value.type !== 'heading') return;
+            this.close();
+            this.onChooseSuggestion(value, evt);
+            return;
+        }
+        if (value.id === 'cmd-note-outline' && value.file) {
+            this.showNoteOutline(value.file);
+            return;
+        }
         if (value.id === 'cmd-note-statistics' && value.file) {
             void this.showNoteStatistics(value.file);
             return;
@@ -585,6 +624,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      */
     getSuggestions(query: string): PaletteItem[] | Promise<PaletteItem[]> {
         if (this.mode === 'statistics') return [];
+        if (this.mode === 'outline') {
+            this.updateInstructions(query);
+            return this.outlineItems.filter(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
+        }
         query = this.composedQueryPrefix + query;
         const trimmed = query.trim();
         this.lastQuery = trimmed;
@@ -996,6 +1039,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private returnToSearch(): void {
+        if (this.mode === 'outline') {
+            this.modalEl.removeClass('seam-palette-outline');
+            this.inputEl.removeAttribute('aria-label');
+            this.outlineItems = [];
+            if (this.outlinePreviousLimit !== null) this.limit = this.outlinePreviousLimit;
+            this.outlinePreviousLimit = null;
+            this.emptyStateText = 'No results found.';
+        }
         this.mode = 'search';
         this.inputEl.value = '';
         this.setPlaceholder(t().palettePlaceholder);
@@ -1004,6 +1055,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private updateInstructions(query: string): void {
+        if (this.mode === 'outline') {
+            const instructions = [
+                { command: '↑↓', purpose: t().paletteHelpNavigate },
+                { command: '↵', purpose: t().paletteHelpSelect },
+            ];
+            if (!query) instructions.push({ command: '⌫', purpose: t().paletteHelpBack });
+            instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss });
+            this.setInstructions(instructions);
+            return;
+        }
         if (this.mode === 'statistics') {
             this.setInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }]);
             return;
@@ -1224,6 +1285,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     renderSuggestion(item: PaletteItem, el: HTMLElement): void {
+        if (item.type === 'heading') {
+            el.addClass('seam-palette-heading');
+            el.setAttribute('data-heading-level', String(item.headingLevel));
+            el.createSpan({ cls: 'seam-palette-heading-level', text: `H${item.headingLevel}` });
+            el.createSpan({ cls: 'seam-palette-title', text: item.title });
+            return;
+        }
         // Derive the plain search query for highlighting
         const highlightQuery = this.getHighlightQuery();
 
@@ -1544,6 +1612,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     onChooseSuggestion(item: PaletteItem, _evt: MouseEvent | KeyboardEvent): void {
         if (this.mode === 'statistics') return;
+        if (this.mode === 'outline') {
+            if (item.type === 'heading') {
+                void Promise.resolve().then(() => item.action?.()).catch(() => new Notice(t().outlineJumpFailed));
+            }
+            return;
+        }
         if (item.type === 'note' && item.file) {
             // Default Enter: open in current tab
             // Mod+Enter (new tab) is handled by the scope handler registered in the constructor

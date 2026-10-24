@@ -228,7 +228,8 @@ export interface PaletteItem {
     id: string;
     title: string;
     description: string;
-    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory';
+    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory' | 'heading';
+    headingLevel?: number;
     icon?: string;
     file?: TFile;
     tags?: string[];

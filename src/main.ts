@@ -1,5 +1,6 @@
 import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian';
 import { DailyTaskTransfer } from './daily/DailyTaskTransfer';
+import { NoteDeletion } from './notes/NoteDeletion';
 import { QueryHistory } from './search/QueryHistory';
 import { isFileInFolder } from './utils/isFileInFolder';
 import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
@@ -38,6 +39,7 @@ export default class SeamPlugin extends Plugin {
     private reconciler!: Reconciler;
     searchService!: SearchService;
     private dailyTaskTransfer!: DailyTaskTransfer;
+    private noteDeletion!: NoteDeletion;
     private queryHistory = new QueryHistory();
     private reconciliationIntervalId: number | null = null;
     private paletteRibbonEl: HTMLElement | null = null;
@@ -59,6 +61,7 @@ export default class SeamPlugin extends Plugin {
         this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue, this.automationService);
         this.searchService = new SearchService(this.app, this.settings);
         this.dailyTaskTransfer = new DailyTaskTransfer(this.app);
+        this.noteDeletion = new NoteDeletion(this.app);
 
         this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().ribbonOpenSeam, () => this.openPalette());
         this.refreshPaletteRibbon();
@@ -101,6 +104,28 @@ export default class SeamPlugin extends Plugin {
         });
 
         // Commands that operate on the current open note
+        this.addCommand({
+            id: 'delete-current-note',
+            name: t().cmdDeleteCurrentNote,
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md') return false;
+                if (!checking) void this.deleteCurrentNote(file);
+                return true;
+            },
+        });
+
+        this.addCommand({
+            id: 'show-note-outline',
+            name: t().cmdShowNoteOutline,
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md') return false;
+                if (!checking) void this.openNoteOutline(file);
+                return true;
+            },
+        });
+
         this.addCommand({
             id: 'show-note-statistics',
             name: t().cmdShowNoteStatistics,
@@ -339,6 +364,13 @@ export default class SeamPlugin extends Plugin {
         window.setTimeout(() => palette.showQuickAdd(), 0);
     }
 
+    private async openNoteOutline(file: TFile): Promise<void> {
+        await this.searchService.refreshDailyNoteSettings();
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.queryHistory);
+        palette.open();
+        palette.showNoteOutline(file);
+    }
+
     private openNoteStatistics(file: TFile): void {
         const palette = new UniversalPalette(this.app, this.settings, this.searchService, [], this.queryHistory);
         palette.open();
@@ -451,6 +483,14 @@ export default class SeamPlugin extends Plugin {
         new Notice(message, 5000);
     }
 
+    private async deleteCurrentNote(file: TFile): Promise<void> {
+        try {
+            await this.noteDeletion.delete(file);
+        } catch (error) {
+            new Notice(`${t().noticeDeleteNoteFailed}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
     private async transferDailyTasks(file: TFile, direction: 'tomorrow' | 'yesterday'): Promise<void> {
         try {
             const count = await this.dailyTaskTransfer.transfer(file, direction);
@@ -506,6 +546,14 @@ export default class SeamPlugin extends Plugin {
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
             const actions: PaletteItem[] = [{
+                id: 'cmd-note-outline',
+                title: t().cmdShowNoteOutline,
+                description: activeFile.basename,
+                type: 'command',
+                icon: 'list-tree',
+                file: activeFile,
+                action: () => this.openNoteOutline(activeFile),
+            }, {
                 id: 'cmd-note-statistics',
                 title: t().cmdShowNoteStatistics,
                 description: activeFile.basename,
@@ -513,6 +561,13 @@ export default class SeamPlugin extends Plugin {
                 icon: 'chart-no-axes-column',
                 file: activeFile,
                 action: () => this.openNoteStatistics(activeFile),
+            }, {
+                id: 'cmd-delete-current-note',
+                title: t().cmdDeleteCurrentNote,
+                description: activeFile.basename,
+                type: 'command',
+                icon: 'trash-2',
+                action: () => this.deleteCurrentNote(activeFile),
             }];
             if (!isFileInFolder(activeFile, this.settings.archiveFolder)) {
                 actions.push({
