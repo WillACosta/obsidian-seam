@@ -36,6 +36,19 @@ export const ptBr: Translations = {
     cmdCreateNewNote: 'Criar uma nova nota',
     cmdCreateQuickNote: 'Criar uma nota rápida',
 
+    cmdMoveDailyTodos: "Mover tarefas pendentes para a nota diária de amanhã",
+    cmdPullDailyTodos: "Trazer tarefas pendentes da nota diária de ontem",
+    paletteCreateTodayDailyNote: "Criar a nota diária de hoje",
+    paletteCreateYesterdayDailyNote: "Criar a nota diária de ontem",
+    noticeCreateDailyFailed: "Não foi possível criar a nota diária",
+    dailyNoteLabel: "Nota diária",
+    paletteSpecialRecentlyOpened: "Os 10 arquivos abertos mais recentemente",
+    paletteSpecialFleeting: "Arquivos na pasta Fleeting",
+    paletteSpecialPermanent: "Arquivos na pasta Permanente",
+    noticeDailyTransferEmpty: "Nenhuma tarefa pendente para mover.",
+    noticeDailyTransferDone: "Tarefas pendentes movidas.",
+    noticeDailyTransferFailed: "Não foi possível mover as tarefas",
+
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Criar nova nota: "${title}"`,
     paletteCreateNoteDesc: (folder: string) => `Criar nova nota em ${folder}/`,

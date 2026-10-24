@@ -1,4 +1,6 @@
 import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian';
+import { DailyTaskTransfer } from './daily/DailyTaskTransfer';
+import { QueryHistory } from './search/QueryHistory';
 import { isFileInFolder } from './utils/isFileInFolder';
 import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
@@ -35,6 +37,8 @@ export default class SeamPlugin extends Plugin {
     private automationQueue!: AutomationQueue;
     private reconciler!: Reconciler;
     searchService!: SearchService;
+    private dailyTaskTransfer!: DailyTaskTransfer;
+    private queryHistory = new QueryHistory();
     private reconciliationIntervalId: number | null = null;
     private paletteRibbonEl: HTMLElement | null = null;
 
@@ -54,6 +58,7 @@ export default class SeamPlugin extends Plugin {
         );
         this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue, this.automationService);
         this.searchService = new SearchService(this.app, this.settings);
+        this.dailyTaskTransfer = new DailyTaskTransfer(this.app);
 
         this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().ribbonOpenSeam, () => this.openPalette());
         this.refreshPaletteRibbon();
@@ -131,6 +136,19 @@ export default class SeamPlugin extends Plugin {
                 return true;
             },
         });
+
+        for (const direction of ['tomorrow', 'yesterday'] as const) {
+            this.addCommand({
+                id: direction === 'tomorrow' ? 'move-daily-todos' : 'pull-daily-todos',
+                name: direction === 'tomorrow' ? t().cmdMoveDailyTodos : t().cmdPullDailyTodos,
+                checkCallback: checking => {
+                    const file = this.app.workspace.getActiveFile();
+                    if (!file || !this.dailyTaskTransfer.canTransfer(file, direction, this.searchService.getDailyNoteSettings())) return false;
+                    if (!checking) void this.transferDailyTasks(file, direction);
+                    return true;
+                },
+            });
+        }
 
         // 4. Register settings tab
         this.addSettingTab(new SeamSettingsTab(this.app, this));
@@ -285,23 +303,26 @@ export default class SeamPlugin extends Plugin {
 
     // ---- Commands ----
 
-    private openPalette(): void {
-        const commands = this.getPaletteCommands();
+    private async openPalette(): Promise<void> {
+        await this.searchService.refreshDailyNoteSettings();
+        const commands = await this.getPaletteCommands();
         const palette = new UniversalPalette(
             this.app,
             this.settings,
             this.searchService,
             commands,
+            this.queryHistory,
         );
         palette.open();
     }
 
-    private openQuickAdd(): void {
+    private async openQuickAdd(): Promise<void> {
         const palette = new UniversalPalette(
             this.app,
             this.settings,
             this.searchService,
-            this.getPaletteCommands(),
+            await this.getPaletteCommands(),
+            this.queryHistory,
         );
         palette.open();
         window.setTimeout(() => palette.showQuickAdd(), 0);
@@ -413,10 +434,17 @@ export default class SeamPlugin extends Plugin {
         new Notice(message, 5000);
     }
 
-    /**
-     * Returns the list of commands available in the Universal Palette.
-     */
-    private getPaletteCommands(): PaletteItem[] {
+    private async transferDailyTasks(file: TFile, direction: 'tomorrow' | 'yesterday'): Promise<void> {
+        try {
+            const count = await this.dailyTaskTransfer.transfer(file, direction);
+            new Notice(count ? t().noticeDailyTransferDone : t().noticeDailyTransferEmpty);
+        } catch (error) {
+            new Notice(`${t().noticeDailyTransferFailed}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    /** Returns the commands available for the current note. */
+    private async getPaletteCommands(): Promise<PaletteItem[]> {
         const commands: PaletteItem[] = [
             {
                 id: 'cmd-quick-note',
@@ -495,6 +523,18 @@ export default class SeamPlugin extends Plugin {
                     ),
                     type: 'action',
                     action: () => this.moveCurrentNoteToFleeting(activeFile),
+                });
+            }
+            const availability = await this.dailyTaskTransfer.getAvailability(activeFile);
+            for (const direction of ['tomorrow', 'yesterday'] as const) {
+                if (!availability[direction]) continue;
+                actions.push({
+                    id: `cmd-daily-todos-${direction}`,
+                    title: direction === 'tomorrow' ? t().cmdMoveDailyTodos : t().cmdPullDailyTodos,
+                    description: '',
+                    type: 'action',
+                    icon: 'calendar-days',
+                    action: () => this.transferDailyTasks(activeFile, direction),
                 });
             }
             commands.splice(3, 0, ...actions);

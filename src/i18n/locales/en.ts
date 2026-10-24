@@ -34,6 +34,19 @@ export const en = {
     cmdCreateNewNote: 'Create a new note',
     cmdCreateQuickNote: 'Create a quick note',
 
+    cmdMoveDailyTodos: "Move todo items to tomorrow's daily note",
+    cmdPullDailyTodos: "Pull todo items from yesterday's daily note",
+    paletteCreateTodayDailyNote: "Create today's daily note",
+    paletteCreateYesterdayDailyNote: "Create yesterday's daily note",
+    noticeCreateDailyFailed: "Unable to create daily note",
+    dailyNoteLabel: "Daily Note",
+    paletteSpecialRecentlyOpened: "The 10 most recently opened files",
+    paletteSpecialFleeting: "Files in your Fleeting folder",
+    paletteSpecialPermanent: "Files in your Permanent folder",
+    noticeDailyTransferEmpty: "No unfinished tasks to move.",
+    noticeDailyTransferDone: "Unfinished tasks moved.",
+    noticeDailyTransferFailed: "Unable to move tasks",
+
     // Universal Palette items & actions
     paletteCreateNoteTitle: (title: string) => `Create new note: "${title}"`,
     paletteCreateNoteDesc: (folder: string) => `Create new note in ${folder}/`,

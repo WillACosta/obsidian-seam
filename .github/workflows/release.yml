@@ -44,6 +44,17 @@ jobs:
       - name: Validate release consistency
         run: node scripts/changelog.mjs validate "${{ inputs.tag || github.ref_name }}"
 
+      - name: Validate Obsidian plugin
+        uses: obsidianmd/obsidian-workflows@v1
+        with:
+          type: plugin
+          mode: pr
+          build: "false"
+          scanner-lint: "true"
+          strict: "true"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Extract release notes
         run: node scripts/changelog.mjs extract "${{ inputs.tag || github.ref_name }}" --out release_notes.md
 

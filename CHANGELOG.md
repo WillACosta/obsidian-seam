@@ -2,6 +2,25 @@
 
 What's new and changed in each Seam release.
 
+## [3.1.0] - 2026-10-23
+<!-- iterations: iteration_11 -->
+
+### Added
+
+- **Special searches**: Find your ten most recently opened files with `@recentlyOpened`, or browse the configured folders with `@fleeting` and `@permanent`. Combine them with other Seam filters.
+- **Daily task transfer**: Move unfinished tasks to tomorrow's Daily Note or pull them from yesterday. Preserve nested task context and completed work, and create missing notes using your Daily Notes folder, date format, and template.
+- **Missing Daily Notes**: Create and open today’s or yesterday’s Daily Note from an empty `@today` or `@yesterday` search, using your configured template.
+- **Palette history**: Press Up in an empty input to cycle through previous queries from the current session.
+
+### Changed
+
+- **Daily Note results**: See readable dates and a calendar subtitle in the Palette.
+- **Daily task commands**: Show Move and Pull only when their source Daily Note contains unfinished work.
+
+### Fixed
+
+- **Daily Note creation shortcuts**: Create missing `@today` and `@yesterday` notes in a new tab or vertical split using the Palette shortcuts. Shortcut labels say “create” when the note does not exist.
+
 ## [3.0.1] - 2026-10-04
 <!-- iterations: iteration_08..iteration_10 -->
 

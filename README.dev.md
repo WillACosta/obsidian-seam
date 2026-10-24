@@ -87,7 +87,7 @@ Releases are automated by the [merged version PR workflow](.github/workflows/tag
    Update `"version"` in:
    - `manifest.json`
    - `package.json`
-   - `versions.json` (`"<new-version>": "1.5.0"`)
+   - `versions.json` (`"<new-version>": "<manifest.minAppVersion>"`)
 
 2. **Generate the Changelog entry**:
    ```bash
@@ -96,6 +96,10 @@ Releases are automated by the [merged version PR workflow](.github/workflows/tag
    If an earlier release did not become available in the Obsidian Community Directory, carry its user-facing notes into the corrected patch release so users can see those features.
 
 3. **Open a PR** from `feat/<new-version>` into `main` with the version files and changelog committed. Merge it after review. Do not create the release tag manually.
+
+### Obsidian validation
+
+PR checks run typecheck, lint, tests, a production build, and `obsidianmd/obsidian-workflows@v1` with the community scanner rules and strict policy enforcement. The same Obsidian check gates version tagging and release publication. It uses validation mode, preserving the existing automated release flow. Review and resolve findings in the workflow summary before merging a release PR.
 
 ### What GitHub Actions Does Automatically
 After a `feat/x.y.z` PR is merged into `main`, the merged version PR workflow:

@@ -104,6 +104,9 @@ export const DEFAULT_SETTINGS: SeamSettings = {
         { search: 'today', pinned: false, hidden: false },
         { search: 'yesterday', pinned: false, hidden: false },
         { search: 'recent', pinned: false, hidden: false },
+        { search: 'recentlyOpened', pinned: false, hidden: false },
+        { search: 'fleeting', pinned: false, hidden: false },
+        { search: 'permanent', pinned: false, hidden: false },
         { search: 'lastDays', pinned: false, hidden: false },
         { search: 'untagged', pinned: false, hidden: false },
         { search: 'docs', pinned: false, hidden: false },
@@ -116,7 +119,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     ],
     specialSearchOrder: [
         'builtin:today', 'builtin:yesterday',
-        'builtin:recent', 'builtin:lastDays',
+        'builtin:recent', 'builtin:recentlyOpened', 'builtin:fleeting', 'builtin:permanent', 'builtin:lastDays',
         'builtin:untagged', 'builtin:docs', 'builtin:images',
         'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code', 'builtin:sources',
     ],
@@ -153,11 +156,14 @@ export interface MatchSnippet {
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text';
 
-export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources';
+export type SpecialSearch = 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources' | 'recentlyOpened' | 'fleeting' | 'permanent';
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
     today: 'calendar-days',
     yesterday: 'history',
     recent: 'clock-3',
+    recentlyOpened: 'history',
+    fleeting: 'folder',
+    permanent: 'folder',
     lastDays: 'calendar-days',
     untagged: 'tag',
     docs: 'file-text',
@@ -173,6 +179,9 @@ export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
     today: '@today',
     yesterday: '@yesterday',
     recent: '@recent',
+    recentlyOpened: '@recentlyOpened',
+    fleeting: '@fleeting',
+    permanent: '@permanent',
     lastDays: '@lastXdays',
     untagged: '@untagged',
     docs: '@docs',
@@ -235,5 +244,5 @@ export interface PaletteItem {
     baseView?: string;
     baseContent?: string;
     baseSearchText?: string;
-    action?: () => void | Promise<void>;
+    action?: (openBehavior?: false | 'tab' | 'split') => void | Promise<void>;
 }

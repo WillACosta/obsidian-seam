@@ -142,6 +142,10 @@ Use estes tokens na Paleta Universal para filtrar buscas ou acessar outros modos
 | `OR` ou `||` | Busca por um termo ou pelo outro. | `#leitura OR #pesquisa` |
 | `>` | Mostra e executa comandos do Seam. | `>archive` |
 
+Encontre arquivos nas pastas configuradas com `@fleeting` e `@permanent`, ou veja os dez arquivos abertos mais recentemente com `@recentlyOpened`. Combine essas buscas com outros filtros do Seam. Com o campo da Paleta vazio, pressione **↑** para percorrer as buscas anteriores da sessão; **↓** retorna em direção ao campo vazio.
+
+As Notas Diárias aparecem com datas legíveis e um subtítulo com calendário. Se `@today` ou `@yesterday` não encontrar a Nota Diária, selecione a ação oferecida para criá-la e abri-la com o modelo configurado. Com a Nota Diária de hoje aberta, use **Mover tarefas pendentes para a nota diária de amanhã** ou **Trazer tarefas pendentes da nota diária de ontem** nos comandos do Seam. Cada comando de tarefas aparece apenas quando sua nota de origem contém trabalho pendente. O Seam usa a pasta, o formato de data e o modelo do plugin nativo Notas Diárias. Tarefas não concluídas (`[ ]`) e parcialmente concluídas (`[/]`) são movidas com o contexto dos itens pais, preservando as concluídas na origem. Se um item pai parcialmente concluído permanecer apenas com filhos concluídos, ele será marcado como concluído na origem.
+
 ## Idiomas
 
 O Seam usa o idioma configurado no Obsidian. Atualmente, oferece suporte a:

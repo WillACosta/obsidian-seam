@@ -1,6 +1,8 @@
 import { App, moment, normalizePath, TFile } from 'obsidian';
 import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } from '../types';
 import { hasDirectoryFilter, parseQuery } from './QueryParser';
+import { isFileInFolder } from '../utils/isFileInFolder';
+import { dailyNoteDate, DailyNoteSettings, DEFAULT_DAILY_SETTINGS, readDailyNoteSettings } from '../daily/DailyNotes';
 import { DOCUMENT_EXTENSIONS, IMAGE_EXTENSIONS } from '../utils/attachments';
 
 /**
@@ -84,10 +86,10 @@ export function parseSpecialSearch(query: string): { search: SpecialSearch | nul
             days: Number(lastDaysMatch[1]),
         };
     }
-    const match = trimmed.match(/^@(today|yesterday|recent|untagged|docs|images|task|todo|done|code|sources)(?:\s+([\s\S]*))?$/i);
+    const match = trimmed.match(/^@(today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?:\s+([\s\S]*))?$/i);
     if (!match) return { search: null, textQuery: trimmed };
     return {
-        search: match[1].toLowerCase() as SpecialSearch,
+        search: (match[1].toLowerCase() === 'recentlyopened' ? 'recentlyOpened' : match[1].toLowerCase()) as SpecialSearch,
         textQuery: normalizeTextQuery(match[2] ?? ''),
     };
 }
@@ -120,6 +122,9 @@ export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearc
         case 'today':
         case 'yesterday':
         case 'recent':
+        case 'recentlyOpened':
+        case 'fleeting':
+        case 'permanent':
             return true;
         case 'lastDays':
             return typeof days === 'number' && file.stat.mtime >= Date.now() - days * 86_400_000;
@@ -210,7 +215,7 @@ export function extractMatchSnippet(
 export class SearchService {
     private searchVersion = 0;
     private contentCache: Map<string, string> = new Map();
-    private dailyNoteSettings = { folder: '', format: 'YYYY-MM-DD' };
+    private dailyNoteSettings = { ...DEFAULT_DAILY_SETTINGS };
 
     constructor(
         private app: App,
@@ -407,7 +412,8 @@ export class SearchService {
 
         // If query contains a supported @ filter, apply it before text matching.
         if (specialQuery.search) {
-            const specialFiles = this.getCachedSpecialSearchFiles(specialQuery.search, this.app.vault.getMarkdownFiles());
+            const pool = ['recentlyOpened', 'fleeting', 'permanent'].includes(specialQuery.search) ? files : this.app.vault.getMarkdownFiles();
+            const specialFiles = this.getCachedSpecialSearchFiles(specialQuery.search, pool);
             return this.specialSearch(specialQuery.search, specialQuery.textQuery, specialFiles, specialQuery.days);
         }
 
@@ -514,7 +520,7 @@ export class SearchService {
 
         for (const filter of specialFilters) {
             let specialCandidates = candidates;
-            if (filter.search === 'today' || filter.search === 'yesterday') {
+            if (filter.search !== 'recent') {
                 specialCandidates = await this.getSpecialSearchFiles(filter.search, specialCandidates);
             }
             if (filter.search === 'recent') {
@@ -546,6 +552,10 @@ export class SearchService {
                 tags: getFileTags(this.app, file),
             }));
         if (this.searchVersion !== currentVersion) return [];
+        if (specialFilters.some(filter => filter.search === 'recentlyOpened')) {
+            const paths = this.app.workspace.getLastOpenFiles();
+            results.sort((a, b) => paths.indexOf(a.path) - paths.indexOf(b.path));
+        }
         results = await this.annotateMatches(results, [tagQuery, textQuery].filter(Boolean).join(' '));
         return this.searchVersion === currentVersion ? results : [];
     }
@@ -582,7 +592,8 @@ export class SearchService {
 
         // If query contains a supported @ filter, apply it before text matching.
         if (specialQuery.search) {
-            const specialFiles = await this.getSpecialSearchFiles(specialQuery.search, this.app.vault.getMarkdownFiles());
+            const pool = ['recentlyOpened', 'fleeting', 'permanent'].includes(specialQuery.search) ? files : this.app.vault.getMarkdownFiles();
+            const specialFiles = await this.getSpecialSearchFiles(specialQuery.search, pool);
             return this.specialSearchWithContent(
                 specialQuery.search,
                 specialQuery.textQuery,
@@ -722,12 +733,12 @@ export class SearchService {
     }
 
     private getCachedSpecialSearchFiles(search: SpecialSearch, files: TFile[]): TFile[] {
-        if (search !== 'today' && search !== 'yesterday') return files;
+        if (search !== 'today' && search !== 'yesterday') return this.selectSpecialFiles(search, files);
         return this.findDailyNote(search, files, this.dailyNoteSettings);
     }
 
     private async getSpecialSearchFiles(search: SpecialSearch, files: TFile[]): Promise<TFile[]> {
-        if (search !== 'today' && search !== 'yesterday') return files;
+        if (search !== 'today' && search !== 'yesterday') return this.selectSpecialFiles(search, files);
         return this.findDailyNote(search, files, await this.readDailyNoteSettings());
     }
 
@@ -745,24 +756,35 @@ export class SearchService {
         return file ? [file] : [];
     }
 
-    private async readDailyNoteSettings(): Promise<{ folder: string; format: string }> {
-        const defaults = { folder: '', format: 'YYYY-MM-DD' };
-        try {
-            const configPath = normalizePath(`${this.app.vault.configDir}/daily-notes.json`);
-            if (!(await this.app.vault.adapter.exists(configPath))) {
-                this.dailyNoteSettings = defaults;
-                return defaults;
-            }
-            const parsed = JSON.parse(await this.app.vault.adapter.read(configPath)) as { folder?: unknown; format?: unknown };
-            this.dailyNoteSettings = {
-                folder: typeof parsed.folder === 'string' ? parsed.folder : defaults.folder,
-                format: typeof parsed.format === 'string' && parsed.format.trim() ? parsed.format : defaults.format,
-            };
-            return this.dailyNoteSettings;
-        } catch {
-            this.dailyNoteSettings = defaults;
-            return defaults;
+    async refreshDailyNoteSettings(): Promise<void> { await this.readDailyNoteSettings(); }
+
+    getDailyNoteSettings(): DailyNoteSettings { return this.dailyNoteSettings; }
+
+    isTodayDailyNote(file: TFile): boolean {
+        return dailyNoteDate(file, this.dailyNoteSettings)?.isSame(moment(), 'day') ?? false;
+    }
+
+    getDailyNoteDisplayTitle(file: TFile): string | null {
+        const date = dailyNoteDate(file, this.dailyNoteSettings);
+        return date ? date.format('D MMM[.] YYYY') : null;
+    }
+
+    private async readDailyNoteSettings() {
+        try { this.dailyNoteSettings = await readDailyNoteSettings(this.app); }
+        catch { this.dailyNoteSettings = { ...DEFAULT_DAILY_SETTINGS }; }
+        return this.dailyNoteSettings;
+    }
+
+    private selectSpecialFiles(search: SpecialSearch, files: TFile[]): TFile[] {
+        if (search === 'recentlyOpened') {
+            const byPath = new Map(files.map(file => [file.path, file]));
+            return [...new Set(this.app.workspace.getLastOpenFiles())].map(path => byPath.get(path)).filter((file): file is TFile => Boolean(file)).slice(0, 10);
         }
+        if (search === 'fleeting' || search === 'permanent') {
+            const folder = search === 'fleeting' ? this.settings.fleetingFolder : this.settings.permanentFolder;
+            return files.filter(file => isFileInFolder(file, folder));
+        }
+        return files;
     }
 
     private specialSearch(search: SpecialSearch, textQuery: string, files: TFile[], days?: number): SearchResult[] {
@@ -789,7 +811,7 @@ export class SearchService {
             });
         }
 
-        if (search !== 'recent') results.sort((a, b) => a.title.localeCompare(b.title));
+        if (search !== 'recent' && search !== 'recentlyOpened') results.sort((a, b) => a.title.localeCompare(b.title));
         return results;
     }
 
@@ -816,7 +838,7 @@ export class SearchService {
                 file.path.toLowerCase().includes(lowerText);
             let matchSnippet: MatchSnippet | undefined;
 
-            if (!titleMatch && lowerText) {
+            if (!titleMatch && lowerText && file.extension === 'md') {
                 try {
                     const content = await this.app.vault.cachedRead(file);
                     const body = this.stripFrontmatter(content);
@@ -828,6 +850,7 @@ export class SearchService {
                 if (!matchSnippet) continue;
             }
 
+            if (!titleMatch && !matchSnippet) continue;
             results.push({
                 file,
                 title: file.basename,
@@ -838,7 +861,7 @@ export class SearchService {
         }
 
         if (this.searchVersion !== searchVersion) return [];
-        if (search !== 'recent') results.sort((a, b) => {
+        if (search !== 'recent' && search !== 'recentlyOpened') results.sort((a, b) => {
             if (lowerText) {
                 const aTitle = a.title.toLowerCase().includes(lowerText) ? 0 : 1;
                 const bTitle = b.title.toLowerCase().includes(lowerText) ? 0 : 1;

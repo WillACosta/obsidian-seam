@@ -7,6 +7,8 @@ import { NoteConflictModal } from './NoteConflictModal';
 import { getTagInputContext, getTagSuggestions } from './TagFilterSuggest';
 import { openSearchResult } from '../search/OpenSearchResult';
 import { hasDirectoryFilter, parseQuery } from '../search/QueryParser';
+import { QueryHistory } from '../search/QueryHistory';
+import { createDailyNote, getMissingDailyNote } from '../daily/DailyNotes';
 import { BaseResultNavigation } from './BaseResultNavigation';
 
 /**
@@ -68,6 +70,8 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
 export class UniversalPalette extends SuggestModal<PaletteItem> {
     private createSuggestionActive = false;
     private lastQuery = '';
+    private historyIndex = -1;
+    private restoringHistory = false;
     private selectedTags: string[] = [];
     private excludedTags: string[] = [];
     private chipsContainerEl: HTMLElement | null = null;
@@ -88,6 +92,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private baseNavigationEnabled = false;
     private baseSourcePath = '';
     private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
+        if (event.target === this.inputEl && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
+            && (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+            && !this.cycleHistory(event, event.key === 'ArrowUp' ? 1 : -1)) {
+            event.stopImmediatePropagation();
+            return;
+        }
         if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return;
         const target = event.target as Node | null;
         if (!target?.instanceOf?.(HTMLElement) || !target.matches('.prompt-input')) return;
@@ -101,6 +111,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         private settings: SeamSettings,
         private searchService: SearchService,
         private commands: PaletteItem[],
+        private queryHistory = new QueryHistory(),
     ) {
         super(app);
         this.setPlaceholder(t().palettePlaceholder);
@@ -118,7 +129,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 void openSearchResult(this.app, item, 'tab');
             } else if (item?.type === 'create') {
                 this.close();
-                void this.createNote(this.inputEl.value.trim(), 'tab');
+                void item.action?.('tab');
             } else if (item?.type === 'tag') {
                 this.selectSuggestion(item, evt);
             }
@@ -129,7 +140,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (item?.type === 'create') {
                 evt.preventDefault();
                 this.close();
-                void this.createNote(this.inputEl.value.trim(), 'split');
+                void item.action?.('split');
                 return false;
             }
             if (item?.type !== 'note' || !item.file || this.baseNavigationEnabled) return true;
@@ -154,6 +165,26 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         });
     }
 
+    private cycleHistory(event: KeyboardEvent, direction: 1 | -1): boolean {
+        if (this.mode !== 'search' || (this.baseNavigationEnabled && this.historyIndex < 0) || !this.queryHistory.length) return true;
+        if (this.historyIndex < 0 && (direction < 0 || this.inputEl.value || this.composedQueryPrefix || this.selectedTags.length || this.excludedTags.length)) return true;
+        event.preventDefault();
+        this.historyIndex = direction > 0 ? (this.historyIndex + 1) % this.queryHistory.length : this.historyIndex - 1;
+        this.selectedTags = [];
+        this.excludedTags = [];
+        this.composedTagKeys = [];
+        this.composedQueryPrefix = '';
+        this.selectedDirectoryToken = null;
+        this.selectedInlineTagTokens.clear();
+        this.renderChips();
+        this.inputEl.value = this.historyIndex < 0 ? '' : this.queryHistory.at(this.historyIndex) ?? '';
+        this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
+        this.restoringHistory = true;
+        try { this.refreshSuggestions(); }
+        finally { this.restoringHistory = false; }
+        return false;
+    }
+
     onOpen(): void {
         window.addEventListener('keydown', this.baseNavigationKeyListener, true);
         void super.onOpen();
@@ -161,6 +192,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     onClose(): void {
+        if (this.mode === 'search') this.queryHistory.record([
+            this.composedQueryPrefix + this.inputEl.value,
+            ...this.selectedTags.map(tag => '#' + tag),
+            ...this.excludedTags.map(tag => '!#' + tag),
+        ].filter(Boolean).join(' '));
         window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
         this.inputEl.closest<HTMLElement>('.prompt')?.removeClass('seam-palette-custom-search-expanded', 'seam-palette-special-search-active', 'seam-palette-directory-search-active');
         this.selectedTags = [];
@@ -273,6 +309,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Also automatically convert a completed tag when user types space (e.g. "#ai ")
         this.inputEl.addEventListener('input', () => {
+            if (!this.restoringHistory) this.historyIndex = -1;
             const val = this.inputEl.value;
             const tokens = new Set(val.split(/\s+/));
             for (const token of this.selectedInlineTagTokens) {
@@ -457,9 +494,31 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         super.selectSuggestion(value, evt);
     }
 
-    /**
-     * Gets the currently selected suggestion from the internal chooser.
-     */
+    private async getDailyNoteCreationSuggestion(search: 'today' | 'yesterday'): Promise<PaletteItem | null> {
+        try {
+            const target = await getMissingDailyNote(this.app, search);
+            if (!target) return null;
+            return {
+                id: `create-daily-note-${search}`,
+                title: search === 'today' ? t().paletteCreateTodayDailyNote : t().paletteCreateYesterdayDailyNote,
+                description: target.path,
+                type: 'create',
+                icon: 'calendar-plus',
+                action: async (openBehavior = false) => {
+                    try {
+                        const file = await createDailyNote(this.app, target.date, target.settings);
+                        const leaf = openBehavior === 'split' ? this.app.workspace.getLeaf('split', 'vertical')
+                            : this.app.workspace.getLeaf(openBehavior);
+                        await leaf.openFile(file);
+                    } catch (error) {
+                        new Notice(`${t().noticeCreateDailyFailed}: ${error instanceof Error ? error.message : String(error)}`);
+                    }
+                },
+            };
+        } catch { return null; }
+    }
+
+    /** Gets the currently selected suggestion from the internal chooser. */
     private getSelectedItem(): PaletteItem | null {
         const chooser = (this as unknown as { chooser: SuggestChooser<PaletteItem> }).chooser;
         if (!chooser?.values || chooser.selectedItem < 0) return null;
@@ -537,9 +596,19 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                     [...combined.flatMap(entry => entry.custom?.mode === 'tags' ? [entry.custom.filterQuery] : []), ...(chipQuery ? [chipQuery] : [])],
                     inlineTagQuery,
                     textQuery,
-                ).then(results => this.lastQuery === trimmed
-                    ? this.mapSearchResults(results, textQuery || inlineTagQuery || chipQuery, combined.some(entry => entry.special?.search === 'todo'))
-                    : []);
+                ).then(async results => {
+                    if (this.lastQuery !== trimmed) return [];
+                    const items = this.mapSearchResults(results, textQuery || inlineTagQuery || chipQuery, combined.some(entry => entry.special?.search === 'todo'));
+                    const dailySearch = combined.length === 1 ? combined[0].special?.search : null;
+                    if (!items.length && !remaining && !chipQuery && (dailySearch === 'today' || dailySearch === 'yesterday')) {
+                        const suggestion = await this.getDailyNoteCreationSuggestion(dailySearch);
+                        if (this.lastQuery !== trimmed) return [];
+                        if (suggestion) items.push(suggestion);
+                    }
+                    this.createSuggestionActive = items.some(item => item.type === 'create');
+                    this.updateInstructions(trimmed);
+                    return items;
+                });
             }
             const custom = customSearch;
             if (custom) {
@@ -675,7 +744,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 description: '',
                 type: 'create',
                 icon: 'file-plus',
-                action: () => this.createNote(query),
+                action: (openBehavior) => this.createNote(query, openBehavior),
             });
         }
 
@@ -759,12 +828,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         showTodoCompletion = false,
     ): PaletteItem[] {
         const items: PaletteItem[] = results.map((r) => {
+            const dailyTitle = this.searchService.getDailyNoteDisplayTitle(r.file);
             const parentPath =
                 r.file.parent?.path && r.file.parent.path !== '/' ? r.file.parent.path : '';
             return {
                 id: r.file.path,
-                title: r.title,
-                description: parentPath,
+                title: dailyTitle ?? r.title,
+                description: dailyTitle ? t().dailyNoteLabel : parentPath,
+                icon: dailyTitle ? 'calendar-days' : undefined,
                 type: 'note' as const,
                 file: r.file,
                 tags: r.tags,
@@ -880,6 +951,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private updateInstructions(query: string): void {
+        if (this.mode === 'search' && this.createSuggestionActive) {
+            this.setInstructions([
+                { command: '↵', purpose: t().paletteHelpCreate },
+                { command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵', purpose: t().paletteHelpCreateNewTab },
+                { command: '⇧↵', purpose: t().paletteHelpCreateSplit },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+            ]);
+            return;
+        }
         if (this.mode === 'search' && !query.trim() && !this.selectedTags.length && !this.excludedTags.length && !this.composedQueryPrefix) {
             this.setInstructions([
                 { command: '#', purpose: t().paletteHelpTag },
@@ -913,15 +993,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         if (this.mode === 'search' && query.trim()) {
             const openNewTab = Platform.isMacOS ? '⌘↵' : 'Ctrl+↵';
-            if (this.createSuggestionActive) {
-                this.setInstructions([
-                    { command: '↵', purpose: t().paletteHelpCreate },
-                    { command: openNewTab, purpose: t().paletteHelpCreateNewTab },
-                    { command: '⇧↵', purpose: t().paletteHelpCreateSplit },
-                    { command: 'esc', purpose: t().paletteHelpDismiss },
-                ]);
-                return;
-            }
             this.setInstructions([
                 { command: '↑↓', purpose: t().paletteHelpNavigate },
                 { command: '↵', purpose: t().paletteHelpOpen },
@@ -965,6 +1036,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             { search: 'today', label: SPECIAL_SEARCH_LABELS.today, description: t().paletteSpecialToday },
             { search: 'yesterday', label: SPECIAL_SEARCH_LABELS.yesterday, description: t().paletteSpecialYesterday },
             { search: 'recent', label: SPECIAL_SEARCH_LABELS.recent, description: t().paletteSpecialRecent },
+            { search: 'recentlyOpened', label: SPECIAL_SEARCH_LABELS.recentlyOpened, description: t().paletteSpecialRecentlyOpened },
+            { search: 'fleeting', label: SPECIAL_SEARCH_LABELS.fleeting, description: t().paletteSpecialFleeting },
+            { search: 'permanent', label: SPECIAL_SEARCH_LABELS.permanent, description: t().paletteSpecialPermanent },
             { search: 'lastDays', label: SPECIAL_SEARCH_LABELS.lastDays, description: t().paletteSpecialLastDays },
             { search: 'untagged', label: SPECIAL_SEARCH_LABELS.untagged, description: t().paletteSpecialUntagged },
             { search: 'docs', label: SPECIAL_SEARCH_LABELS.docs, description: t().paletteSpecialDocs },
@@ -977,7 +1051,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         ];
         const needle = query.toLowerCase();
         const builtIns = options
-            .filter((option) => option.label.startsWith(needle) && !this.settings.specialSearchPreferences.find((preference) => preference.search === option.search)?.hidden)
+            .filter((option) => option.label.toLowerCase().startsWith(needle) && !this.settings.specialSearchPreferences.find((preference) => preference.search === option.search)?.hidden)
             .map((option) => ({
                 id: `special-search-${option.search}`,
                 title: option.label,
@@ -1022,7 +1096,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private getActiveSpecialQueryToken(query: string): string | null {
         const custom = this.getCustomSearchForQuery(query.trim());
         if (custom) return query.trimStart().slice(0, custom.identifier.length);
-        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i);
+        const match = query.trimStart().match(/^@(last[1-9]\d*days|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i);
         return match?.[0] ?? null;
     }
 
@@ -1159,7 +1233,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 const folderEl = el.createDiv({ cls: 'seam-palette-folder' });
                 if (this.settings.showIcons) {
                     const iconEl = folderEl.createSpan({ cls: 'seam-palette-folder-icon' });
-                    setIcon(iconEl, 'folder');
+                    setIcon(iconEl, item.icon || 'folder');
                 }
                 const nameEl = folderEl.createSpan({ cls: 'seam-palette-folder-name' });
                 nameEl.setText(item.description);

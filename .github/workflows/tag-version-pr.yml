@@ -78,6 +78,17 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Validate Obsidian plugin
+        uses: obsidianmd/obsidian-workflows@v1
+        with:
+          type: plugin
+          mode: pr
+          build: "false"
+          scanner-lint: "true"
+          strict: "true"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Create and push the version tag
         env:
           VERSION: ${{ steps.version.outputs.version }}
