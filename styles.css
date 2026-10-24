@@ -1,5 +1,134 @@
 /* Seam — Universal Palette styles */
 
+.prompt.seam-palette-statistics .prompt-input-container,
+.prompt.seam-palette-statistics .prompt-results {
+    display: none;
+}
+
+.prompt.seam-palette-statistics {
+    max-height: 85vh;
+}
+
+.seam-note-statistics {
+    padding: 24px;
+    overflow-y: auto;
+    min-height: 0;
+    user-select: text;
+}
+
+.seam-note-statistics:focus {
+    outline: none;
+}
+
+.seam-note-statistics-header h2 {
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    color: var(--text-muted);
+    margin: 0 0 12px;
+    padding-inline-end: 32px;
+}
+
+.prompt.seam-palette-statistics .seam-note-statistics-dismiss {
+    position: absolute;
+    inset-inline-end: 14px;
+    top: 14px;
+    width: 32px;
+    height: 32px;
+    color: var(--text-muted);
+    background: var(--background-primary);
+    box-shadow: none;
+}
+
+.seam-note-statistics-header .seam-note-statistics-title {
+    margin: 0;
+    font-size: 1.4em;
+    color: var(--text-normal);
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.seam-note-statistics-path {
+    margin: 6px 0 20px;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    overflow-wrap: anywhere;
+}
+
+.seam-note-statistics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+
+.seam-note-statistics-block {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    gap: 16px;
+    min-width: 0;
+    padding: 20px;
+    border-radius: var(--radius-l);
+    background: var(--background-secondary);
+}
+
+.seam-note-statistics-label {
+    order: 2;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+}
+
+.seam-note-statistics-value {
+    order: 1;
+    margin: 0;
+    padding-inline-end: 24px;
+    font-size: 1.9em;
+    line-height: 1.2;
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.seam-note-statistics-icon {
+    position: absolute;
+    inset-inline-end: 20px;
+    top: 22px;
+    color: var(--text-muted);
+    display: inline-flex;
+}
+
+.seam-note-statistics-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.seam-note-statistics-dates {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 16px 0 0;
+    border-radius: var(--radius-l);
+    overflow: hidden;
+}
+
+.seam-note-statistics-dates .seam-note-statistics-block {
+    border-radius: 0;
+    gap: 6px;
+}
+
+.seam-note-statistics-dates .seam-note-statistics-value {
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+    .seam-note-statistics { padding: 20px 16px; }
+    .seam-note-statistics-block { padding: 16px; gap: 12px; }
+    .seam-note-statistics-icon { inset-inline-end: 14px; top: 18px; }
+    .seam-note-statistics-value { font-size: 1.6em; }
+    .prompt.seam-palette-statistics .seam-note-statistics-dismiss { width: 44px; height: 44px; top: 6px; inset-inline-end: 6px; }
+}
+
 .seam-ribbon-hidden {
     display: none;
 }

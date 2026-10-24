@@ -146,6 +146,10 @@ Encontre arquivos nas pastas configuradas com `@fleeting` e `@permanent`, ou vej
 
 As Notas Diárias aparecem com datas legíveis e um subtítulo com calendário. Se `@today` ou `@yesterday` não encontrar a Nota Diária, selecione a ação oferecida para criá-la e abri-la com o modelo configurado. Com a Nota Diária de hoje aberta, use **Mover tarefas pendentes para a nota diária de amanhã** ou **Trazer tarefas pendentes da nota diária de ontem** nos comandos do Seam. Cada comando de tarefas aparece apenas quando sua nota de origem contém trabalho pendente. O Seam usa a pasta, o formato de data e o modelo do plugin nativo Notas Diárias. Tarefas não concluídas (`[ ]`) e parcialmente concluídas (`[/]`) são movidas com o contexto dos itens pais, preservando as concluídas na origem. Se um item pai parcialmente concluído permanecer apenas com filhos concluídos, ele será marcado como concluído na origem.
 
+### Estatísticas da nota
+
+Com uma nota Markdown aberta, escolha **Mostrar estatísticas da nota** nos comandos do Obsidian ou nos comandos `>` do Seam. A Paleta Universal mostra palavras, caracteres, parágrafos, tempo estimado de leitura e datas de criação e modificação no idioma configurado. A contagem inclui o texto ainda não salvo no editor; caracteres incluem espaços e Markdown, parágrafos são separados por linhas em branco e o tempo de leitura usa 200 palavras por minuto. Pressione `Esc` ou use o botão de fechar para sair.
+
 ## Idiomas
 
 O Seam usa o idioma configurado no Obsidian. Atualmente, oferece suporte a:

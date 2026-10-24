@@ -5,6 +5,7 @@
 - **Specs Directory:** [`docs/specs/iteration_11`](../specs/iteration_11/)
   - `human_friendly_daily_note_name.md`
   - `new_built_in_special_queries.md`
+  - `note_statistics.md`
   - `obsidian_workflows.md`
   - `unfinished_daily_note_data.md`
   - `universal_palette_history_cycling.md`
@@ -12,6 +13,7 @@
 ## Summary of Changes
 
 ### Added
+- **Note statistics**: Show the current Markdown note's words, characters, paragraphs, estimated reading time, and localized modified/created dates in a block-based Universal Palette report. Offer the command in Obsidian and Seam only while a note is active. Count unsaved editor text without writing the note; show only dismiss in the footer and support Escape, close-button, and outside-click dismissal. Theme-aware cards and date rows adapt to narrow views; English and Brazilian Portuguese copy is included.
 - **Special searches**: Find the ten most recently opened files with `@recentlyOpened`, or search the configured Fleeting and Permanent folders with `@fleeting` and `@permanent`. Include attachments, preserve recent-file order, and combine these searches with tags, text, folders, and other compatible special searches.
 - **Daily task transfer**: From today's Daily Note, move unchecked and partially complete tasks to tomorrow or pull yesterday's pending tasks into today. Create missing destinations with the core Daily Notes folder, date format, and template. Preserve nested parent context and completed siblings; mark a retained task parent complete once its pending work has moved. Save active editor buffers, serialize transfers, and append successfully before changing the source. Roll back the append on source failure when the destination is unchanged; preserve both notes and request review if concurrent destination changes prevent rollback.
 - **Missing Daily Notes**: Empty standalone `@today` and `@yesterday` searches offer to create and open the missing note with the core Daily Notes folder, format, and template. Existing or concurrently created notes are opened without overwriting them; filtered-out existing notes do not offer duplicate creation.
@@ -33,6 +35,8 @@
   - **Verified Scenarios**: Real key events for recall after reopening, multiple Up presses, wrapping, Down to an empty input, composed query restoration, and typing before result navigation.
 
 ### Tests
+- Note statistics follow-up: all 163 unit tests passed, with eight new cases for empty text, Unicode and Markdown word boundaries, code-point character counts, CRLF paragraphs, reading-time rounding, unsaved editor content, reading-mode fallback, and read errors. Typecheck, lint, and production build passed. Live test-vault checks verified contextual visibility for Markdown, empty views, and attachments, 203 words / 1,022 characters / 2 paragraphs / 2 min from current editor text, report selection through Seam commands, reading-mode content, the dismiss-only footer, Escape and close-button dismissal, and inert Enter/tab/split shortcuts. A 390 px viewport had no horizontal overflow; doubled report text scrolled while keeping the footer visible. Physical-device acceptance was not performed.
+- Final statistics checks: desktop light and dark appearances were inspected, outside-click dismissal passed, and runtime/console error checks were empty after reloading the final build. Release consistency and whitespace checks passed. The original test-vault layout and appearance were restored, viewport emulation cleared, and temporary note/attachment fixtures moved to trash.
 - Shortcut follow-up: all 155 unit tests passed, including eight Palette creation-routing regressions; typecheck, lint, production build, changelog validation, and whitespace checks passed. Real CDP key events in `seam_test_vault` verified all four shortcuts for both date queries, template content, current-tab reuse, new-tab counts, separate split groups, creation footer labels, and existing-note open labels. Runtime and console error checks were empty. Settings were restored byte-for-byte, the original layout restored, and temporary fixtures moved to trash.
 - 147 passing unit tests, including 20 Iteration 11 cases covering nested task branches, completed and cancelled parents, ordered lists and continuations, YAML and code exclusion, template-based creation, repeated moves, pull direction, missing templates, destination/source write failures, concurrent edits, overlapping commands, custom date paths, attachment searches, folder boundaries, composition, recent ordering/limit, readable date recognition, and history deduplication. The shared Obsidian mock now uses the installed Moment implementation.
 - Typecheck, lint, production build, release consistency validation, changelog validation, and whitespace checks passed.

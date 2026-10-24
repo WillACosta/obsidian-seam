@@ -146,6 +146,10 @@ Find files in your configured folders with `@fleeting` and `@permanent`, or brow
 
 Daily Notes appear with readable dates and a calendar subtitle. If `@today` or `@yesterday` has no Daily Note, select the offered action to create and open it from your configured template. While today's Daily Note is open, use **Move todo items to tomorrow's daily note** or **Pull todo items from yesterday's daily note** in Seam's commands. Each task command appears only when its source note has unfinished work. Seam follows the core Daily Notes folder, date format, and template. It moves unchecked (`[ ]`) and partially complete (`[/]`) tasks with their parent context, leaving completed tasks behind. If a partially complete parent remains with only completed children, its source checkbox becomes completed.
 
+### Note statistics
+
+With a Markdown note open, choose **Show note statistics** from Obsidian's commands or Seam's `>` commands. The Universal Palette displays words, characters, paragraphs, estimated reading time, and localized creation/modification dates. Counts include current unsaved editor text; characters include whitespace and Markdown, paragraphs are separated by blank lines, and reading time uses 200 words per minute. Press `Esc` or use the close button to dismiss.
+
 ## Languages
 
 Seam follows Obsidian's language setting. It currently supports:

@@ -7,6 +7,7 @@ What's new and changed in each Seam release.
 
 ### Added
 
+- **Note statistics**: Show words, characters, paragraphs, reading time, and modified/created dates for the current note in the Universal Palette, including unsaved editor text.
 - **Special searches**: Find your ten most recently opened files with `@recentlyOpened`, or browse the configured folders with `@fleeting` and `@permanent`. Combine them with other Seam filters.
 - **Daily task transfer**: Move unfinished tasks to tomorrow's Daily Note or pull them from yesterday. Preserve nested task context and completed work, and create missing notes using your Daily Notes folder, date format, and template.
 - **Missing Daily Notes**: Create and open today’s or yesterday’s Daily Note from an empty `@today` or `@yesterday` search, using your configured template.

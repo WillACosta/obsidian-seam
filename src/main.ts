@@ -102,6 +102,17 @@ export default class SeamPlugin extends Plugin {
 
         // Commands that operate on the current open note
         this.addCommand({
+            id: 'show-note-statistics',
+            name: t().cmdShowNoteStatistics,
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md') return false;
+                if (!checking) this.openNoteStatistics(file);
+                return true;
+            },
+        });
+
+        this.addCommand({
             id: 'archive-current-note',
             name: t().cmdArchiveCurrentNote,
             checkCallback: (checking: boolean) => {
@@ -328,6 +339,12 @@ export default class SeamPlugin extends Plugin {
         window.setTimeout(() => palette.showQuickAdd(), 0);
     }
 
+    private openNoteStatistics(file: TFile): void {
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, [], this.queryHistory);
+        palette.open();
+        void palette.showNoteStatistics(file);
+    }
+
     private async ensureQuickNoteFolder(path: string): Promise<string> {
         const folderPath = normalizePath(path.trim().replace(/^\/+|\/+$/g, ''));
         if (!folderPath) return '';
@@ -488,7 +505,15 @@ export default class SeamPlugin extends Plugin {
         // Contextual commands: only when a note is active
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
-            const actions: PaletteItem[] = [];
+            const actions: PaletteItem[] = [{
+                id: 'cmd-note-statistics',
+                title: t().cmdShowNoteStatistics,
+                description: activeFile.basename,
+                type: 'command',
+                icon: 'chart-no-axes-column',
+                file: activeFile,
+                action: () => this.openNoteStatistics(activeFile),
+            }];
             if (!isFileInFolder(activeFile, this.settings.archiveFolder)) {
                 actions.push({
                     id: 'cmd-archive-current',
