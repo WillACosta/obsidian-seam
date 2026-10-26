@@ -9,6 +9,8 @@ import { openSearchResult } from '../search/OpenSearchResult';
 import { hasDirectoryFilter, parseQuery } from '../search/QueryParser';
 import { createDailyNote, getMissingDailyNote } from '../daily/DailyNotes';
 import { BaseResultNavigation } from './BaseResultNavigation';
+import { GlobalStatistics } from '../statistics/GlobalStatistics';
+import { GlobalStatisticsView } from './GlobalStatisticsView';
 import { readNoteStatistics } from '../statistics/NoteStatistics';
 import { groupPaletteItems } from './PaletteGroups';
 import { confirmPeriodicNote } from './PeriodicNoteConfirmation';
@@ -99,6 +101,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private calendarHost: HTMLElement | null = null;
     private calendarGeneration = 0;
     private statisticsHost: HTMLElement | null = null;
+    private globalStatisticsView: GlobalStatisticsView | null = null;
     private quickAddDraft = '';
     private selectedDirectoryToken: string | null = null;
     private selectedInlineTagTokens = new Set<string>();
@@ -110,7 +113,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private baseNavigationEnabled = false;
     private baseSourcePath = '';
     private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
-        if (this.mode === 'statistics') return;
+        if (this.mode === 'statistics') {
+            const dismiss = this.modalEl.querySelector<HTMLButtonElement>('.seam-note-statistics-dismiss');
+            if (dismiss && event.target === dismiss && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault(); event.stopImmediatePropagation(); dismiss.click(); return;
+            }
+            this.globalStatisticsView?.handleKey(event);
+            return;
+        }
         if (this.calendarView?.handleKey(event)) return;
         if (this.calendarHost && !this.calendarView && (event.key === 'Enter' || event.key === ' ')) {
             const target = event.target as Node | null;
@@ -136,6 +146,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         private searchService: SearchService,
         private commands: PaletteItem[],
         private calendarPins?: CalendarPins,
+        private globalStatistics?: GlobalStatistics,
     ) {
         super(app);
         this.setPlaceholder(t().palettePlaceholder);
@@ -210,6 +221,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
         this.releaseCloseButtonScope();
         this.disposeCalendar();
+        this.globalStatisticsView?.destroy();
+        this.globalStatisticsView = null;
         this.statisticsHost?.remove();
         this.statisticsHost = null;
         this.outlineItems = [];
@@ -286,7 +299,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     /** Replace search with a read-only report in the same Palette. */
-    async showNoteStatistics(file: TFile, completion = false): Promise<void> {
+    private createReportHost(title: string): HTMLElement {
         this.mode = 'statistics';
         this.lastQuery = '';
         this.baseNavigationEnabled = false;
@@ -294,10 +307,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.modalEl.addClass('seam-palette-statistics');
         this.inputEl.disabled = true;
         this.updateInstructions('');
+        this.globalStatisticsView?.destroy();
+        this.globalStatisticsView = null;
         this.statisticsHost?.remove();
+        this.modalEl.querySelector('.seam-note-statistics-dismiss')?.remove();
+        this.modalEl.removeClass('seam-palette-global-statistics');
         const host = this.modalEl.createDiv({
             cls: 'seam-note-statistics',
-            attr: { tabindex: '-1', 'aria-label': completion ? t().completionTitle : t().statisticsTitle, role: 'region', 'aria-busy': 'true', 'aria-live': 'polite' },
+            attr: { tabindex: '-1', 'aria-label': title, role: 'region', 'aria-busy': 'true', 'aria-live': 'polite' },
         });
         this.resultContainerEl.before(host);
         this.statisticsHost = host;
@@ -306,6 +323,22 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         setIcon(dismiss, 'x');
         dismiss.addEventListener('click', () => this.close());
         host.focus();
+        return host;
+    }
+
+    showGlobalStatistics(): void {
+        if (!this.globalStatistics) return;
+        const host = this.createReportHost(t().globalTitle);
+        host.setAttribute('aria-live', 'off');
+        host.removeAttribute('aria-busy');
+        this.modalEl.addClass('seam-palette-global-statistics');
+        this.globalStatisticsView = new GlobalStatisticsView(this.app, host, this.globalStatistics, async file => {
+            this.close(); await this.app.workspace.getLeaf(false).openFile(file);
+        });
+    }
+
+    async showNoteStatistics(file: TFile, completion = false): Promise<void> {
+        const host = this.createReportHost(completion ? t().completionTitle : t().statisticsTitle);
         try {
             if (completion) {
                 const report = await readNoteCompletion(this.app, file);
@@ -566,6 +599,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             if (value.type !== 'heading') return;
             this.close();
             this.onChooseSuggestion(value, evt);
+            return;
+        }
+        if (value.id === 'cmd-global-statistics') {
+            this.showGlobalStatistics();
             return;
         }
         if (value.id === 'cmd-note-outline' && value.file) {
@@ -1137,9 +1174,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     private returnToSearch(): void {
         if (this.mode === 'statistics') {
+            this.globalStatisticsView?.destroy();
+            this.globalStatisticsView = null;
             this.statisticsHost?.remove();
             this.statisticsHost = null;
-            this.modalEl.removeClass('seam-palette-statistics');
+            this.modalEl.removeClass('seam-palette-statistics', 'seam-palette-global-statistics');
             this.modalEl.querySelector('.seam-note-statistics-dismiss')?.remove();
             this.inputEl.disabled = false;
         }

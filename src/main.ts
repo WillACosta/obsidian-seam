@@ -3,6 +3,8 @@ import { DailyTaskTransfer } from './daily/DailyTaskTransfer';
 import { CalendarPins, normalizeCalendarPins } from './calendar/CalendarPins';
 import { PalettePins, normalizePalettePins } from './notes/PalettePins';
 import { confirmPeriodicNote } from './ui/PeriodicNoteConfirmation';
+import { GlobalStatistics } from './statistics/GlobalStatistics';
+import { writingActivityExtension } from './statistics/WritingActivityExtension';
 import { currentNoteCompletion } from './statistics/NoteCompletion';
 import { NoteDeletion } from './notes/NoteDeletion';
 import { isFileInFolder } from './utils/isFileInFolder';
@@ -45,6 +47,7 @@ export default class SeamPlugin extends Plugin {
     private noteDeletion!: NoteDeletion;
     calendarPins!: CalendarPins;
     palettePins!: PalettePins;
+    globalStatistics!: GlobalStatistics;
     private reconciliationIntervalId: number | null = null;
     private paletteRibbonEl: HTMLElement | null = null;
     private activePalettes = new Set<UniversalPalette>();
@@ -74,7 +77,15 @@ export default class SeamPlugin extends Plugin {
 
         this.palettePins = this.addChild(new PalettePins(this.app, () => this.settings, () => this.saveData(this.settings)));
 
+        this.globalStatistics = this.addChild(new GlobalStatistics(this.app,
+            this.manifest.dir ?? normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`)));
+        this.registerEditorExtension(writingActivityExtension(this.globalStatistics));
+
         // 3. Register commands
+        this.addCommand({
+            id: 'show-global-statistics', name: t().cmdShowGlobalStatistics,
+            callback: () => { void this.openGlobalStatistics(); },
+        });
         this.addCommand({
             id: 'create-quick-note',
             name: t().cmdCreateQuickNote,
@@ -399,6 +410,7 @@ export default class SeamPlugin extends Plugin {
             this.searchService,
             commands,
             this.calendarPins,
+            this.globalStatistics,
         );
         this.openTrackedPalette(palette);
     }
@@ -410,6 +422,7 @@ export default class SeamPlugin extends Plugin {
             this.searchService,
             await this.getPaletteCommands(),
             this.calendarPins,
+            this.globalStatistics,
         );
         this.openTrackedPalette(palette);
         window.setTimeout(() => palette.showQuickAdd(), 0);
@@ -417,14 +430,20 @@ export default class SeamPlugin extends Plugin {
 
     private async openNoteOutline(file: TFile): Promise<void> {
         await this.searchService.refreshDailyNoteSettings();
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.calendarPins);
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.calendarPins, this.globalStatistics);
         this.openTrackedPalette(palette);
         palette.showNoteOutline(file);
     }
 
+    private async openGlobalStatistics(): Promise<void> {
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.calendarPins, this.globalStatistics);
+        this.openTrackedPalette(palette);
+        palette.showGlobalStatistics();
+    }
+
     private async openNoteStatistics(file: TFile, completion = false): Promise<void> {
         const commands = await this.getPaletteCommands();
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, commands, this.calendarPins);
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, commands, this.calendarPins, this.globalStatistics);
         this.openTrackedPalette(palette);
         void palette.showNoteStatistics(file, completion);
     }
@@ -571,6 +590,8 @@ export default class SeamPlugin extends Plugin {
     /** Returns the commands available for the current note. */
     private async getPaletteCommands(): Promise<PaletteItem[]> {
         const commands: PaletteItem[] = [
+            { id: 'cmd-global-statistics', title: t().cmdShowGlobalStatistics, description: t().globalDescription,
+                type: 'command', icon: 'chart-no-axes-combined', action: () => this.openGlobalStatistics() },
             {
                 id: 'cmd-quick-note',
                 title: t().cmdCreateQuickNote,

@@ -19,6 +19,9 @@ pnpm test
 
 # Link compiled plugin to test vault (seam_test_vault/)
 pnpm run symlink
+
+# Build and copy the plugin files to the personal Obsidian vault
+pnpm run install:personal
 ```
 
 Test against `seam_test_vault/` using the Obsidian CLI:

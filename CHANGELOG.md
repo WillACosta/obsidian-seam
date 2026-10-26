@@ -3,18 +3,26 @@
 What's new and changed in each Seam release.
 
 ## [Unreleased] - 2026-10-26
-<!-- iterations: iteration_13 -->
+<!-- iterations: iteration_13..iteration_14 -->
 
 ### Added
 - **Palette note pins**: Pin or unpin the current Markdown note and keep it first in the empty-input Universal Palette, even with default commands hidden. Persist references across reloads, follow file/folder moves, and remove deleted references. Palette note pins are independent of calendar pins and special-query pins.
 - **Note completion**: Offer “Show current note's percentage completion” only for notes containing tasks. Display a theme-colored progress bar and counts of unfinished, partially done (`[/]`), completed, and total items inside the Palette. Include unsaved editor content and respect reduced motion. Press Backspace from completion or Note statistics to return to Palette search, with a matching footer hint.
 - **Periodic-note confirmation**: Ask before Seam creates a daily, weekly, or yearly note, including calendar actions, rolling weekly pins, date queries, and daily-task transfer. Show the target path and allow cancellation without creation. Add a default-on Calendar and periodic notes setting; existing notes open directly.
 - **Palette group names**: Separate related commands with dimmed names such as Note Statistics and Move Notes, and distinguish built-in/custom special queries without adding selectable rows. Add a default-on Interface toggle.
+- **Global Statistics**: Open a writing dashboard inside the Universal Palette through “Show global statistics,” grouped with note reports. Show current Markdown note/word totals, recorded active days, and a current writing streak. Use four overview cards in a row or a responsive 2×2 layout.
+- **Writing activity**: Explore 52 weekly columns or three months of daily contributions, with month/weekday labels and five themed intensity levels. Switch between gross words written, distinct notes edited, and writing sessions. Hover for details or select a day to see its notes and word contributions; open a note directly. Include mouse, keyboard, and touch support, horizontal heatmap scrolling, English/PT-BR text, and meaningful empty/untracked states.
+- **Writing over time**: Show six vertical monthly bars with a shared linear scale, axis ticks/grid lines, month labels and values, including the current month, for recorded words written or observed Markdown note creations. Do not invent history for existing notes.
+- **Local activity history**: Persist counts, timestamps, and stable note references in `statistics.json`, with a small local write-ahead journal for recovery. Track local dates at edit time, preserve dates through timezone changes, follow file/folder renames, and retain historical contributions when a note is deleted.
 
 ### Changed
 - **Calendar pin feedback**: Highlight calendar pinned-note buttons with the theme hover background on hover and visible keyboard focus.
 - **Query-pin count**: Show `Pinned • N/5` aligned to the right of the Search Queries title, with the subtitle beneath, counting all built-in/custom pins independently of the settings filter.
 - **Completion consistency**: Partially done tasks no longer count as fully completed in the existing `@todo` result percentage. Keep special-query pin priority and configured ordering when showing group labels.
+- **Dashboard controls**: Replace dropdowns with themed pill chips. Keep Year / 3 months at the dashboard’s top right, Words / Notes / Activity beside the activity heading, and Words / Notes above the monthly chart. Support roving radio-group keyboard focus and touch.
+- **Background totals**: Index current notes after layout readiness with bounded concurrent reads. Maintain totals from subsequent file/editor events rather than rescanning when a dashboard opens. Include current unsaved editor text and keep imports/sync/automated updates separate from writing activity.
+- **Activity definitions**: Count direct editor transactions with user input, deletion, or movement origins. Preserve word credit while typing/composing, count new replacement words, and exclude undo/redo from new contributions. Group sessions per note/day with a five-minute inactivity gap. A streak may end yesterday while today is still in progress. Notes Created records actual post-enable Markdown create events as vault growth, including imports, without treating creation alone as writing activity.
+- **Report navigation**: Reuse Palette report framing, dismissal, and Backspace navigation. Chip radio groups and date-cell keys avoid the hidden suggestion chooser. Dispose dashboard subscriptions/timers when returning, dismissing, or unloading.
 
 ### Removed
 - **Query-history cycling**: Remove session query storage and Up/Down query recall from the Universal Palette. Arrow keys use normal suggestion/calendar/Base navigation.
@@ -24,6 +32,14 @@ What's new and changed in each Seam release.
   - **Root Cause**: The existing result percentage counted every nonempty checkbox status, including `[/]`, as completed.
   - **Fix**: Share the same task summary for the completion report and result percentages, with partial tasks counted separately.
   - **Verified Scenarios**: Mixed unfinished, partial, and completed tasks; all-partial notes; unsaved editor text; and a live 50% report for two fully completed tasks out of four.
+- **Overlapping activity tooltips**:
+  - **Root Cause**: Day cells provided the same text as both a native `title` and an Obsidian `aria-label` tooltip.
+  - **Fix**: Use Obsidian’s tooltip API and accessible labels without native title attributes, including monthly bars and note details.
+  - **Verified Scenarios**: A real pointer hover produced one Obsidian tooltip; no native titles remained in the dashboard.
+- **Statistics loading and reload races**:
+  - **Root Cause**: An editor can temporarily expose empty content during initial file loading, asynchronous reads can lag unsaved edits, and reloads can overlap unfinished initialization or storage writes.
+  - **Fix**: Maintain editor-observed word counts and per-file read versions. Serialize initialization/writes across reloads, validate and replay sequenced recovery events once, and preserve buffered user input until history is available.
+  - **Verified Scenarios**: Initial editor loading, stale reads, same-note sessions across reloads, duplicate transaction/recovery events, failed saves/recovery, early input during initialization, and a reload while the previous writer is blocked.
 
 ## [3.1.0] - 2026-10-23
 <!-- iterations: iteration_11..iteration_12 -->

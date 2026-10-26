@@ -176,7 +176,15 @@ With a Markdown note open, choose **Show note outline** from Obsidian's commands
 
 ### Note statistics
 
-With a Markdown note open, choose **Show note statistics** from Obsidian's commands or Seam's `>` commands. The Universal Palette displays words, characters, paragraphs, estimated reading time, and localized creation/modification dates. Counts include current unsaved editor text; characters include whitespace and Markdown, paragraphs are separated by blank lines, and reading time uses 200 words per minute. Press `Esc` or use the close button to dismiss.
+With a Markdown note open, choose **Show note statistics** from Obsidian's commands or Seam's `>` commands. The Universal Palette displays words, characters, paragraphs, estimated reading time, and localized creation/modification dates. Counts include current unsaved editor text; characters include whitespace and Markdown, paragraphs are separated by blank lines, and reading time uses 200 words per minute. Press Backspace to return to Palette search, or press `Esc` or use the close button to dismiss.
+
+### Global statistics
+
+Choose **Show global statistics** from Obsidian commands or the Palette’s `>` commands. View current Markdown note/word totals, recorded active days, and the current writing streak. Explore 52 weeks or three months of writing activity by words written, distinct notes edited, or writing sessions; use the chips to change metrics and periods, and select a day to open its notes. **Writing over time** shows six vertical monthly bars with a shared linear scale for words written or notes created. Arrow keys navigate the calendar, Enter selects a day, and Backspace returns to the Palette.
+
+Writing history starts when this feature is enabled; existing notes count toward vault totals without generating historical activity. Words written counts new words, including replacements, without counting each typed character or replaying undo/redo. A writing session groups direct editor edits to the same note within five minutes; the streak continues through yesterday while today is still in progress. Dates use the local calendar date when an edit happens and stay attached to that date after timezone changes.
+
+Current totals include imports, sync, and automated changes, but these do not count as writing contributions. Notes created measures Markdown creation events observed after tracking starts, including imports, separately from writing activity. History stays local in Seam’s plugin folder (`statistics.json`), with a local recovery journal for interrupted saves. No note text is stored in the activity log.
 
 ## Languages
 

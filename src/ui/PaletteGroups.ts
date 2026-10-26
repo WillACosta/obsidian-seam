@@ -2,7 +2,7 @@ import { PaletteItem } from '../types';
 import { t } from '../i18n';
 
 function commandGroup(item: PaletteItem): string {
-    if (['cmd-note-statistics', 'cmd-note-completion'].includes(item.id)) return t().paletteGroupStatistics;
+    if (['cmd-global-statistics', 'cmd-note-statistics', 'cmd-note-completion'].includes(item.id)) return t().paletteGroupStatistics;
     if (/^cmd-(archive|move-|daily-todos)/.test(item.id)) return t().paletteGroupMove;
     if (/^cmd-(quick-|source-note)/.test(item.id)) return t().paletteGroupCreate;
     if (['cmd-show-status', 'cmd-process-pending'].includes(item.id)) return t().paletteGroupSeam;

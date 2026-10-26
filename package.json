@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "symlink": "node scripts/symlink.mjs --dir=seam_test_vault",
+    "install:personal": "pnpm build && node scripts/copy-personal-vault.mjs",
     "changelog:extract": "node scripts/changelog.mjs extract",
     "changelog:generate": "node scripts/changelog.mjs generate",
     "changelog:validate": "node scripts/changelog.mjs validate",
@@ -18,6 +19,8 @@
     "install:local": "pnpm build && pnpm symlink && obsidian vault='seam_test_vault' plugin:reload id=seam"
   },
   "devDependencies": {
+    "@codemirror/state": "6.5.0",
+    "@codemirror/view": "6.38.6",
     "@types/node": "^16.11.6",
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
