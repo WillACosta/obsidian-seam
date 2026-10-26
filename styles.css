@@ -1202,3 +1202,47 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
     .prompt.seam-palette-global-statistics button.seam-global-day { width: 24px; height: 24px; }
     .seam-global-note-row { flex-wrap: wrap; gap: 0 12px; }
 }
+
+/* Optional vault setup preview and report. */
+.modal.seam-setup-modal {
+    width: min(720px, 94vw);
+}
+.seam-setup-warning {
+    padding: var(--size-4-3);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+}
+.seam-setup-list {
+    list-style: none;
+    margin: var(--size-4-2) 0;
+    padding: 0;
+}
+.seam-setup-item {
+    padding: var(--size-4-2) 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+    overflow-wrap: anywhere;
+    font-size: var(--font-ui-small);
+}
+.seam-setup-item p, .seam-setup-item ul {
+    margin: var(--size-4-1) 0;
+    color: var(--text-muted);
+}
+.seam-setup-status {
+    display: inline-block;
+    margin-inline-end: var(--size-4-2);
+    color: var(--text-accent);
+    font-weight: var(--font-semibold);
+}
+.seam-setup-conflict .seam-setup-status, .seam-setup-failed .seam-setup-status {
+    color: var(--text-error);
+}
+.seam-setup-existing .seam-setup-status, .seam-setup-unsupported .seam-setup-status {
+    color: var(--text-muted);
+}
+.seam-setup-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-4);
+}

@@ -30,6 +30,12 @@ export class SeamSettingsTab extends PluginSettingTab {
         const strings = t();
         return [{
             type: 'group',
+            heading: strings.setupTitle,
+            items: [{ name: strings.setupTitle, desc: strings.setupDescription, render: setting => {
+                setting.addButton(button => button.setButtonText(strings.setupPreview).onClick(() => this.plugin.openSetup(() => this.update())));
+            } }],
+        }, {
+            type: 'group',
             heading: strings.settingsFolderHeading,
             items: [
                 this.folderDefinition(strings.settingsPermanentFolder, strings.settingsPermanentFolderDesc, 'Permanent', 'permanentFolder', 'folder'),

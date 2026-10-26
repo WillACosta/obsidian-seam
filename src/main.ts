@@ -16,6 +16,8 @@ import { Reconciler } from './automation/Reconciler';
 import { SearchService } from './search/SearchService';
 import { UniversalPalette } from './ui/UniversalPalette';
 import { SeamSettingsTab } from './settings/SettingsTab';
+import { SeamInitializer } from './setup/SeamInitializer';
+import { SetupModal } from './setup/SetupModal';
 import { t } from './i18n';
 import { getSeamReleaseNotesAfter, getSeamReleaseNotesForVersion, UpdateModal } from './ui/UpdateModal';
 
@@ -48,6 +50,8 @@ export default class SeamPlugin extends Plugin {
     calendarPins!: CalendarPins;
     palettePins!: PalettePins;
     globalStatistics!: GlobalStatistics;
+    initializer!: SeamInitializer;
+    private setupModal: SetupModal | null = null;
     private reconciliationIntervalId: number | null = null;
     private paletteRibbonEl: HTMLElement | null = null;
     private activePalettes = new Set<UniversalPalette>();
@@ -55,6 +59,16 @@ export default class SeamPlugin extends Plugin {
     async onload(): Promise<void> {
         // 1. Load persisted settings
         await this.loadSettings();
+        this.initializer = new SeamInitializer(this.app,
+            this.manifest.dir ?? normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`),
+            () => this.settings, async settings => {
+                await this.saveData(settings);
+                Object.assign(this.settings, settings);
+                this.automationService?.updateSettings(this.settings);
+                this.reconciler?.updateSettings(this.settings);
+                this.searchService?.updateSettings(this.settings);
+                for (const palette of this.activePalettes) palette.refreshSpecialSearchChoices();
+            });
 
         // 2. Instantiate lightweight services
         this.automationService = new AutomationService(this.app, this.settings);
@@ -82,6 +96,7 @@ export default class SeamPlugin extends Plugin {
         this.registerEditorExtension(writingActivityExtension(this.globalStatistics));
 
         // 3. Register commands
+        this.addCommand({ id: 'initialize-seam', name: t().setupTitle, callback: () => this.openSetup() });
         this.addCommand({
             id: 'show-global-statistics', name: t().cmdShowGlobalStatistics,
             callback: () => { void this.openGlobalStatistics(); },
@@ -250,6 +265,9 @@ export default class SeamPlugin extends Plugin {
     }
 
     onunload(): void {
+        this.initializer?.dispose();
+        this.setupModal?.dispose();
+        this.setupModal = null;
         for (const palette of this.activePalettes) palette.close();
         this.activePalettes.clear();
         if (this.reconciliationIntervalId !== null) {
@@ -629,6 +647,8 @@ export default class SeamPlugin extends Plugin {
                 type: 'command',
                 action: () => this.showStatus(),
             },
+            { id: 'cmd-initialize-seam', title: t().setupTitle, description: t().setupDescription,
+                type: 'command', icon: 'list-start', action: () => this.openSetup() },
         ];
 
         // Contextual commands: only when a note is active
@@ -728,6 +748,13 @@ export default class SeamPlugin extends Plugin {
     }
 
     // ---- Settings ----
+
+    openSetup(done?: () => void): void {
+        if (this.setupModal?.isApplying) return;
+        this.setupModal?.close();
+        this.setupModal = new SetupModal(this.app, this.initializer, done);
+        this.setupModal.open();
+    }
 
     async loadSettings(): Promise<void> {
         const raw: unknown = await this.loadData();

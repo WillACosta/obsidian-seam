@@ -1,6 +1,30 @@
 import { Translations } from './en';
 
 export const ptBr: Translations = {
+    setupTitle: 'Inicializar o Seam',
+    setupDescription: 'Visualize pastas, modelos, visualizações da biblioteca e preferências recomendadas do Obsidian/Seam para este vault.',
+    setupPreview: 'Visualizar configuração',
+    setupLoading: 'Preparando a prévia da configuração…',
+    setupConfiguredMessage: 'Este vault corresponde à configuração recomendada do Seam. Nenhuma alteração é necessária.',
+    setupNothingToApply: 'Nenhuma alteração pode ser aplicada. Revise os itens ignorados ou não suportados abaixo.',
+    setupOk: 'OK',
+    setupWarning: 'As notas existentes não serão movidas, excluídas ou editadas. Esta ação altera pastas do vault e preferências selecionadas do Obsidian/Seam. Não há como desfazer com um clique.',
+    setupRestartWarning: 'As alterações de configuração do Obsidian exigem reiniciar o aplicativo antes do uso. Valores existentes indicados com → serão substituídos. Modelos, consultas e arquivos Base personalizados serão preservados.',
+    setupCancel: 'Cancelar', setupApply: 'Aplicar configuração', setupApplying: 'Aplicando configuração…',
+    setupComplete: 'Relatório da configuração', setupFailed: 'Não foi possível concluir a configuração', setupClose: 'Fechar',
+    setupBackups: 'Cópias recuperáveis da configuração',
+    setupCounts: (applied: number, skipped: number, failed: number) => `${applied} aplicados · ${skipped} ignorados · ${failed} falhas`,
+    setupGroups: { resources: 'Pastas e arquivos', obsidian: 'Configurações do Obsidian', searches: 'Buscas do Seam' },
+    setupStatuses: { create: 'Criar', update: 'Atualizar', existing: 'Já configurado', conflict: 'Ignorar / conflito', unsupported: 'Não suportado' },
+    setupOutcomes: { applied: 'Aplicado', skipped: 'Ignorado', failed: 'Falha' },
+    setupReasons: {
+        preserved: 'O conteúdo existente será preservado.', pathConflict: 'Um arquivo ou pasta ocupa um caminho necessário.',
+        invalidJson: 'Não foi possível ler a configuração com segurança. O arquivo será preservado.', unsupported: 'Não foi possível verificar o suporte nesta versão do Obsidian.',
+        hotkeyConflict: 'Mod+K está atribuído a outro comando. O atalho será preservado.', aliasConflict: 'Este identificador já pertence a uma consulta existente. Ela será preservada.',
+        baseUnavailable: 'Não é possível configurar o Bases. As buscas dependentes serão ignoradas.', missingView: 'A Base existente não contém a visualização de cartões necessária. Ela será preservada.',
+        changed: 'O destino mudou após a prévia. Visualize a configuração novamente para revisá-lo.', dependency: 'Um recurso ou configuração necessário não está disponível.',
+        applied: 'Aplicado com sucesso.', restart: 'Configuração salva. Reinicie o Obsidian antes do uso.',
+    },
     // Source notes
     cmdCreateNoteFromAttachment: "Criar nota a partir de anexo",
     paletteSpecialSources: "Notas de fontes",

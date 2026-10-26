@@ -1,0 +1,105 @@
+filters:
+  and:
+    - '!file.name.contains("Template")'
+    - file.hasTag("books")
+formulas:
+  cover: '"![cover|120](" + cover + ")"'
+  reading_time: if( total_pages, (total_pages / 40).round() + "h", "" )
+  rating: if( rating, "★ " + rating + "/10", "" )
+  priority_ui: if( priority == "highest", icon("chevrons-up"), if( priority == "high", icon("chevron-up"), if( priority == "medium", icon("minus"), if( priority == "low", icon("chevron-down"), if( priority == "lowest", icon("chevrons-down"), icon("minus") ) ) ) ) )
+  progress: if( total_pages, ( "" + "▰".repeat(((current_page / total_pages) * 5).round()) + "▱".repeat(5 - ((current_page / total_pages) * 5).round()) + " " + ((current_page / total_pages) * 100).round() + "%" ), "" )
+  progress_value: ((current_page / total_pages) * 100)
+  priority_value: if(priority == "highest", 5, if(priority == "high", 4, if(priority == "medium", 3, if(priority == "low", 2, if(priority == "lowest", 1, 0)))))
+properties:
+  formula.priority_ui:
+    displayName: priority
+  formula.progress:
+    displayName: progress
+  formula.reading_time:
+    displayName: reading
+views:
+  - type: cards
+    name: Bookshelf
+    order:
+      - file.name
+      - formula.rating
+      - formula.reading_time
+      - author
+      - formula.priority_ui
+    sort:
+      - property: formula.priority_value
+        direction: DESC
+    image: note.cover
+    imageFit: contain
+    imageAspectRatio: 1.5
+    cardSize: 150
+  - type: cards
+    name: Reading
+    filters:
+      and:
+        - file.hasTag("reading")
+        - current_page > 0
+        - current_page < total_pages
+    order:
+      - file.name
+      - author
+      - formula.priority_ui
+      - formula.progress
+      - formula.reading_time
+    sort:
+      - property: formula.priority_value
+        direction: DESC
+      - property: formula.progress_value
+        direction: DESC
+    imageAspectRatio: 1.5
+    image: note.cover
+    imageFit: contain
+    cardSize: 150
+  - type: cards
+    name: Stopped
+    filters:
+      and:
+        - file.hasTag("stopped")
+        - current_page > 0
+        - current_page < total_pages
+    order:
+      - file.name
+      - author
+      - formula.priority_ui
+      - formula.progress
+      - formula.reading_time
+    sort:
+      - property: formula.priority_value
+        direction: DESC
+      - property: formula.progress_value
+        direction: DESC
+    imageAspectRatio: 1.5
+    image: note.cover
+    imageFit: contain
+    cardSize: 150
+  - type: cards
+    name: Unread
+    filters:
+      and:
+        - file.hasTag("books")
+        - current_page > 0
+        - current_page < total_pages
+        - '!file.name.contains("Template")'
+        - or:
+            - status == "unread"
+            - status.isEmpty()
+    order:
+      - file.name
+      - author
+      - formula.priority_ui
+      - formula.progress
+      - formula.reading_time
+    sort:
+      - property: formula.priority_value
+        direction: DESC
+      - property: formula.progress_value
+        direction: DESC
+    imageAspectRatio: 1.5
+    image: note.cover
+    imageFit: contain
+    cardSize: 150

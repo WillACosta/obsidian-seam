@@ -3,7 +3,7 @@
 What's new and changed in each Seam release.
 
 ## [Unreleased] - 2026-10-26
-<!-- iterations: iteration_13..iteration_14 -->
+<!-- iterations: iteration_13..iteration_15 -->
 
 ### Added
 - **Palette note pins**: Pin or unpin the current Markdown note and keep it first in the empty-input Universal Palette, even with default commands hidden. Persist references across reloads, follow file/folder moves, and remove deleted references. Palette note pins are independent of calendar pins and special-query pins.
@@ -15,6 +15,8 @@ What's new and changed in each Seam release.
 - **Writing activity**: Explore 52 weekly columns or three months of daily contributions, with month/weekday labels and five themed intensity levels. Switch between gross words written, distinct notes edited, and writing sessions. Hover for details or select a day to see its notes and word contributions; open a note directly. Include mouse, keyboard, and touch support, horizontal heatmap scrolling, English/PT-BR text, and meaningful empty/untracked states.
 - **Writing over time**: Show six vertical monthly bars with a shared linear scale, axis ticks/grid lines, month labels and values, including the current month, for recorded words written or observed Markdown note creations. Do not invent history for existing notes.
 - **Local activity history**: Persist counts, timestamps, and stable note references in `statistics.json`, with a small local write-ahead journal for recovery. Track local dates at edit time, preserve dates through timezone changes, follow file/folder renames, and retain historical contributions when a note is deleted.
+- **Initialize Seam**: Preview an optional vault setup from Seam Settings, the Obsidian command palette, or the Universal Palette. Review grouped folders/files, Obsidian preferences, and Seam searches before confirming. Create only missing workflow directories and templates, configure selected preferences with new notes directed to `Fleeting`, and report applied, skipped, failed, and restart-required items. Existing notes are never scanned, moved, deleted, or edited by setup.
+- **Bookshelf setup**: Create a native four-view Bookshelf Base and reusable `@bookshelf` / `@reading` queries. Include book properties, priority icons/order, zero-safe ratings, estimated reading hours, bounded progress bars, and unread/missing-value handling. Exclude the templates folder from every view and preserve customized files and alias collisions.
 
 ### Changed
 - **Calendar pin feedback**: Highlight calendar pinned-note buttons with the theme hover background on hover and visible keyboard focus.
@@ -24,6 +26,9 @@ What's new and changed in each Seam release.
 - **Background totals**: Index current notes after layout readiness with bounded concurrent reads. Maintain totals from subsequent file/editor events rather than rescanning when a dashboard opens. Include current unsaved editor text and keep imports/sync/automated updates separate from writing activity.
 - **Activity definitions**: Count direct editor transactions with user input, deletion, or movement origins. Preserve word credit while typing/composing, count new replacement words, and exclude undo/redo from new contributions. Group sessions per note/day with a five-minute inactivity gap. A streak may end yesterday while today is still in progress. Notes Created records actual post-enable Markdown create events as vault growth, including imports, without treating creation alone as writing activity.
 - **Report navigation**: Reuse Palette report framing, dismissal, and Backspace navigation. Chip radio groups and date-cell keys avoid the hidden suggestion chooser. Dispose dashboard subscriptions/timers when returning, dismissing, or unloading.
+- **Archive destination**: Initialize Seam creates and recommends `Resources/Archive` as the archive destination. Existing root-level archive folders and notes stay in place.
+- **Setup completion**: Show “Already configured,” a confirmation message, and OK when the current vault matches the recommendations, including after a verified successful setup. Keep configuration details collapsed on repeat visits and retain restart requirements in the completion report. Missing or drifted settings return to the preview/apply flow; conflicts and unsupported items do not produce a completed state.
+- **Setup safeguards**: Keep setup entirely user initiated. Show replacements explicitly, collapse already-configured items on repeat previews, and preserve unrelated configuration, shortcuts, property types, core-plugin states, and custom searches. Save recoverable copies of existing configuration before changes and request an Obsidian restart for configuration-file updates. Skip unsupported settings, invalid JSON, conflicting paths, changed targets, and unavailable dependencies.
 
 ### Removed
 - **Query-history cycling**: Remove session query storage and Up/Down query recall from the Universal Palette. Arrow keys use normal suggestion/calendar/Base navigation.
