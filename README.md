@@ -142,6 +142,8 @@ Use these tokens in the Universal Palette to narrow a search or switch modes:
 | `OR` or `||` | Match either side of a search. | `#reading OR #research` |
 | `>` | Browse and run Seam commands. | `>archive` |
 
+Pin up to **five special queries**, shared between built-in and custom queries, in Seam settings. Pinned queries appear first in the `@` listing.
+
 Find files in your configured folders with `@fleeting` and `@permanent`, or browse the ten most recently opened files with `@recentlyOpened`. Combine these with other Seam filters. With an empty Palette input, press **↑** to cycle through previous queries from the current session; **↓** returns toward the empty input.
 
 Daily Notes appear with readable dates and a calendar subtitle. If `@today` or `@yesterday` has no Daily Note, select the offered action to create and open it from your configured template. While today's Daily Note is open, use **Move todo items to tomorrow's daily note** or **Pull todo items from yesterday's daily note** in Seam's commands. Each task command appears only when its source note has unfinished work. Seam follows the core Daily Notes folder, date format, and template. It moves unchecked (`[ ]`) and partially complete (`[/]`) tasks with their parent context, leaving completed tasks behind. If a partially complete parent remains with only completed children, its source checkbox becomes completed.
@@ -151,6 +153,18 @@ Daily Notes appear with readable dates and a calendar subtitle. If `@today` or `
 Enter `@calendar` in the Universal Palette to browse Daily Notes. Dots mark dates with notes; click one to open it. Clicking an empty date selects it and offers **Create daily note**, using your Daily Notes folder, date format, and template. The calendar starts at the open Daily Note or today. `@today`, `@yesterday`, and `@calendar` stay together in the special-query list.
 
 Use Up/Down from the input to enter the calendar, then arrow keys to move by day/week. Page Up/Down changes months; add Shift to change years. Click the month/year heading, or reach it with Tab and press Enter, to choose a year and then a month. Enter opens or creates the selected day's note. Press `Esc` once to return to the input, then again to dismiss the Palette. Toolbar controls also support Tab and Enter/Space.
+
+The selected day also offers **Open weekly note** or **Create weekly note**, with the week’s date range. In **Seam settings → Calendar and periodic notes**, use enabled Periodic Notes settings automatically or configure a weekly folder, filename format, and template in Seam. Use `gggg-[W]ww` for locale weeks or `GGGG-[W]WW` for Monday-based ISO weeks; the calendar follows the same week boundaries. Templates support `{{date}}`, `{{title}}`, `{{time}}`, and weekday tokens such as `{{monday:YYYY-MM-DD}}`.
+
+Use **Pin note** in the calendar or **Pin current note to calendar** in Obsidian/Seam commands to keep up to three notes above the calendar. Pins stay visible while browsing dates and pickers, follow note moves/renames, and are removed when a note is deleted. Use the unpin button or **Unpin current note from calendar** to remove one.
+
+**Keep this week pinned** uses one of those slots for the real current week. It follows each new week independently of the date you browse; if its note is missing, creation is offered explicitly. Other pins, such as annual goals, remain fixed. Tab reaches pins and weekly actions; Enter/Space activates them, and the footer follows the focused action.
+
+### Current week and year notes
+
+Use `@thisWeek` for the current week's note and `@thisYear` for the current calendar year's note. Like `@today`, they offer an existing note to open or an explicit creation suggestion if missing. Enter uses the current tab; Mod+Enter opens a new tab; Shift+Enter or Mod+Shift+Enter opens a split. You can filter existing results with tags, text, or folders without creating duplicates.
+
+Weekly queries reuse the calendar's weekly settings. For yearly notes, configure the folder, format, and template in **Seam settings → Calendar and periodic notes**. Defaults are `Yearly/YYYY.md` and no template; enabled Periodic Notes yearly settings are used when the shared Periodic Notes option is on. Yearly templates use January 1 for `{{date}}`, the filename for `{{title}}`, and support `{{time}}`. Annual pins remain fixed until you unpin or delete them.
 
 ### Delete current note
 

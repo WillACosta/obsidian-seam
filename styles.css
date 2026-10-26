@@ -1050,3 +1050,37 @@ body .seam-source-pdf .pdf-embed .pdfViewer .page {
 .prompt.seam-palette-calendar .seam-calendar-period:hover,
 .prompt.seam-palette-calendar .seam-calendar-day.is-selected,
 .prompt.seam-palette-calendar .seam-calendar-period.is-selected { background: var(--background-modifier-hover); }
+
+/* The pin shelf stays visible while dates and pickers scroll below it. */
+.prompt.seam-palette-calendar .seam-calendar { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.seam-calendar-scroll { min-height: 0; overflow-y: auto; padding: 12px 20px 16px; }
+.seam-calendar-pins { flex-shrink: 0; padding: 8px 20px; border-bottom: 1px solid var(--background-modifier-border); }
+.seam-calendar-pins-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.seam-calendar-pin-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.prompt.seam-palette-calendar .seam-calendar-pin-open { display: block; flex: 1; min-width: 0; height: auto; min-height: 32px; padding: 6px 8px; text-align: start; white-space: normal; overflow-wrap: anywhere; background: transparent; border: none; box-shadow: none; justify-content: flex-start; }
+.seam-calendar-pin-open small { display: block; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.prompt.seam-palette-calendar .seam-calendar-pins-heading button { background: transparent; box-shadow: none; font-size: var(--font-ui-smaller); }
+.seam-calendar-weekly-action { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.seam-calendar-weekly-action .seam-calendar-action { flex: 1; min-width: 0; }
+@media (max-width: 480px) {
+    .seam-calendar-scroll, .seam-calendar-pins { padding-inline: 12px; }
+}
+body.is-mobile .seam-calendar-pin-row button,
+body.is-mobile .seam-calendar-pins-heading button { min-height: 44px; }
+
+.prompt .prompt-input-container.seam-palette-input-container .seam-palette-close {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-muted);
+}
+.prompt .seam-palette-close svg { width: 20px; height: 20px; }
+body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .seam-palette-close {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+}

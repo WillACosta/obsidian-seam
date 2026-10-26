@@ -1,7 +1,8 @@
 import './mocks/obsidian';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { MockTFile } from './mocks/obsidian';
+import { MockTFile, MockTFolder } from './mocks/obsidian';
+import { moment } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../src/types';
 
 // Keep the real Palette routing and async suggestion logic; stub only its UI host.
@@ -22,23 +23,43 @@ Object.assign(require.cache['obsidian']!.exports, {
 });
 const { UniversalPalette } = require('../src/ui/UniversalPalette');
 
-describe('Palette daily creation shortcuts', () => {
-    for (const query of ['@today', '@yesterday']) {
+describe('Palette date-query creation shortcuts', () => {
+    it('shows a recoverable settings error for an invalid yearly format without creating a note', async () => {
+        let writes = 0;
+        const app = { vault: { getAbstractFileByPath: () => null, create: async () => { writes++; } } };
+        const palette = new UniversalPalette(app, { ...DEFAULT_SETTINGS, calendarUsePeriodicNotes: false, calendarYearlyFormat: 'GGGG' }, { searchCombinedSpecialWithContent: async () => [] }, []);
+        palette.disposeBaseRender = () => {};
+        palette.renderActiveSpecialQueryInput = () => {};
+        palette.inputEl.value = '@thisYear';
+        const items = await palette.getSuggestions('@thisYear');
+        assert.equal(items[0].id, 'period-query-error');
+        assert.deepEqual(palette.instructions.map((entry: { purpose: string }) => entry.purpose), ['dismiss']);
+        palette.close = () => assert.fail('Error selection must not dismiss the Palette');
+        palette.selectSuggestion(items[0], {});
+        assert.equal(writes, 0);
+    });
+
+    for (const query of ['@today', '@yesterday', '@thisWeek', '@thisYear']) {
         for (const [shortcut, target] of [['Enter', false], ['Mod+Enter', 'tab'], ['Shift+Enter', 'split'], ['Mod+Shift+Enter', 'split']] as const) {
             it(`${query} creates in the requested destination with ${shortcut}`, async () => {
-                const files = new Map<string, MockTFile>();
+                const files = new Map<string, MockTFile | MockTFolder>();
+                files.set('Templates/Weekly.md', new MockTFile('Templates/Weekly.md'));
+                files.set('Templates/Yearly.md', new MockTFile('Templates/Yearly.md'));
+                const contents = new Map<string, string>();
                 const opened: unknown[][] = [];
                 const app = {
                     vault: {
                         configDir: '.obsidian',
                         adapter: { exists: async () => true, read: async () => JSON.stringify({ folder: 'Daily', format: 'YYYY-MM-DD' }) },
                         getAbstractFileByPath: (path: string) => files.get(path),
-                        createFolder: async () => {},
-                        create: async (path: string) => { const file = new MockTFile(path); files.set(path, file); return file; },
+                        createFolder: async (path: string) => { files.set(path, new MockTFolder(path)); },
+                        read: async () => '# {{title}}\n{{date:YYYY-MM-DD}}',
+                        create: async (path: string, content: string) => { const file = new MockTFile(path); files.set(path, file); contents.set(path, content); return file; },
                     },
                     workspace: { getLeaf: (...args: unknown[]) => ({ openFile: async (file: MockTFile) => { opened.push([...args, file.path]); } }) },
                 };
-                const palette = new UniversalPalette(app, DEFAULT_SETTINGS, { searchCombinedSpecialWithContent: async () => [] }, []);
+                const settings = { ...DEFAULT_SETTINGS, calendarUsePeriodicNotes: false, calendarWeeklyFolder: 'Weekly', calendarWeeklyFormat: 'GGGG/[W]WW', calendarWeeklyTemplate: 'Templates/Weekly', calendarYearlyFolder: 'Yearly', calendarYearlyFormat: 'YYYY/[Goals]', calendarYearlyTemplate: 'Templates/Yearly' };
+                const palette = new UniversalPalette(app, settings, { searchCombinedSpecialWithContent: async () => [] }, []);
                 palette.disposeBaseRender = () => {};
                 palette.renderActiveSpecialQueryInput = () => {};
                 palette.inputEl.value = query;
@@ -54,6 +75,14 @@ describe('Palette daily creation shortcuts', () => {
                 assert.deepEqual(opened[0].slice(0, -1), target === 'split' ? ['split', 'vertical'] : [target]);
                 assert.equal(opened[0][opened[0].length - 1], items[0].description);
 
+                if (query === '@thisWeek') {
+                    assert.equal(items[0].description, `Weekly/${moment().format('GGGG')}/W${moment().format('WW')}.md`);
+                    assert.ok(contents.get(items[0].description)?.includes(moment().startOf('isoWeek').format('YYYY-MM-DD')));
+                }
+                if (query === '@thisYear') {
+                    assert.equal(items[0].description, `Yearly/${moment().format('YYYY')}/Goals.md`);
+                    assert.equal(contents.get(items[0].description), `# Goals\n${moment().format('YYYY')}-01-01`);
+                }
                 // Refreshing the query after creation must restore the open labels.
                 await palette.getSuggestions(query);
                 assert.equal(palette.instructions[1].purpose, 'open in a new tab');

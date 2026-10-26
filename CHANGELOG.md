@@ -3,10 +3,13 @@
 What's new and changed in each Seam release.
 
 ## [3.1.0] - 2026-10-23
-<!-- iterations: iteration_11 -->
+<!-- iterations: iteration_11..iteration_12 -->
 
 ### Added
 
+- **Current week and year notes**: Use `@thisWeek` and `@thisYear` to open the current note or create it from your template, with the same tab/split shortcuts as `@today`. Configure yearly notes in Seam or reuse Periodic Notes settings.
+- **Weekly notes**: Open or create the selected week’s note from the calendar using Periodic Notes settings or Seam’s weekly folder, format, and template. Supports locale and ISO weeks.
+- **Calendar pins**: Keep up to three notes visible above the calendar, including an optional rolling current-week note. Pins persist, follow moves/renames, and disappear when their notes are deleted.
 - **Daily Notes calendar**: Browse `@calendar` in the Universal Palette, see dates with notes, jump between months/years, and open or create Daily Notes with your configured template. Supports keyboard navigation and keeps `@today`, `@yesterday`, and `@calendar` together.
 - **Delete current note**: Delete the open note from Obsidian or Seam commands, respecting Obsidian’s confirmation setting and configured system trash, vault `.trash`, or permanent deletion.
 - **Note outline**: Browse all headings in the current note, including nested headings, in the Universal Palette. Use arrow keys to navigate and Enter or a click to jump to a heading. Press Backspace with an empty input to return to Palette search.
@@ -18,11 +21,13 @@ What's new and changed in each Seam release.
 
 ### Changed
 
+- **Special-query pins**: Pin up to five built-in or custom queries in the Universal Palette.
 - **Daily Note results**: See readable dates and a calendar subtitle in the Palette.
 - **Daily task commands**: Show Move and Pull only when their source Daily Note contains unfinished work.
 
 ### Fixed
 
+- **Palette controls**: The close button dismisses the Palette with a click, Enter, or Space. Pinned special queries stay above unpinned queries, including date queries, and refresh immediately after settings changes.
 - **Daily Note creation shortcuts**: Create missing `@today` and `@yesterday` notes in a new tab or vertical split using the Palette shortcuts. Shortcut labels say “create” when the note does not exist.
 
 ## [3.0.1] - 2026-10-04

@@ -142,6 +142,8 @@ Use estes tokens na Paleta Universal para filtrar buscas ou acessar outros modos
 | `OR` ou `||` | Busca por um termo ou pelo outro. | `#leitura OR #pesquisa` |
 | `>` | Mostra e executa comandos do Seam. | `>archive` |
 
+Fixe até **cinco buscas especiais**, entre integradas e personalizadas, nas configurações do Seam. As buscas fixadas aparecem primeiro na lista de `@`.
+
 Encontre arquivos nas pastas configuradas com `@fleeting` e `@permanent`, ou veja os dez arquivos abertos mais recentemente com `@recentlyOpened`. Combine essas buscas com outros filtros do Seam. Com o campo da Paleta vazio, pressione **↑** para percorrer as buscas anteriores da sessão; **↓** retorna em direção ao campo vazio.
 
 As Notas Diárias aparecem com datas legíveis e um subtítulo com calendário. Se `@today` ou `@yesterday` não encontrar a Nota Diária, selecione a ação oferecida para criá-la e abri-la com o modelo configurado. Com a Nota Diária de hoje aberta, use **Mover tarefas pendentes para a nota diária de amanhã** ou **Trazer tarefas pendentes da nota diária de ontem** nos comandos do Seam. Cada comando de tarefas aparece apenas quando sua nota de origem contém trabalho pendente. O Seam usa a pasta, o formato de data e o modelo do plugin nativo Notas Diárias. Tarefas não concluídas (`[ ]`) e parcialmente concluídas (`[/]`) são movidas com o contexto dos itens pais, preservando as concluídas na origem. Se um item pai parcialmente concluído permanecer apenas com filhos concluídos, ele será marcado como concluído na origem.
@@ -151,6 +153,18 @@ As Notas Diárias aparecem com datas legíveis e um subtítulo com calendário. 
 Digite `@calendar` na Paleta Universal para navegar pelas Notas Diárias. Pontos indicam datas com notas; clique para abri-las. Clicar numa data vazia seleciona o dia e oferece **Criar nota diária**, usando a pasta, o formato de data e o modelo configurados em Notas Diárias. O calendário começa na data da Nota Diária aberta ou no dia atual. `@today`, `@yesterday` e `@calendar` ficam juntos na lista de buscas especiais.
 
 Use as setas para cima/baixo no campo de busca para entrar no calendário; depois, navegue por dias/semanas com as setas. Page Up/Down muda o mês; com Shift, muda o ano. Clique no mês/ano ou alcance esse botão com Tab e Enter para escolher um ano e depois um mês. Enter abre ou cria a nota do dia selecionado. Pressione `Esc` uma vez para voltar ao campo e novamente para fechar a Paleta. Os controles também aceitam Tab e Enter/Espaço.
+
+O dia selecionado também oferece **Abrir nota semanal** ou **Criar nota semanal**, com o intervalo de datas da semana. Em **Configurações do Seam → Calendário e notas periódicas**, use automaticamente as configurações habilitadas do Periodic Notes ou defina a pasta, o formato e o modelo no Seam. Use `gggg-[W]ww` para semanas locais ou `GGGG-[W]WW` para semanas ISO iniciadas na segunda-feira; o calendário segue os mesmos limites. Os modelos aceitam `{{date}}`, `{{title}}`, `{{time}}` e dias da semana, como `{{monday:YYYY-MM-DD}}`.
+
+Use **Fixar nota** no calendário ou **Fixar nota atual no calendário** nos comandos do Obsidian/Seam para manter até três notas acima do calendário. Elas permanecem visíveis ao navegar por datas e seletores, acompanham mudanças de nome/pasta e são removidas quando a nota é excluída. Use o botão de desafixar ou **Desafixar nota atual do calendário** para remover uma delas.
+
+**Manter esta semana fixada** usa uma dessas posições para a semana atual real. A referência acompanha cada nova semana independentemente da data navegada; se a nota não existir, sua criação é oferecida explicitamente. As demais notas, como metas anuais, continuam fixas. Tab alcança as notas e ações semanais; Enter/Espaço ativa os controles e o rodapé acompanha a ação em foco.
+
+### Notas da semana e do ano atuais
+
+Use `@thisWeek` para a nota da semana atual e `@thisYear` para a nota do ano civil atual. Assim como `@today`, eles oferecem a nota existente para abrir ou uma sugestão explícita de criação quando ela não existe. Enter usa a aba atual; Mod+Enter abre outra aba; Shift+Enter ou Mod+Shift+Enter abre um painel dividido. Filtros de tags, texto e pastas não criam notas duplicadas.
+
+A busca semanal reutiliza as configurações do calendário. Para notas anuais, configure a pasta, o formato e o modelo em **Configurações do Seam → Calendário e notas periódicas**. O padrão é `Yearly/YYYY.md`, sem modelo; as configurações anuais habilitadas do Periodic Notes são usadas quando a opção compartilhada está ativada. Modelos anuais usam 1º de janeiro para `{{date}}`, o nome do arquivo para `{{title}}` e aceitam `{{time}}`. Notas anuais fixadas continuam apontando para o mesmo arquivo até serem desafixadas ou excluídas.
 
 ### Excluir nota atual
 

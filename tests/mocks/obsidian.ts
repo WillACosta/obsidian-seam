@@ -45,6 +45,7 @@ require.cache['obsidian'] = {
     loaded: true,
     exports: {
         Component: class {},
+        FuzzySuggestModal: class {},
         Platform: {
             isMacOS: process.platform === 'darwin',
             isDesktop: true,

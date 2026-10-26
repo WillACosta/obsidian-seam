@@ -3,6 +3,7 @@ import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } f
 import { hasDirectoryFilter, parseQuery } from './QueryParser';
 import { isFileInFolder } from '../utils/isFileInFolder';
 import { dailyNoteDate, DailyNoteSettings, DEFAULT_DAILY_SETTINGS, readDailyNoteSettings } from '../daily/DailyNotes';
+import { currentPeriodTarget, CurrentPeriod } from '../calendar/CurrentPeriodNotes';
 import { DOCUMENT_EXTENSIONS, IMAGE_EXTENSIONS } from '../utils/attachments';
 
 /**
@@ -86,10 +87,11 @@ export function parseSpecialSearch(query: string): { search: SpecialSearch | nul
             days: Number(lastDaysMatch[1]),
         };
     }
-    const match = trimmed.match(/^@(today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?:\s+([\s\S]*))?$/i);
+    const match = trimmed.match(/^@(thisWeek|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?:\s+([\s\S]*))?$/i);
     if (!match) return { search: null, textQuery: trimmed };
+    const canonical: Record<string, SpecialSearch> = { thisweek: 'thisWeek', thisyear: 'thisYear', recentlyopened: 'recentlyOpened' };
     return {
-        search: (match[1].toLowerCase() === 'recentlyopened' ? 'recentlyOpened' : match[1].toLowerCase()) as SpecialSearch,
+        search: canonical[match[1].toLowerCase()] ?? match[1].toLowerCase() as SpecialSearch,
         textQuery: normalizeTextQuery(match[2] ?? ''),
     };
 }
@@ -120,6 +122,8 @@ export function matchesSpecialSearch(app: App, file: TFile, search: SpecialSearc
     if (search === 'calendar') return false; // Calendar is a view, not a file filter.
     const cache = app.metadataCache.getFileCache(file);
     switch (search) {
+        case 'thisWeek':
+        case 'thisYear':
         case 'today':
         case 'yesterday':
         case 'recent':
@@ -216,6 +220,7 @@ export function extractMatchSnippet(
 export class SearchService {
     private searchVersion = 0;
     private contentCache: Map<string, string> = new Map();
+    private periodPaths: Partial<Record<CurrentPeriod, { path: string; day: string }>> = {};
     private dailyNoteSettings = { ...DEFAULT_DAILY_SETTINGS };
 
     constructor(
@@ -227,6 +232,7 @@ export class SearchService {
 
     updateSettings(settings: SeamSettings): void {
         this.settings = settings;
+        this.periodPaths = {};
     }
 
     private getSearchableFiles(): TFile[] {
@@ -734,11 +740,20 @@ export class SearchService {
     }
 
     private getCachedSpecialSearchFiles(search: SpecialSearch, files: TFile[]): TFile[] {
+        if (search === 'thisWeek' || search === 'thisYear') {
+            const cached = this.periodPaths[search];
+            return cached?.day === moment().format('YYYY-MM-DD') ? files.filter(file => file.path === cached.path) : [];
+        }
         if (search !== 'today' && search !== 'yesterday') return this.selectSpecialFiles(search, files);
         return this.findDailyNote(search, files, this.dailyNoteSettings);
     }
 
     private async getSpecialSearchFiles(search: SpecialSearch, files: TFile[]): Promise<TFile[]> {
+        if (search === 'thisWeek' || search === 'thisYear') {
+            const target = await currentPeriodTarget(this.app, this.settings, search);
+            this.periodPaths[search] = { path: target.path, day: target.day };
+            return files.filter(file => file.path === target.path);
+        }
         if (search !== 'today' && search !== 'yesterday') return this.selectSpecialFiles(search, files);
         return this.findDailyNote(search, files, await this.readDailyNoteSettings());
     }

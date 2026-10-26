@@ -1,6 +1,6 @@
 import { App, getIcon, Notice, PluginSettingTab, setIcon, Setting, SettingDefinitionItem } from 'obsidian';
 import type SeamPlugin from '../main';
-import { AutomationDelayMode, CustomSpecialSearch, QuickAddChoice, UpdateAnnouncementMode, SpecialSearch, PaletteRibbonMode, SPECIAL_SEARCH_ICONS, SPECIAL_SEARCH_LABELS } from '../types';
+import { AutomationDelayMode, CustomSpecialSearch, QuickAddChoice, UpdateAnnouncementMode, SpecialSearch, PaletteRibbonMode, SPECIAL_SEARCH_ICONS, SPECIAL_SEARCH_LABELS, SPECIAL_SEARCH_PIN_LIMIT } from '../types';
 import { t } from '../i18n';
 import { QuickAddChoiceModal } from './QuickAddChoiceModal';
 import { CustomSpecialSearchModal } from './CustomSpecialSearchModal';
@@ -36,6 +36,33 @@ export class SeamSettingsTab extends PluginSettingTab {
                 this.folderDefinition(strings.settingsArchiveFolder, strings.settingsArchiveFolderDesc, 'Archive', 'archiveFolder', 'folder'),
                 this.folderDefinition(strings.settingsFleetingFolder, strings.settingsFleetingFolderDesc, 'Fleeting', 'fleetingFolder', 'folder'),
                 this.folderDefinition(strings.settingsFleetingTemplate, strings.settingsFleetingTemplateDesc, 'Templates/Fleeting', 'fleetingNoteTemplate', 'file'),
+            ],
+        }, {
+            type: 'group',
+            heading: strings.settingsCalendarHeading,
+            items: [
+                { name: strings.settingsWeeklyAuto, desc: strings.settingsWeeklyAutoDesc, render: (setting) => {
+                    setting.addToggle(toggle => toggle.setValue(this.plugin.settings.calendarUsePeriodicNotes).onChange(async value => {
+                        this.plugin.settings.calendarUsePeriodicNotes = value;
+                        await this.plugin.saveSettings();
+                    }));
+                } },
+                this.folderDefinition(strings.settingsWeeklyFolder, strings.settingsWeeklyFolderDesc, 'Weekly', 'calendarWeeklyFolder', 'folder'),
+                { name: strings.settingsWeeklyFormat, desc: strings.settingsWeeklyFormatDesc, render: (setting) => {
+                    setting.addText(text => text.setPlaceholder('gggg-[W]ww').setValue(this.plugin.settings.calendarWeeklyFormat).onChange(async value => {
+                        this.plugin.settings.calendarWeeklyFormat = value;
+                        await this.plugin.saveSettings();
+                    }));
+                } },
+                this.folderDefinition(strings.settingsWeeklyTemplate, strings.settingsWeeklyTemplateDesc, 'Templates/Weekly', 'calendarWeeklyTemplate', 'file'),
+                this.folderDefinition(strings.settingsYearlyFolder, strings.settingsYearlyFolderDesc, 'Yearly', 'calendarYearlyFolder', 'folder'),
+                { name: strings.settingsYearlyFormat, desc: strings.settingsYearlyFormatDesc, render: (setting) => {
+                    setting.addText(text => text.setPlaceholder('YYYY').setValue(this.plugin.settings.calendarYearlyFormat).onChange(async value => {
+                        this.plugin.settings.calendarYearlyFormat = value;
+                        await this.plugin.saveSettings();
+                    }));
+                } },
+                this.folderDefinition(strings.settingsYearlyTemplate, strings.settingsYearlyTemplateDesc, 'Templates/Yearly', 'calendarYearlyTemplate', 'file'),
             ],
         }, {
             type: 'group',
@@ -114,7 +141,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         name: string,
         desc: string,
         placeholder: string,
-        key: 'permanentFolder' | 'archiveFolder' | 'fleetingFolder' | 'fleetingNoteTemplate' | 'sourcesFolder' | 'sourceNoteTemplate',
+        key: 'permanentFolder' | 'archiveFolder' | 'fleetingFolder' | 'fleetingNoteTemplate' | 'sourcesFolder' | 'sourceNoteTemplate' | 'calendarWeeklyFolder' | 'calendarWeeklyTemplate' | 'calendarYearlyFolder' | 'calendarYearlyTemplate',
         pathType: 'folder' | 'file',
     ) {
         return {
@@ -205,7 +232,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                     this.addChoiceButton(actions, search.pinned ? 'pin-off' : 'pin', search.pinned ? `Unpin ${search.identifier}` : `Pin ${search.identifier}`, () => {
                         const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned && item.id !== search.id).length
                             + this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned).length;
-                        if (!search.pinned && pinnedCount >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
+                        if (!search.pinned && pinnedCount >= SPECIAL_SEARCH_PIN_LIMIT) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
                         search.pinned = !search.pinned;
                         void this.plugin.saveSettings().then(() => this.update());
                     });
@@ -384,7 +411,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         this.addChoiceButton(actions, preference.pinned ? 'pin-off' : 'pin', `${preference.pinned ? 'Unpin' : 'Pin'} ${label}`, () => {
             const pinned = this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned && item.search !== search).length
                 + this.plugin.settings.customSpecialSearches.filter((item) => item.pinned).length;
-            if (!preference.pinned && pinned >= 3) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
+            if (!preference.pinned && pinned >= SPECIAL_SEARCH_PIN_LIMIT) { new Notice(t().settingsCustomSearchPinnedLimit); return; }
             preference.pinned = !preference.pinned;
             void this.plugin.saveSettings().then(() => this.update());
         });
@@ -515,7 +542,7 @@ export class SeamSettingsTab extends PluginSettingTab {
             }
             const pinnedCount = this.plugin.settings.customSpecialSearches.filter((item) => item.pinned && item.id !== saved.id).length
                 + this.plugin.settings.specialSearchPreferences.filter((item) => item.pinned).length;
-            if (saved.pinned && pinnedCount >= 3) {
+            if (saved.pinned && pinnedCount >= SPECIAL_SEARCH_PIN_LIMIT) {
                 new Notice(t().settingsCustomSearchPinnedLimit);
                 return;
             }

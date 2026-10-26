@@ -1,6 +1,11 @@
 import { App, Component, moment, Notice, Scope, setIcon, TFile } from 'obsidian';
 import { DailyNoteSettings, dailyNoteDate } from '../daily/DailyNotes';
 import { detectLocale, t } from '../i18n';
+import { CalendarPins } from './CalendarPins';
+import { CalendarPinModal } from './CalendarPinModal';
+import { CalendarPin } from '../types';
+import { findWeeklyNote, resolveWeeklyNote, weekKey, weekStart, WeeklyNoteSettings } from './WeeklyNotes';
+import type { Moment } from 'moment';
 import { CalendarModel, findCalendarNote, resolveCalendarNote } from './CalendarModel';
 
 interface CalendarCallbacks {
@@ -23,10 +28,13 @@ export class DailyNoteCalendar extends Component {
         private settings: DailyNoteSettings,
         private callbacks: CalendarCallbacks,
         parentScope: Scope,
+        private pins: CalendarPins | undefined,
+        private weekly: WeeklyNoteSettings,
     ) {
         super();
         const file = app.workspace.getActiveFile();
-        this.model = new CalendarModel(file ? dailyNoteDate(file, settings) ?? moment() : moment(), detectLocale());
+        this.pins?.setWeeklySettings(weekly);
+        this.model = new CalendarModel(file ? dailyNoteDate(file, settings) ?? moment() : moment(), detectLocale(), weekly.iso);
         this.navigationScope = new Scope(parentScope);
         for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Enter', ' ']) {
             this.navigationScope.register([], key, event => this.handleKey(event) ? false : true);
@@ -43,21 +51,49 @@ export class DailyNoteCalendar extends Component {
 
     get hasNote(): boolean { return Boolean(findCalendarNote(this.app, this.model.selected, this.settings)); }
     get picking(): boolean { return this.model.page !== 'days'; }
+    get footerAction(): string {
+        const active = this.host.ownerDocument.activeElement;
+        const action = active && this.host.contains(active) ? active.getAttribute('data-calendar-action') : null;
+        if (action === 'open') return t().paletteHelpOpen;
+        if (action === 'create') return t().paletteHelpCreate;
+        if (action === 'pin') return t().calendarHelpPin;
+        if (action === 'unpin') return t().calendarHelpUnpin;
+        if (action === 'select') return t().paletteHelpSelect;
+        return this.picking ? t().paletteHelpSelect : this.hasNote ? t().paletteHelpOpen : t().paletteHelpCreate;
+    }
+    private now(): Moment { return moment().locale(detectLocale()); }
+    private weekRange(date: Moment): string {
+        const start = weekStart(date, this.weekly);
+        const end = start.clone().add(6, 'days');
+        return `${start.format(start.isSame(end, 'month') ? 'D' : start.year() === end.year() ? 'D MMM' : 'D MMM YYYY')} – ${end.format('D MMM YYYY')}`;
+    }
 
     onload(): void {
         this.registerDomEvent(this.host, 'focusin', () => {
             if (!this.scopeActive) { this.app.keymap.pushScope(this.navigationScope); this.scopeActive = true; }
+            this.callbacks.changed();
         });
         this.registerDomEvent(this.host, 'focusout', event => {
             const next = event.relatedTarget as Node | null;
             if (next && !this.host.contains(next)) this.exitNavigation(false);
         });
-        this.registerDomEvent(this.input, 'focus', () => this.exitNavigation(false));
+        this.registerDomEvent(this.input, 'focus', () => { this.exitNavigation(false); this.callbacks.changed(); });
         this.render();
         const refresh = (): void => { if (!this.busy) this.render(); };
         this.registerEvent(this.app.vault.on('create', refresh));
         this.registerEvent(this.app.vault.on('delete', refresh));
         this.registerEvent(this.app.vault.on('rename', refresh));
+        if (this.pins) {
+            this.register(this.pins.subscribe(() => this.render()));
+            void this.pins.reconcile().catch((error: unknown) => this.report(error));
+        }
+        let day = this.now().format('YYYY-MM-DD');
+        const checkDay = (): void => {
+            const current = this.now().format('YYYY-MM-DD');
+            if (current !== day) { day = current; this.render(); }
+        };
+        this.registerInterval(window.setInterval(checkDay, 30000));
+        this.registerDomEvent(this.host.ownerDocument, 'visibilitychange', checkDay);
     }
 
     onunload(): void { this.destroyed = true; this.exitNavigation(false); this.host.remove(); }
@@ -125,46 +161,136 @@ export class DailyNoteCalendar extends Component {
         const activeControl = active?.getAttribute('data-calendar-control');
         const wasCell = active?.hasAttribute('data-calendar-cell');
         this.host.empty();
-        const header = this.host.createDiv({ cls: 'seam-calendar-header' });
+        this.renderPins();
+        const body = this.host.createDiv({ cls: 'seam-calendar-scroll' });
+        const header = body.createDiv({ cls: 'seam-calendar-header' });
         const selected = this.model.selected;
         const page = this.model.page;
         const title = page === 'years' ? `${this.model.yearStart}–${this.model.yearStart + 11}`
             : page === 'months' ? selected.format('YYYY') : selected.format('MMMM YYYY');
         const titleButton = this.button(header, title, () => { this.model.page = page === 'years' ? 'days' : 'years'; this.render(true); }, 'seam-calendar-title');
         titleButton.setAttribute('aria-label', `${title}: ${page === 'years' ? t().calendarShowDays : t().calendarChooseYear}`);
-        titleButton.setAttribute('data-calendar-control', 'title');
+        this.control(titleButton, 'title', 'select');
         for (const direction of [-1, 1]) {
             if (direction === 1) {
                 const today = this.button(header, t().calendarToday, () => {
                     this.model.selected = moment().locale(detectLocale()).startOf('day'); this.model.page = 'days'; this.render(true);
                 }, 'seam-calendar-today');
-                today.setAttribute('data-calendar-control', 'today');
+                this.control(today, 'today', 'select');
             }
             const label = direction < 0 ? t().calendarPrevious : t().calendarNext;
             const button = this.button(header, '', () => { this.model.shift(direction); this.render(); }, 'clickable-icon');
             button.setAttribute('aria-label', label);
-            button.setAttribute('data-calendar-control', direction < 0 ? 'previous' : 'next');
+            this.control(button, direction < 0 ? 'previous' : 'next', 'select');
             setIcon(button, direction < 0 ? 'chevron-left' : 'chevron-right');
         }
-        const grid = this.host.createDiv({ cls: `seam-calendar-grid seam-calendar-${page}`, attr: { role: 'grid', 'aria-label': title } });
+        const grid = body.createDiv({ cls: `seam-calendar-grid seam-calendar-${page}`, attr: { role: 'grid', 'aria-label': title } });
         if (page === 'days') this.renderDays(grid);
         else this.renderPicker(grid);
-        const hint = this.host.createDiv({ cls: 'seam-calendar-hint', text: t().calendarKeyboardHint });
+        const hint = body.createDiv({ cls: 'seam-calendar-hint', text: t().calendarKeyboardHint });
         hint.setAttribute('aria-live', 'polite');
         if (page === 'days') {
             const label = `${this.hasNote ? t().calendarOpenNote : t().calendarCreateNote} · ${selected.format('LL')}`;
-            const action = this.button(this.host, label, () => { void this.activate(); }, 'seam-calendar-action');
+            const action = this.button(body, label, () => { void this.activate(); }, 'seam-calendar-action');
             action.disabled = this.busy;
-            action.setAttribute('data-calendar-control', 'action');
+            this.control(action, 'action', this.hasNote ? 'open' : 'create');
+            this.renderWeeklyAction(body);
         }
         if (focus || wasCell) this.focusSelected();
-        else if (activeControl) this.host.querySelector<HTMLElement>(`[data-calendar-control="${activeControl}"]`)?.focus();
+        else if (activeControl) {
+            const previous = Array.from(this.host.querySelectorAll<HTMLElement>('[data-calendar-control]')).find(element => element.getAttribute('data-calendar-control') === activeControl);
+            if (previous && !previous.matches(':disabled')) previous.focus(); else this.input.focus();
+        }
         this.callbacks.changed();
+    }
+
+    private control(button: HTMLButtonElement, id: string, action: string): void {
+        button.setAttribute('data-calendar-control', id);
+        button.setAttribute('data-calendar-action', action);
+    }
+    private report(error: unknown): void {
+        new Notice(`${t().calendarActionFailed}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    private async perform(action: () => Promise<void>): Promise<void> {
+        if (this.busy || this.destroyed) return;
+        this.busy = true;
+        try { await action(); }
+        catch (error) { this.report(error); }
+        finally { this.busy = false; if (!this.destroyed) this.render(); }
+    }
+
+    private renderPins(): void {
+        if (!this.pins) return;
+        const pins = this.pins;
+        const shelf = this.host.createDiv({ cls: 'seam-calendar-pins', attr: { 'aria-label': t().calendarPinnedHeading } });
+        const heading = shelf.createDiv({ cls: 'seam-calendar-pins-heading' });
+        heading.createSpan({ text: `${t().calendarPinnedHeading} · ${pins.pins.length}/3` });
+        const add = this.button(heading, t().calendarAddPin, () => new CalendarPinModal(this.app, pins).open());
+        this.control(add, 'add-pin', 'select');
+        add.disabled = pins.full;
+        for (const pin of pins.pins) {
+            const now = this.now();
+            const path = pin.kind === 'file' ? pin.path : pins.weeklyTarget(pin, this.weekly, now);
+            const file = this.app.vault.getAbstractFileByPath(path);
+            const exists = file instanceof TFile;
+            const row = shelf.createDiv({ cls: 'seam-calendar-pin-row' });
+            const label = pin.kind === 'weekly' ? `${t().calendarThisWeek} · ${this.weekRange(now)}` : file instanceof TFile ? file.basename : path;
+            const open = this.button(row, label, () => { void this.openPin(pin); }, 'seam-calendar-pin-open');
+            this.control(open, `open-pin-${pin.kind === 'file' ? pin.path : 'weekly'}`, exists ? 'open' : pin.kind === 'weekly' ? 'create' : 'select');
+            open.setAttribute('aria-label', `${label}: ${pin.kind === 'weekly' && !exists ? t().calendarCreateWeekly : path}`);
+            if (pin.kind === 'weekly' && !exists) open.createEl('small', { text: t().calendarCreateWeekly });
+            const unpin = this.button(row, '', () => { void this.perform(() => pins.unpin(pin)); }, 'clickable-icon');
+            unpin.setAttribute('aria-label', `${t().calendarUnpin}: ${label}`);
+            this.control(unpin, `unpin-${pin.kind === 'file' ? pin.path : 'weekly'}`, 'unpin');
+            setIcon(unpin, 'pin-off');
+        }
+    }
+    private async openPin(pin: CalendarPin): Promise<void> {
+        await this.perform(async () => {
+            if (!this.pins) return;
+            const now = this.now();
+            const path = pin.kind === 'file' ? pin.path : this.pins.weeklyTarget(pin, this.weekly, now);
+            let file = this.app.vault.getAbstractFileByPath(path);
+            if (!(file instanceof TFile) && pin.kind === 'weekly') file = await resolveWeeklyNote(this.app, now, this.weekly);
+            if (!(file instanceof TFile)) { await this.pins.reconcile(); throw new Error(t().calendarPinUnavailable); }
+            if (!this.destroyed) await this.callbacks.open(file);
+        });
+    }
+    private renderWeeklyAction(parent: HTMLElement): void {
+        const currentWeek = weekKey(this.model.selected, this.weekly) === weekKey(this.now(), this.weekly);
+        if (currentWeek && this.pins?.rolling) return;
+        const file = findWeeklyNote(this.app, this.model.selected, this.weekly);
+        const row = parent.createDiv({ cls: 'seam-calendar-weekly-action' });
+        const open = this.button(row, `${file ? t().calendarOpenWeekly : t().calendarCreateWeekly} · ${this.weekRange(this.model.selected)}`, () => {
+            const date = this.model.selected.clone();
+            void this.perform(async () => {
+                const target = await resolveWeeklyNote(this.app, date, this.weekly);
+                if (!this.destroyed) await this.callbacks.open(target);
+            });
+        }, 'seam-calendar-action');
+        this.control(open, 'weekly-action', file ? 'open' : 'create');
+        open.disabled = this.busy;
+        if (!this.pins) return;
+        const pins = this.pins;
+        if (currentWeek || file) {
+            const pinned = file ? pins.hasFile(file.path) : false;
+            const pin = this.button(row, '', () => { void this.perform(async () => {
+                if (currentWeek) await pins.pinWeek(this.weekly);
+                else if (file) {
+                    const existing = pins.pins.find(item => item.kind === 'file' && item.path === file.path);
+                    if (existing) await pins.unpin(existing); else await pins.pinFile(file);
+                }
+            }); }, 'clickable-icon');
+            pin.disabled = pins.full && !pinned;
+            pin.setAttribute('aria-label', currentWeek ? t().calendarKeepWeekPinned : pinned ? t().calendarUnpin : t().calendarHelpPin);
+            this.control(pin, 'weekly-pin', pinned && !currentWeek ? 'unpin' : 'pin');
+            setIcon(pin, pinned && !currentWeek ? 'pin-off' : 'pin');
+        }
     }
 
     private renderDays(grid: HTMLElement): void {
         const weekdays = grid.createDiv({ cls: 'seam-calendar-weekdays', attr: { role: 'row' } });
-        const start = this.model.selected.clone().startOf('week');
+        const start = this.model.selected.clone().startOf(this.weekly.iso ? 'isoWeek' : 'week');
         for (let index = 0; index < 7; index++) {
             const day = start.clone().add(index, 'days');
             weekdays.createSpan({ text: day.format('ddd'), attr: { role: 'columnheader', 'aria-label': day.format('dddd') } });
@@ -224,7 +350,7 @@ export class DailyNoteCalendar extends Component {
             const file = await resolveCalendarNote(this.app, date, this.settings);
             if (!this.destroyed) await this.callbacks.open(file);
         } catch (error) {
-            new Notice(`${t().noticeCreateDailyFailed}: ${error instanceof Error ? error.message : String(error)}`);
+            this.report(error);
         } finally {
             this.busy = false;
             if (!this.destroyed) this.render();

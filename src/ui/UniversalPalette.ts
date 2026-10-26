@@ -1,4 +1,4 @@
-import { App, Component, MarkdownRenderer, SuggestModal, setIcon, normalizePath, Notice, Platform, TFile, TFolder } from 'obsidian';
+import { App, Component, MarkdownRenderer, Scope, SuggestModal, setIcon, normalizePath, Notice, Platform, TFile, TFolder } from 'obsidian';
 import { CustomSpecialSearch, PaletteItem, QuickAddChoice, QuickAddConflictBehavior, SeamSettings, SpecialSearch, SpecialSearchOption, SPECIAL_SEARCH_ICONS, SPECIAL_SEARCH_LABELS } from '../types';
 import { normalizeTextQuery, parseSpecialSearch, SearchService } from '../search/SearchService';
 import { t } from '../i18n';
@@ -12,9 +12,12 @@ import { createDailyNote, getMissingDailyNote } from '../daily/DailyNotes';
 import { BaseResultNavigation } from './BaseResultNavigation';
 import { readNoteStatistics } from '../statistics/NoteStatistics';
 import { renderNoteStatistics } from './NoteStatisticsView';
+import { currentPeriodTarget, CurrentPeriod } from '../calendar/CurrentPeriodNotes';
+import { CalendarPins } from '../calendar/CalendarPins';
+import { readWeeklyNoteSettings } from '../calendar/WeeklyNotes';
 import { DailyNoteCalendar } from '../calendar/DailyNoteCalendar';
 import { readDailyNoteSettings } from '../daily/DailyNotes';
-import { groupDailySearches } from '../calendar/SpecialSearchOrder';
+import { orderSpecialSearches } from '../calendar/SpecialSearchOrder';
 import { getNoteOutline } from '../outline/NoteOutline';
 
 /**
@@ -76,6 +79,7 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
 export class UniversalPalette extends SuggestModal<PaletteItem> {
     onClosed?: () => void;
     private createSuggestionActive = false;
+    private closeButtonScope: Scope | null = null;
     private lastQuery = '';
     private historyIndex = -1;
     private restoringHistory = false;
@@ -137,6 +141,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         private searchService: SearchService,
         private commands: PaletteItem[],
         private queryHistory = new QueryHistory(),
+        private calendarPins?: CalendarPins,
     ) {
         super(app);
         this.setPlaceholder(t().palettePlaceholder);
@@ -147,7 +152,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // SuggestModal's default Enter handler does not preserve modifier state
         // when calling onChooseSuggestion, so we intercept at the scope level.
         this.scope.register(['Mod'], 'Enter', (evt: KeyboardEvent) => {
-            if (this.mode === 'statistics' || this.mode === 'outline' || this.calendarHost) return false;
+            if (this.mode === 'statistics' || this.mode === 'outline' || this.calendarHost || this.closeButtonScope) return false;
             evt.preventDefault();
             const item = this.getSelectedItem();
             if (item?.type === 'note' && item.file) {
@@ -162,7 +167,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return false;
         });
         const openInSplit = (evt: KeyboardEvent): boolean => {
-            if (this.mode === 'statistics' || this.mode === 'outline' || this.calendarHost) return false;
+            if (this.mode === 'statistics' || this.mode === 'outline' || this.calendarHost || this.closeButtonScope) return false;
             const item = this.getSelectedItem();
             if (item?.type === 'create') {
                 evt.preventDefault();
@@ -230,6 +235,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             ...this.excludedTags.map(tag => '!#' + tag),
         ].filter(Boolean).join(' '));
         window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
+        this.releaseCloseButtonScope();
         this.disposeCalendar();
         this.statisticsHost?.remove();
         this.statisticsHost = null;
@@ -264,18 +270,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.calendarHost = host;
         host.createEl('p', { text: t().calendarLoading });
         const generation = ++this.calendarGeneration;
-        void readDailyNoteSettings(this.app).then(settings => {
+        void Promise.all([readDailyNoteSettings(this.app), readWeeklyNoteSettings(this.app, this.settings)]).then(([settings, weekly]) => {
             if (generation !== this.calendarGeneration) return;
             const leaf = this.app.workspace.getLeaf(false);
             this.calendarView = new DailyNoteCalendar(this.app, host, this.inputEl, settings, {
                 changed: () => this.updateInstructions(''),
                 open: async file => { this.close(); await leaf.openFile(file); },
-            }, this.scope);
+            }, this.scope, this.calendarPins, weekly);
             this.calendarView.load();
-        }).catch(() => {
+        }).catch((error: unknown) => {
             if (generation !== this.calendarGeneration) return;
             host.empty();
-            host.createEl('p', { text: t().calendarLoadFailed, attr: { role: 'alert' } });
+            host.createEl('p', { text: `${t().calendarLoadFailed} ${error instanceof Error ? error.message : String(error)}`, attr: { role: 'alert' } });
             const retry = host.createEl('button', { text: t().calendarRetry, attr: { type: 'button' } });
             retry.addEventListener('click', () => { this.disposeCalendar(); this.refreshSuggestions(); });
         }).finally(() => { host.removeAttribute('aria-busy'); });
@@ -340,14 +346,41 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         }
     }
 
-    /**
-     * Sets up the chips container inside the prompt input container.
-     */
+    private releaseCloseButtonScope(): void {
+        const scope = this.closeButtonScope;
+        this.closeButtonScope = null;
+        if (scope) this.app.keymap.popScope(scope);
+    }
+
+    /** Sets up the chips and dismiss control inside the prompt input container. */
     private setupChipsContainer(): void {
         const parent = this.inputEl.parentElement;
         if (!parent) return;
 
         parent.addClass('seam-palette-input-container');
+        // The native clear control is no longer adjacent to inputEl after chip wrapping.
+        // Give the visible X an explicit, accessible modal-dismiss action instead.
+        parent.querySelector('.search-input-clear-button')?.remove();
+        const close = parent.createEl('button', { cls: 'clickable-icon seam-palette-close', attr: {
+            type: 'button', 'aria-label': t().paletteHelpDismiss,
+        } });
+        setIcon(close, 'circle-x');
+        close.addEventListener('click', () => this.close());
+        close.addEventListener('focus', () => {
+            if (this.closeButtonScope) return;
+            const scope = new Scope(this.scope);
+            const dismiss = (): false => { this.close(); return false; };
+            scope.register([], 'Enter', dismiss);
+            scope.register([], ' ', dismiss);
+            this.closeButtonScope = scope;
+            this.app.keymap.pushScope(scope);
+            this.updateInstructions(this.lastQuery);
+        });
+        close.addEventListener('blur', () => {
+            this.releaseCloseButtonScope();
+            this.updateInstructions(this.lastQuery);
+        });
+
 
         this.chipsContainerEl = createDiv({ cls: 'seam-palette-chips-container is-hidden' });
         parent.insertBefore(this.chipsContainerEl, this.inputEl);
@@ -553,6 +586,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     /**
      * Programmatically re-triggers the SuggestModal's input handler to update suggestions.
      */
+    refreshSpecialSearchChoices(): void {
+        const query = this.composedQueryPrefix + this.inputEl.value;
+        if (this.mode === 'search' && !this.calendarHost && query.trimStart().startsWith('@') && !this.getSpecialQueryTokens(query).length) {
+            this.refreshSuggestions();
+        }
+    }
+
     private refreshSuggestions(): void {
         this.inputEl.dispatchEvent(new Event('input'));
     }
@@ -561,7 +601,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
      * Intercept suggestion selection to keep the modal open when a tag is selected.
      */
     selectSuggestion(value: PaletteItem, evt: MouseEvent | KeyboardEvent): void {
-        if (this.mode === 'statistics' || this.calendarHost) return;
+        if (this.mode === 'statistics' || this.calendarHost || value.id === 'period-query-error') return;
         if (this.mode === 'outline') {
             if (value.type !== 'heading') return;
             this.close();
@@ -665,6 +705,25 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         } catch { return null; }
     }
 
+    private async getPeriodNoteCreationSuggestion(search: CurrentPeriod): Promise<PaletteItem | null> {
+        const target = await currentPeriodTarget(this.app, this.settings, search);
+        if (this.app.vault.getAbstractFileByPath(target.path)) return null;
+        return {
+            id: `create-period-note-${search}`,
+            title: search === 'thisWeek' ? t().paletteCreateWeeklyNote : t().paletteCreateYearlyNote,
+            description: target.path, type: 'create', icon: 'calendar-plus',
+            action: async (openBehavior = false) => {
+                try {
+                    const file = await target.create();
+                    const leaf = openBehavior === 'split' ? this.app.workspace.getLeaf('split', 'vertical') : this.app.workspace.getLeaf(openBehavior);
+                    await leaf.openFile(file);
+                } catch (error) {
+                    new Notice(`${t().calendarActionFailed}: ${error instanceof Error ? error.message : String(error)}`);
+                }
+            },
+        };
+    }
+
     /** Gets the currently selected suggestion from the internal chooser. */
     private getSelectedItem(): PaletteItem | null {
         const chooser = (this as unknown as { chooser: SuggestChooser<PaletteItem> }).chooser;
@@ -760,14 +819,22 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                     if (this.lastQuery !== trimmed) return [];
                     const items = this.mapSearchResults(results, textQuery || inlineTagQuery || chipQuery, combined.some(entry => entry.special?.search === 'todo'));
                     const dailySearch = combined.length === 1 ? combined[0].special?.search : null;
-                    if (!items.length && !remaining && !chipQuery && (dailySearch === 'today' || dailySearch === 'yesterday')) {
-                        const suggestion = await this.getDailyNoteCreationSuggestion(dailySearch);
+                    if (!items.length && !remaining && !chipQuery && (dailySearch === 'today' || dailySearch === 'yesterday' || dailySearch === 'thisWeek' || dailySearch === 'thisYear')) {
+                        const suggestion = dailySearch === 'thisWeek' || dailySearch === 'thisYear'
+                            ? await this.getPeriodNoteCreationSuggestion(dailySearch) : await this.getDailyNoteCreationSuggestion(dailySearch);
                         if (this.lastQuery !== trimmed) return [];
                         if (suggestion) items.push(suggestion);
                     }
                     this.createSuggestionActive = items.some(item => item.type === 'create');
                     this.updateInstructions(trimmed);
                     return items;
+                }).catch((error: unknown) => {
+                    if (!combined.some(entry => entry.special?.search === 'thisWeek' || entry.special?.search === 'thisYear')) throw error;
+                    if (this.lastQuery !== trimmed) return [];
+                    this.createSuggestionActive = false;
+                    this.setInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }]);
+                    return [{ id: 'period-query-error', title: t().periodQueryFailed,
+                        description: error instanceof Error ? error.message : String(error), type: 'action' as const, icon: 'alert-triangle' }];
                 });
             }
             const custom = customSearch;
@@ -1119,10 +1186,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private updateInstructions(query: string): void {
+        if (this.closeButtonScope) {
+            this.setInstructions([
+                { command: '↵', purpose: t().paletteHelpDismiss },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+            ]);
+            return;
+        }
         if (this.calendarHost) {
             const instructions = [{ command: '↑↓←→', purpose: t().paletteHelpNavigate }];
-            if (this.calendarView) instructions.push({ command: '↵', purpose: this.calendarView.picking ? t().paletteHelpSelect
-                : this.calendarView.hasNote ? t().paletteHelpOpen : t().paletteHelpCreate });
+            if (this.calendarView) instructions.push({ command: '↵', purpose: this.calendarView.footerAction });
             instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss });
             this.setInstructions(instructions);
             return;
@@ -1227,6 +1300,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             { search: 'today', label: SPECIAL_SEARCH_LABELS.today, description: t().paletteSpecialToday },
             { search: 'yesterday', label: SPECIAL_SEARCH_LABELS.yesterday, description: t().paletteSpecialYesterday },
             { search: 'calendar', label: SPECIAL_SEARCH_LABELS.calendar, description: t().paletteSpecialCalendar },
+            { search: 'thisWeek', label: SPECIAL_SEARCH_LABELS.thisWeek, description: t().paletteSpecialThisWeek },
+            { search: 'thisYear', label: SPECIAL_SEARCH_LABELS.thisYear, description: t().paletteSpecialThisYear },
             { search: 'recent', label: SPECIAL_SEARCH_LABELS.recent, description: t().paletteSpecialRecent },
             { search: 'recentlyOpened', label: SPECIAL_SEARCH_LABELS.recentlyOpened, description: t().paletteSpecialRecentlyOpened },
             { search: 'fleeting', label: SPECIAL_SEARCH_LABELS.fleeting, description: t().paletteSpecialFleeting },
@@ -1263,19 +1338,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 customSearchId: search.id,
                 icon: search.icon || 'search',
             }));
-        const orderIndex = (item: PaletteItem): number => {
-            const key = item.customSearchId
-                ? `custom:${item.customSearchId}`
-                : item.specialSearch ? `builtin:${item.specialSearch}` : '';
-            return this.settings.specialSearchOrder.indexOf(key);
-        };
-        const isPinned = (item: PaletteItem): boolean => {
-            if (item.specialSearch) return Boolean(this.settings.specialSearchPreferences.find((preference) => preference.search === item.specialSearch)?.pinned);
-            return Boolean(this.settings.customSpecialSearches.find((search) => search.id === item.customSearchId)?.pinned);
-        };
-        return groupDailySearches([...builtIns, ...custom].sort((a, b) =>
-            Number(isPinned(b)) - Number(isPinned(a)) || orderIndex(a) - orderIndex(b),
-        ));
+        return orderSpecialSearches([...builtIns, ...custom], this.settings);
     }
 
     private isExactActiveSpecialSearch(query: string): boolean {
@@ -1288,7 +1351,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private getActiveSpecialQueryToken(query: string): string | null {
         const custom = this.getCustomSearchForQuery(query.trim());
         if (custom) return query.trimStart().slice(0, custom.identifier.length);
-        const match = query.trimStart().match(/^@(last[1-9]\d*days|calendar|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i);
+        const match = query.trimStart().match(/^@(last[1-9]\d*days|calendar|thisWeek|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i);
         return match?.[0] ?? null;
     }
 

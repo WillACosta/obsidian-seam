@@ -3,8 +3,19 @@ import { TFile } from 'obsidian';
 export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000';
 export type UpdateAnnouncementMode = 'major' | 'all' | 'never';
 export type PaletteRibbonMode = 'both' | 'mobile' | 'hidden';
+export const SPECIAL_SEARCH_PIN_LIMIT = 5;
+
+export type CalendarPin = { kind: 'file'; path: string } | { kind: 'weekly'; week?: string; path?: string };
 
 export interface SeamSettings {
+    calendarPins: CalendarPin[];
+    calendarUsePeriodicNotes: boolean;
+    calendarWeeklyFolder: string;
+    calendarWeeklyFormat: string;
+    calendarWeeklyTemplate: string;
+    calendarYearlyFolder: string;
+    calendarYearlyFormat: string;
+    calendarYearlyTemplate: string;
     permanentFolder: string;
     archiveFolder: string;
     fleetingFolder: string;
@@ -74,6 +85,14 @@ export interface CustomSpecialSearch {
 }
 
 export const DEFAULT_SETTINGS: SeamSettings = {
+    calendarPins: [],
+    calendarUsePeriodicNotes: true,
+    calendarWeeklyFolder: 'Weekly',
+    calendarWeeklyFormat: 'gggg-[W]ww',
+    calendarWeeklyTemplate: '',
+    calendarYearlyFolder: 'Yearly',
+    calendarYearlyFormat: 'YYYY',
+    calendarYearlyTemplate: '',
     permanentFolder: 'Permanent',
     archiveFolder: 'Archive',
     fleetingFolder: 'Fleeting',
@@ -104,6 +123,8 @@ export const DEFAULT_SETTINGS: SeamSettings = {
         { search: 'today', pinned: false, hidden: false },
         { search: 'yesterday', pinned: false, hidden: false },
         { search: 'calendar', pinned: false, hidden: false },
+        { search: 'thisWeek', pinned: false, hidden: false },
+        { search: 'thisYear', pinned: false, hidden: false },
         { search: 'recent', pinned: false, hidden: false },
         { search: 'recentlyOpened', pinned: false, hidden: false },
         { search: 'fleeting', pinned: false, hidden: false },
@@ -119,7 +140,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
         { search: 'sources', pinned: false, hidden: false },
     ],
     specialSearchOrder: [
-        'builtin:today', 'builtin:yesterday', 'builtin:calendar',
+        'builtin:today', 'builtin:yesterday', 'builtin:calendar', 'builtin:thisWeek', 'builtin:thisYear',
         'builtin:recent', 'builtin:recentlyOpened', 'builtin:fleeting', 'builtin:permanent', 'builtin:lastDays',
         'builtin:untagged', 'builtin:docs', 'builtin:images',
         'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code', 'builtin:sources',
@@ -157,8 +178,10 @@ export interface MatchSnippet {
 
 export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text';
 
-export type SpecialSearch = 'calendar' | 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources' | 'recentlyOpened' | 'fleeting' | 'permanent';
+export type SpecialSearch = 'thisWeek' | 'thisYear' | 'calendar' | 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources' | 'recentlyOpened' | 'fleeting' | 'permanent';
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
+    thisWeek: 'calendar-range',
+    thisYear: 'calendar',
     calendar: 'calendar-days',
     today: 'calendar-days',
     yesterday: 'history',
@@ -178,6 +201,8 @@ export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
 };
 
 export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
+    thisWeek: '@thisWeek',
+    thisYear: '@thisYear',
     calendar: '@calendar',
     today: '@today',
     yesterday: '@yesterday',

@@ -1,5 +1,6 @@
 import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian';
 import { DailyTaskTransfer } from './daily/DailyTaskTransfer';
+import { CalendarPins, normalizeCalendarPins } from './calendar/CalendarPins';
 import { NoteDeletion } from './notes/NoteDeletion';
 import { QueryHistory } from './search/QueryHistory';
 import { isFileInFolder } from './utils/isFileInFolder';
@@ -40,6 +41,7 @@ export default class SeamPlugin extends Plugin {
     searchService!: SearchService;
     private dailyTaskTransfer!: DailyTaskTransfer;
     private noteDeletion!: NoteDeletion;
+    calendarPins!: CalendarPins;
     private queryHistory = new QueryHistory();
     private reconciliationIntervalId: number | null = null;
     private paletteRibbonEl: HTMLElement | null = null;
@@ -63,6 +65,7 @@ export default class SeamPlugin extends Plugin {
         this.searchService = new SearchService(this.app, this.settings);
         this.dailyTaskTransfer = new DailyTaskTransfer(this.app);
         this.noteDeletion = new NoteDeletion(this.app);
+        this.calendarPins = this.addChild(new CalendarPins(this.app, () => this.settings, () => this.saveData(this.settings)));
 
         this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().ribbonOpenSeam, () => this.openPalette());
         this.refreshPaletteRibbon();
@@ -103,6 +106,19 @@ export default class SeamPlugin extends Plugin {
             name: t().cmdShowStatus,
             callback: () => this.showStatus(),
         });
+
+        for (const pinned of [false, true]) {
+            this.addCommand({
+                id: pinned ? 'unpin-current-note-from-calendar' : 'pin-current-note-to-calendar',
+                name: pinned ? t().cmdUnpinCalendarNote : t().cmdPinCalendarNote,
+                checkCallback: (checking: boolean) => {
+                    const file = this.app.workspace.getActiveFile();
+                    if (!file || file.extension !== 'md' || Boolean(this.calendarPins.pinForFile(file.path)) !== pinned) return false;
+                    if (!checking) void this.toggleCalendarPin(file);
+                    return true;
+                },
+            });
+        }
 
         // Commands that operate on the current open note
         this.addCommand({
@@ -357,6 +373,7 @@ export default class SeamPlugin extends Plugin {
             this.searchService,
             commands,
             this.queryHistory,
+            this.calendarPins,
         );
         this.openTrackedPalette(palette);
     }
@@ -368,6 +385,7 @@ export default class SeamPlugin extends Plugin {
             this.searchService,
             await this.getPaletteCommands(),
             this.queryHistory,
+            this.calendarPins,
         );
         this.openTrackedPalette(palette);
         window.setTimeout(() => palette.showQuickAdd(), 0);
@@ -375,13 +393,13 @@ export default class SeamPlugin extends Plugin {
 
     private async openNoteOutline(file: TFile): Promise<void> {
         await this.searchService.refreshDailyNoteSettings();
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.queryHistory);
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.queryHistory, this.calendarPins);
         this.openTrackedPalette(palette);
         palette.showNoteOutline(file);
     }
 
     private openNoteStatistics(file: TFile): void {
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, [], this.queryHistory);
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, [], this.queryHistory, this.calendarPins);
         this.openTrackedPalette(palette);
         void palette.showNoteStatistics(file);
     }
@@ -492,6 +510,16 @@ export default class SeamPlugin extends Plugin {
         new Notice(message, 5000);
     }
 
+    private async toggleCalendarPin(file: TFile): Promise<void> {
+        if (this.app.workspace.getActiveFile() !== file) return;
+        try {
+            const pin = this.calendarPins.pinForFile(file.path);
+            if (pin) await this.calendarPins.unpin(pin); else await this.calendarPins.pinFile(file);
+        } catch (error) {
+            new Notice(`${t().calendarPinFailed}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
     private async deleteCurrentNote(file: TFile): Promise<void> {
         try {
             await this.noteDeletion.delete(file);
@@ -554,7 +582,12 @@ export default class SeamPlugin extends Plugin {
         // Contextual commands: only when a note is active
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
+            const pinned = Boolean(this.calendarPins.pinForFile(activeFile.path));
             const actions: PaletteItem[] = [{
+                id: 'cmd-calendar-pin', title: pinned ? t().cmdUnpinCalendarNote : t().cmdPinCalendarNote,
+                description: activeFile.basename, type: 'command', icon: pinned ? 'pin-off' : 'pin',
+                action: () => this.toggleCalendarPin(activeFile),
+            }, {
                 id: 'cmd-note-outline',
                 title: t().cmdShowNoteOutline,
                 description: activeFile.basename,
@@ -708,6 +741,11 @@ export default class SeamPlugin extends Plugin {
         } else {
             this.settings = Object.assign({}, DEFAULT_SETTINGS);
         }
+        this.settings.calendarPins = normalizeCalendarPins(this.settings.calendarPins);
+        this.settings.calendarUsePeriodicNotes = this.settings.calendarUsePeriodicNotes !== false;
+        for (const key of ['calendarWeeklyFolder', 'calendarWeeklyFormat', 'calendarWeeklyTemplate', 'calendarYearlyFolder', 'calendarYearlyFormat', 'calendarYearlyTemplate'] as const) {
+            if (typeof this.settings[key] !== 'string') this.settings[key] = DEFAULT_SETTINGS[key];
+        }
     }
 
     async saveSettings(): Promise<void> {
@@ -777,11 +815,13 @@ export default class SeamPlugin extends Plugin {
      * Called when settings change. Propagates new settings to all services.
      */
     onSettingsChange(): void {
+        if (this.calendarPins?.rolling) void this.calendarPins.refreshWeeklySettings().catch(() => {});
         this.refreshPaletteRibbon();
         this.automationService?.updateSettings(this.settings);
         this.automationQueue?.setDelayMode(this.settings.automationDelay);
         this.reconciler?.updateSettings(this.settings);
         this.searchService?.updateSettings(this.settings);
+        for (const palette of this.activePalettes) palette.refreshSpecialSearchChoices();
         this.startPeriodicReconciliation();
 
         // Re-seed tag suggestions when settings change

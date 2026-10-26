@@ -9,14 +9,14 @@ export class CalendarModel {
     selected: Moment;
     page: CalendarPage = 'days';
 
-    constructor(date: Moment, locale: string) {
+    constructor(date: Moment, locale: string, readonly isoWeeks = false) {
         this.selected = date.clone().locale(locale).startOf('day');
     }
 
     get yearStart(): number { return Math.floor(this.selected.year() / 12) * 12; }
 
     days(): Moment[] {
-        const start = this.selected.clone().startOf('month').startOf('week');
+        const start = this.selected.clone().startOf('month').startOf(this.isoWeeks ? 'isoWeek' : 'week');
         return Array.from({ length: 42 }, (_, index) => start.clone().add(index, 'days'));
     }
 
@@ -27,8 +27,8 @@ export class CalendarModel {
         }
         const direction = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : key === 'ArrowUp' ? -1 : 1;
         if (this.page === 'days') {
-            if (key === 'Home') this.selected.startOf('week');
-            else if (key === 'End') this.selected.endOf('week').startOf('day');
+            if (key === 'Home') this.selected.startOf(this.isoWeeks ? 'isoWeek' : 'week');
+            else if (key === 'End') this.selected.endOf(this.isoWeeks ? 'isoWeek' : 'week').startOf('day');
             else this.selected.add(direction * (key === 'ArrowUp' || key === 'ArrowDown' ? 7 : 1), 'days');
         } else {
             if (key === 'Home' || key === 'End') {
