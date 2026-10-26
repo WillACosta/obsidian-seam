@@ -1058,6 +1058,10 @@ body .seam-source-pdf .pdf-embed .pdfViewer .page {
 .seam-calendar-pins-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .seam-calendar-pin-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .prompt.seam-palette-calendar .seam-calendar-pin-open { display: block; flex: 1; min-width: 0; height: auto; min-height: 32px; padding: 6px 8px; text-align: start; white-space: normal; overflow-wrap: anywhere; background: transparent; border: none; box-shadow: none; justify-content: flex-start; }
+.prompt.seam-palette-calendar .seam-calendar-pin-open:hover:enabled,
+.prompt.seam-palette-calendar .seam-calendar-pin-open:focus-visible {
+    background: var(--background-modifier-hover);
+}
 .seam-calendar-pin-open small { display: block; color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .prompt.seam-palette-calendar .seam-calendar-pins-heading button { background: transparent; box-shadow: none; font-size: var(--font-ui-smaller); }
 .seam-calendar-weekly-action { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
@@ -1084,3 +1088,50 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
     width: 44px;
     height: 44px;
 }
+
+.seam-palette-group-label {
+    padding: 16px 12px 6px;
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    pointer-events: none;
+    user-select: none;
+}
+.seam-palette-group-label:first-child { padding-top: 6px; }
+.seam-custom-search-panel-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+.seam-search-pinned-count {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    margin-inline-start: auto;
+    white-space: nowrap;
+}
+.seam-note-completion-summary { display: flex; align-items: baseline; gap: 12px; margin-top: 20px; }
+.seam-note-completion-percent { font-size: 3em; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+.seam-note-completion-bar {
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 8px;
+    margin-block: 12px 24px;
+    border: 0;
+    border-radius: var(--radius-l);
+    overflow: hidden;
+    background: var(--background-modifier-border);
+    accent-color: var(--interactive-accent);
+}
+.seam-note-completion-bar::-webkit-progress-bar { background: var(--background-modifier-border); border-radius: var(--radius-l); }
+.seam-note-completion-bar::-webkit-progress-value { background: var(--interactive-accent); border-radius: var(--radius-l); animation: seam-completion-reveal 320ms ease-out; }
+.seam-note-completion-bar::-moz-progress-bar { background: var(--interactive-accent); border-radius: var(--radius-l); }
+.seam-note-completion-counts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 0; }
+.seam-note-completion-count dt { color: var(--text-muted); font-size: var(--font-ui-small); overflow-wrap: anywhere; }
+.seam-note-completion-count dd { margin: 6px 0 0; font-size: 1.5em; font-variant-numeric: tabular-nums; }
+.seam-periodic-confirmation-path { color: var(--text-muted); overflow-wrap: anywhere; }
+.seam-periodic-confirmation-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
+@keyframes seam-completion-reveal { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .seam-note-completion-bar::-webkit-progress-value { animation: none; } }

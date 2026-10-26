@@ -144,7 +144,7 @@ Use these tokens in the Universal Palette to narrow a search or switch modes:
 
 Pin up to **five special queries**, shared between built-in and custom queries, in Seam settings. Pinned queries appear first in the `@` listing. Press **Backspace** immediately after an active query to remove it in one step, including its trailing space.
 
-Find files in your configured folders with `@fleeting` and `@permanent`, or browse the ten most recently opened files with `@recentlyOpened`. Combine these with other Seam filters. With an empty Palette input, press **↑** to cycle through previous queries from the current session; **↓** returns toward the empty input.
+Find files in your configured folders with `@fleeting` and `@permanent`, or browse the ten most recently opened files with `@recentlyOpened`. Combine these with other Seam filters.
 
 Daily Notes appear with readable dates and a calendar subtitle. If `@today` or `@yesterday` has no Daily Note, select the offered action to create and open it from your configured template. While today's Daily Note is open, use **Move todo items to tomorrow's daily note** or **Pull todo items from yesterday's daily note** in Seam's commands. Each task command appears only when its source note has unfinished work. Seam follows the core Daily Notes folder, date format, and template. It moves unchecked (`[ ]`) and partially complete (`[/]`) tasks with their parent context, leaving completed tasks behind. If a partially complete parent remains with only completed children, its source checkbox becomes completed.
 

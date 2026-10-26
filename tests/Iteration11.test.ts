@@ -6,7 +6,6 @@ import moment from 'moment';
 import { extractPendingTasks, hasPendingTasksInCache } from '../src/daily/PendingTasks';
 import { DailyTaskTransfer } from '../src/daily/DailyTaskTransfer';
 import { createDailyNote, dailyNoteDate, dailyNotePath, getMissingDailyNote } from '../src/daily/DailyNotes';
-import { QueryHistory } from '../src/search/QueryHistory';
 import { parseSpecialSearch, SearchService } from '../src/search/SearchService';
 import { DEFAULT_SETTINGS } from '../src/types';
 
@@ -109,6 +108,22 @@ describe('Pending daily tasks', () => {
         assert.match(result.remaining, /more code/);
         assert.match(result.remaining, /Child/);
     });
+    it('preserves both notes and creates no destination when creation is cancelled', async () => {
+        const fixture = vaultFixture();
+        const source = fixture.file('Journal/2026-10-23.md', '- [ ] Keep here\n');
+        const service = new DailyTaskTransfer(fixture.app, async path => { assert.equal(path, 'Journal/2026-10-24.md'); return false; });
+        assert.equal(await service.transfer(source, 'tomorrow'), null);
+        assert.equal(fixture.contents.get(source.path), '- [ ] Keep here\n');
+        assert.equal(fixture.contents.has('Journal/2026-10-24.md'), false);
+    });
+    it('does not ask to create an existing destination', async () => {
+        const fixture = vaultFixture();
+        const source = fixture.file('Journal/2026-10-23.md', '- [ ] Transfer\n');
+        fixture.file('Journal/2026-10-24.md', '# Existing\n');
+        const service = new DailyTaskTransfer(fixture.app, async () => assert.fail('Existing notes must not prompt'));
+        assert.equal(await service.transfer(source, 'tomorrow'), 1);
+        assert.match(fixture.contents.get('Journal/2026-10-24.md')!, /Transfer/);
+    });
     it('creates tomorrow with the core Daily Notes template and avoids repeated moves', async () => {
         const fixture = vaultFixture();
         const source = fixture.file('Journal/2026-10-23.md', '- [ ] Pending\n- [x] Done\n');
@@ -180,7 +195,7 @@ describe('Pending daily tasks', () => {
     });
 });
 
-describe('Iteration 11 searches and history', () => {
+describe('Iteration 11 searches', () => {
     it('includes attachments, respects folder boundaries and composes with tags', async () => {
         const fixture = vaultFixture();
         const pdf = fixture.file('Fleeting/Report.pdf', '');
@@ -212,12 +227,5 @@ describe('Iteration 11 searches and history', () => {
         assert.equal(service.getDailyNoteDisplayTitle(ordinary), null);
         assert.equal(daily.path, 'Journal/2026-10-02.md');
     });
-    it('shares deduplicated newest-first history without persisting empty queries', () => {
-        const history = new QueryHistory();
-        history.record(' #work '); history.record('@fleeting'); history.record('#work'); history.record('');
-        assert.equal(history.length, 2);
-        assert.equal(history.at(0), '#work');
-        assert.equal(history.at(1), '@fleeting');
-        assert.equal(new QueryHistory().length, 0);
-    });
+
 });

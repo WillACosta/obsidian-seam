@@ -7,10 +7,13 @@ import { NoteConflictModal } from './NoteConflictModal';
 import { getTagInputContext, getTagSuggestions } from './TagFilterSuggest';
 import { openSearchResult } from '../search/OpenSearchResult';
 import { hasDirectoryFilter, parseQuery } from '../search/QueryParser';
-import { QueryHistory } from '../search/QueryHistory';
 import { createDailyNote, getMissingDailyNote } from '../daily/DailyNotes';
 import { BaseResultNavigation } from './BaseResultNavigation';
 import { readNoteStatistics } from '../statistics/NoteStatistics';
+import { groupPaletteItems } from './PaletteGroups';
+import { confirmPeriodicNote } from './PeriodicNoteConfirmation';
+import { renderNoteCompletion } from './NoteCompletionView';
+import { readNoteCompletion, summarizeTasks } from '../statistics/NoteCompletion';
 import { renderNoteStatistics } from './NoteStatisticsView';
 import { currentPeriodTarget, CurrentPeriod } from '../calendar/CurrentPeriodNotes';
 import { CalendarPins } from '../calendar/CalendarPins';
@@ -81,8 +84,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private createSuggestionActive = false;
     private closeButtonScope: Scope | null = null;
     private lastQuery = '';
-    private historyIndex = -1;
-    private restoringHistory = false;
     private selectedTags: string[] = [];
     private excludedTags: string[] = [];
     private chipsContainerEl: HTMLElement | null = null;
@@ -121,12 +122,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 return;
             }
         }
-        if (event.target === this.inputEl && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
-            && (event.key === 'ArrowUp' || event.key === 'ArrowDown')
-            && !this.cycleHistory(event, event.key === 'ArrowUp' ? 1 : -1)) {
-            event.stopImmediatePropagation();
-            return;
-        }
         if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return;
         const target = event.target as Node | null;
         if (!target?.instanceOf?.(HTMLElement) || !target.matches('.prompt-input')) return;
@@ -140,7 +135,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         private settings: SeamSettings,
         private searchService: SearchService,
         private commands: PaletteItem[],
-        private queryHistory = new QueryHistory(),
         private calendarPins?: CalendarPins,
     ) {
         super(app);
@@ -194,32 +188,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return false;
         });
         this.scope.register([], 'Backspace', (evt: KeyboardEvent) => {
-            if (this.mode === 'statistics') return true;
+            if (this.mode === 'statistics') {
+                evt.preventDefault();
+                this.returnToSearch();
+                return false;
+            }
             if (this.mode === 'search' || this.inputEl.value.length > 0) return true;
             evt.preventDefault();
             this.returnToSearch();
             return false;
         });
-    }
-
-    private cycleHistory(event: KeyboardEvent, direction: 1 | -1): boolean {
-        if (this.mode !== 'search' || (this.baseNavigationEnabled && this.historyIndex < 0) || !this.queryHistory.length) return true;
-        if (this.historyIndex < 0 && (direction < 0 || this.inputEl.value || this.composedQueryPrefix || this.selectedTags.length || this.excludedTags.length)) return true;
-        event.preventDefault();
-        this.historyIndex = direction > 0 ? (this.historyIndex + 1) % this.queryHistory.length : this.historyIndex - 1;
-        this.selectedTags = [];
-        this.excludedTags = [];
-        this.composedTagKeys = [];
-        this.composedQueryPrefix = '';
-        this.selectedDirectoryToken = null;
-        this.selectedInlineTagTokens.clear();
-        this.renderChips();
-        this.inputEl.value = this.historyIndex < 0 ? '' : this.queryHistory.at(this.historyIndex) ?? '';
-        this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
-        this.restoringHistory = true;
-        try { this.refreshSuggestions(); }
-        finally { this.restoringHistory = false; }
-        return false;
     }
 
     onOpen(): void {
@@ -229,11 +207,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     onClose(): void {
-        if (this.mode === 'search') this.queryHistory.record([
-            this.composedQueryPrefix + this.inputEl.value,
-            ...this.selectedTags.map(tag => '#' + tag),
-            ...this.excludedTags.map(tag => '!#' + tag),
-        ].filter(Boolean).join(' '));
         window.removeEventListener('keydown', this.baseNavigationKeyListener, true);
         this.releaseCloseButtonScope();
         this.disposeCalendar();
@@ -276,7 +249,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.calendarView = new DailyNoteCalendar(this.app, host, this.inputEl, settings, {
                 changed: () => this.updateInstructions(''),
                 open: async file => { this.close(); await leaf.openFile(file); },
-            }, this.scope, this.calendarPins, weekly);
+            }, this.scope, this.calendarPins, weekly, this.settings.confirmPeriodicNoteCreation);
             this.calendarView.load();
         }).catch((error: unknown) => {
             if (generation !== this.calendarGeneration) return;
@@ -313,7 +286,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     /** Replace search with a read-only report in the same Palette. */
-    async showNoteStatistics(file: TFile): Promise<void> {
+    async showNoteStatistics(file: TFile, completion = false): Promise<void> {
         this.mode = 'statistics';
         this.lastQuery = '';
         this.baseNavigationEnabled = false;
@@ -324,7 +297,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.statisticsHost?.remove();
         const host = this.modalEl.createDiv({
             cls: 'seam-note-statistics',
-            attr: { tabindex: '-1', 'aria-label': t().statisticsTitle, role: 'region', 'aria-busy': 'true', 'aria-live': 'polite' },
+            attr: { tabindex: '-1', 'aria-label': completion ? t().completionTitle : t().statisticsTitle, role: 'region', 'aria-busy': 'true', 'aria-live': 'polite' },
         });
         this.resultContainerEl.before(host);
         this.statisticsHost = host;
@@ -334,9 +307,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         dismiss.addEventListener('click', () => this.close());
         host.focus();
         try {
-            const report = await readNoteStatistics(this.app, file);
-            if (this.statisticsHost !== host) return;
-            renderNoteStatistics(host, report, this.settings.showIcons);
+            if (completion) {
+                const report = await readNoteCompletion(this.app, file);
+                if (this.statisticsHost !== host) return;
+                renderNoteCompletion(host, file, report);
+            } else {
+                const report = await readNoteStatistics(this.app, file);
+                if (this.statisticsHost !== host) return;
+                renderNoteStatistics(host, report, this.settings.showIcons);
+            }
         } catch {
             if (this.statisticsHost !== host) return;
             host.empty();
@@ -456,7 +435,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Also automatically convert a completed tag when user types space (e.g. "#ai ")
         this.inputEl.addEventListener('input', () => {
-            if (!this.restoringHistory) this.historyIndex = -1;
             const val = this.inputEl.value;
             const tokens = new Set(val.split(/\s+/));
             for (const token of this.selectedInlineTagTokens) {
@@ -594,8 +572,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             this.showNoteOutline(value.file);
             return;
         }
-        if (value.id === 'cmd-note-statistics' && value.file) {
-            void this.showNoteStatistics(value.file);
+        if ((value.id === 'cmd-note-statistics' || value.id === 'cmd-note-completion') && value.file) {
+            void this.showNoteStatistics(value.file, value.id === 'cmd-note-completion');
             return;
         }
         const fullInput = this.composedQueryPrefix + this.inputEl.value;
@@ -675,6 +653,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 icon: 'calendar-plus',
                 action: async (openBehavior = false) => {
                     try {
+                        if (!await confirmPeriodicNote(this.app, target.path, this.settings.confirmPeriodicNoteCreation)) return;
                         const file = await createDailyNote(this.app, target.date, target.settings);
                         const leaf = openBehavior === 'split' ? this.app.workspace.getLeaf('split', 'vertical')
                             : this.app.workspace.getLeaf(openBehavior);
@@ -696,6 +675,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             description: target.path, type: 'create', icon: 'calendar-plus',
             action: async (openBehavior = false) => {
                 try {
+                    if (!await confirmPeriodicNote(this.app, target.path, this.settings.confirmPeriodicNoteCreation)) return;
                     const file = await target.create();
                     const leaf = openBehavior === 'split' ? this.app.workspace.getLeaf('split', 'vertical') : this.app.workspace.getLeaf(openBehavior);
                     await leaf.openFile(file);
@@ -837,12 +817,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         // Command mode: > prefix
         if (trimmed.startsWith('>')) {
             const cmdQuery = trimmed.substring(1).trim().toLowerCase();
-            if (!cmdQuery) return this.commands;
-            return this.commands.filter(
+            if (!cmdQuery) return groupPaletteItems(this.commands, this.settings.showPaletteGroups);
+            return groupPaletteItems(this.commands.filter(
                 (c) =>
                     c.title.toLowerCase().includes(cmdQuery) ||
                     c.description.toLowerCase().includes(cmdQuery),
-            );
+            ), this.settings.showPaletteGroups);
         }
 
         // Tag search mode: user has typed '#' in the current input
@@ -867,7 +847,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Commands can be shown by default or kept behind the `>` prefix.
         if (!trimmed) {
-            return this.settings.showCommandsByDefault ? this.commands : [];
+            const notes = this.settings.palettePinnedNotes.flatMap(path => {
+                const file = this.app.vault.getAbstractFileByPath(path);
+                return file instanceof TFile ? [{ id: `pinned-note-${path}`, title: file.basename,
+                    description: file.parent?.path ?? '', type: 'note' as const, file }] : [];
+            });
+            return groupPaletteItems([...notes, ...(this.settings.showCommandsByDefault ? this.commands : [])], this.settings.showPaletteGroups);
         }
 
         // Plain text queries without tags: async (in-note content search)
@@ -1063,8 +1048,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private getTaskCompletionPercent(file: TFile): number | undefined {
         const tasks = this.app.metadataCache.getFileCache(file)?.listItems?.filter((item) => item.task !== undefined) ?? [];
         if (tasks.length === 0) return undefined;
-        const completed = tasks.filter((item) => item.task !== ' ').length;
-        return Math.round((completed / tasks.length) * 100);
+        return summarizeTasks(tasks.map(item => item.task!)).percent;
     }
 
     /**
@@ -1152,6 +1136,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     private returnToSearch(): void {
+        if (this.mode === 'statistics') {
+            this.statisticsHost?.remove();
+            this.statisticsHost = null;
+            this.modalEl.removeClass('seam-palette-statistics');
+            this.modalEl.querySelector('.seam-note-statistics-dismiss')?.remove();
+            this.inputEl.disabled = false;
+        }
         if (this.mode === 'outline') {
             this.modalEl.removeClass('seam-palette-outline');
             this.inputEl.removeAttribute('aria-label');
@@ -1165,6 +1156,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.setPlaceholder(t().palettePlaceholder);
         this.updateInstructions('');
         this.refreshSuggestions();
+        this.inputEl.focus();
     }
 
     private updateInstructions(query: string): void {
@@ -1193,7 +1185,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return;
         }
         if (this.mode === 'statistics') {
-            this.setInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }]);
+            this.setInstructions([
+                { command: '⌫', purpose: t().paletteHelpBack },
+                { command: 'esc', purpose: t().paletteHelpDismiss },
+            ]);
             return;
         }
         if (this.mode === 'search' && this.createSuggestionActive) {
@@ -1320,7 +1315,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 customSearchId: search.id,
                 icon: search.icon || 'search',
             }));
-        return orderSpecialSearches([...builtIns, ...custom], this.settings);
+        return groupPaletteItems(orderSpecialSearches([...builtIns, ...custom], this.settings), this.settings.showPaletteGroups, true);
     }
 
     /** Delete a complete query token atomically, leaving other filters and text intact. */
@@ -1423,6 +1418,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     renderSuggestion(item: PaletteItem, el: HTMLElement): void {
+        if (item.groupLabel) {
+            const label = createDiv({ cls: 'seam-palette-group-label', text: item.groupLabel,
+                attr: { role: 'presentation', 'aria-hidden': 'true' } });
+            // SuggestModal can render before attaching the row. Insert after native rendering finishes.
+            queueMicrotask(() => { if (el.parentElement) el.before(label); });
+        }
         if (item.type === 'heading') {
             el.addClass('seam-palette-heading');
             el.setAttribute('data-heading-level', String(item.headingLevel));

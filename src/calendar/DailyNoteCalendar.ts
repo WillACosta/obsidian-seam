@@ -4,8 +4,10 @@ import { detectLocale, t } from '../i18n';
 import { CalendarPins } from './CalendarPins';
 import { CalendarPinModal } from './CalendarPinModal';
 import { CalendarPin } from '../types';
-import { findWeeklyNote, resolveWeeklyNote, weekKey, weekStart, WeeklyNoteSettings } from './WeeklyNotes';
+import { findWeeklyNote, resolveWeeklyNote, weekKey, weekStart, WeeklyNoteSettings, weeklyNotePath } from './WeeklyNotes';
 import type { Moment } from 'moment';
+import { confirmPeriodicNote } from '../ui/PeriodicNoteConfirmation';
+import { dailyNotePath } from '../daily/DailyNotes';
 import { CalendarModel, findCalendarNote, resolveCalendarNote } from './CalendarModel';
 
 interface CalendarCallbacks {
@@ -30,6 +32,7 @@ export class DailyNoteCalendar extends Component {
         parentScope: Scope,
         private pins: CalendarPins | undefined,
         private weekly: WeeklyNoteSettings,
+        private askBeforeCreation = true,
     ) {
         super();
         const file = app.workspace.getActiveFile();
@@ -251,7 +254,10 @@ export class DailyNoteCalendar extends Component {
             const now = this.now();
             const path = pin.kind === 'file' ? pin.path : this.pins.weeklyTarget(pin, this.weekly, now);
             let file = this.app.vault.getAbstractFileByPath(path);
-            if (!(file instanceof TFile) && pin.kind === 'weekly') file = await resolveWeeklyNote(this.app, now, this.weekly);
+            if (!(file instanceof TFile) && pin.kind === 'weekly') {
+                if (!await confirmPeriodicNote(this.app, path, this.askBeforeCreation) || this.destroyed) return;
+                file = await resolveWeeklyNote(this.app, now, this.weekly);
+            }
             if (!(file instanceof TFile)) { await this.pins.reconcile(); throw new Error(t().calendarPinUnavailable); }
             if (!this.destroyed) await this.callbacks.open(file);
         });
@@ -264,6 +270,7 @@ export class DailyNoteCalendar extends Component {
         const open = this.button(row, `${file ? t().calendarOpenWeekly : t().calendarCreateWeekly} · ${this.weekRange(this.model.selected)}`, () => {
             const date = this.model.selected.clone();
             void this.perform(async () => {
+                if (!await confirmPeriodicNote(this.app, weeklyNotePath(date, this.weekly), this.askBeforeCreation) || this.destroyed) return;
                 const target = await resolveWeeklyNote(this.app, date, this.weekly);
                 if (!this.destroyed) await this.callbacks.open(target);
             });
@@ -347,6 +354,7 @@ export class DailyNoteCalendar extends Component {
         const date = this.model.selected.clone();
         this.render();
         try {
+            if (!await confirmPeriodicNote(this.app, dailyNotePath(date, this.settings), this.askBeforeCreation) || this.destroyed) return;
             const file = await resolveCalendarNote(this.app, date, this.settings);
             if (!this.destroyed) await this.callbacks.open(file);
         } catch (error) {

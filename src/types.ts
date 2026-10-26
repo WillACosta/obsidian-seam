@@ -8,6 +8,9 @@ export const SPECIAL_SEARCH_PIN_LIMIT = 5;
 export type CalendarPin = { kind: 'file'; path: string } | { kind: 'weekly'; week?: string; path?: string };
 
 export interface SeamSettings {
+    palettePinnedNotes: string[];
+    showPaletteGroups: boolean;
+    confirmPeriodicNoteCreation: boolean;
     calendarPins: CalendarPin[];
     calendarUsePeriodicNotes: boolean;
     calendarWeeklyFolder: string;
@@ -85,6 +88,9 @@ export interface CustomSpecialSearch {
 }
 
 export const DEFAULT_SETTINGS: SeamSettings = {
+    palettePinnedNotes: [],
+    showPaletteGroups: true,
+    confirmPeriodicNoteCreation: true,
     calendarPins: [],
     calendarUsePeriodicNotes: true,
     calendarWeeklyFolder: 'Weekly',
@@ -257,6 +263,7 @@ export interface PaletteItem {
     title: string;
     description: string;
     type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory' | 'heading';
+    groupLabel?: string;
     headingLevel?: number;
     icon?: string;
     file?: TFile;

@@ -1,8 +1,10 @@
 import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian';
 import { DailyTaskTransfer } from './daily/DailyTaskTransfer';
 import { CalendarPins, normalizeCalendarPins } from './calendar/CalendarPins';
+import { PalettePins, normalizePalettePins } from './notes/PalettePins';
+import { confirmPeriodicNote } from './ui/PeriodicNoteConfirmation';
+import { currentNoteCompletion } from './statistics/NoteCompletion';
 import { NoteDeletion } from './notes/NoteDeletion';
-import { QueryHistory } from './search/QueryHistory';
 import { isFileInFolder } from './utils/isFileInFolder';
 import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types';
 import { AutomationQueue } from './automation/AutomationQueue';
@@ -42,7 +44,7 @@ export default class SeamPlugin extends Plugin {
     private dailyTaskTransfer!: DailyTaskTransfer;
     private noteDeletion!: NoteDeletion;
     calendarPins!: CalendarPins;
-    private queryHistory = new QueryHistory();
+    palettePins!: PalettePins;
     private reconciliationIntervalId: number | null = null;
     private paletteRibbonEl: HTMLElement | null = null;
     private activePalettes = new Set<UniversalPalette>();
@@ -63,12 +65,14 @@ export default class SeamPlugin extends Plugin {
         );
         this.reconciler = new Reconciler(this.app, this.settings, this.automationQueue, this.automationService);
         this.searchService = new SearchService(this.app, this.settings);
-        this.dailyTaskTransfer = new DailyTaskTransfer(this.app);
+        this.dailyTaskTransfer = new DailyTaskTransfer(this.app, path => confirmPeriodicNote(this.app, path, this.settings.confirmPeriodicNoteCreation));
         this.noteDeletion = new NoteDeletion(this.app);
         this.calendarPins = this.addChild(new CalendarPins(this.app, () => this.settings, () => this.saveData(this.settings)));
 
         this.paletteRibbonEl = this.addRibbonIcon('sparkles', t().ribbonOpenSeam, () => this.openPalette());
         this.refreshPaletteRibbon();
+
+        this.palettePins = this.addChild(new PalettePins(this.app, () => this.settings, () => this.saveData(this.settings)));
 
         // 3. Register commands
         this.addCommand({
@@ -143,13 +147,35 @@ export default class SeamPlugin extends Plugin {
             },
         });
 
+        for (const pinned of [false, true]) {
+            this.addCommand({
+                id: pinned ? 'unpin-note' : 'pin-note',
+                name: pinned ? t().cmdUnpinNote : t().cmdPinNote,
+                checkCallback: checking => {
+                    const file = this.app.workspace.getActiveFile();
+                    if (!file || file.extension !== 'md' || this.palettePins.has(file.path) !== pinned) return false;
+                    if (!checking) void this.togglePalettePin(file);
+                    return true;
+                },
+            });
+        }
+        this.addCommand({
+            id: 'show-note-completion', name: t().cmdShowNoteCompletion,
+            checkCallback: checking => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file || file.extension !== 'md' || !currentNoteCompletion(this.app, file).total) return false;
+                if (!checking) void this.openNoteStatistics(file, true);
+                return true;
+            },
+        });
+
         this.addCommand({
             id: 'show-note-statistics',
             name: t().cmdShowNoteStatistics,
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
                 if (!file || file.extension !== 'md') return false;
-                if (!checking) this.openNoteStatistics(file);
+                if (!checking) void this.openNoteStatistics(file);
                 return true;
             },
         });
@@ -372,7 +398,6 @@ export default class SeamPlugin extends Plugin {
             this.settings,
             this.searchService,
             commands,
-            this.queryHistory,
             this.calendarPins,
         );
         this.openTrackedPalette(palette);
@@ -384,7 +409,6 @@ export default class SeamPlugin extends Plugin {
             this.settings,
             this.searchService,
             await this.getPaletteCommands(),
-            this.queryHistory,
             this.calendarPins,
         );
         this.openTrackedPalette(palette);
@@ -393,15 +417,16 @@ export default class SeamPlugin extends Plugin {
 
     private async openNoteOutline(file: TFile): Promise<void> {
         await this.searchService.refreshDailyNoteSettings();
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.queryHistory, this.calendarPins);
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, await this.getPaletteCommands(), this.calendarPins);
         this.openTrackedPalette(palette);
         palette.showNoteOutline(file);
     }
 
-    private openNoteStatistics(file: TFile): void {
-        const palette = new UniversalPalette(this.app, this.settings, this.searchService, [], this.queryHistory, this.calendarPins);
+    private async openNoteStatistics(file: TFile, completion = false): Promise<void> {
+        const commands = await this.getPaletteCommands();
+        const palette = new UniversalPalette(this.app, this.settings, this.searchService, commands, this.calendarPins);
         this.openTrackedPalette(palette);
-        void palette.showNoteStatistics(file);
+        void palette.showNoteStatistics(file, completion);
     }
 
     private async ensureQuickNoteFolder(path: string): Promise<string> {
@@ -531,10 +556,16 @@ export default class SeamPlugin extends Plugin {
     private async transferDailyTasks(file: TFile, direction: 'tomorrow' | 'yesterday'): Promise<void> {
         try {
             const count = await this.dailyTaskTransfer.transfer(file, direction);
+            if (count === null) return;
             new Notice(count ? t().noticeDailyTransferDone : t().noticeDailyTransferEmpty);
         } catch (error) {
             new Notice(`${t().noticeDailyTransferFailed}: ${error instanceof Error ? error.message : String(error)}`);
         }
+    }
+
+    private async togglePalettePin(file: TFile): Promise<void> {
+        try { await this.palettePins.toggle(file); }
+        catch { new Notice(t().palettePinFailed); }
     }
 
     /** Returns the commands available for the current note. */
@@ -583,7 +614,12 @@ export default class SeamPlugin extends Plugin {
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
             const pinned = Boolean(this.calendarPins.pinForFile(activeFile.path));
+            const palettePinned = this.palettePins.has(activeFile.path);
             const actions: PaletteItem[] = [{
+                id: 'cmd-palette-pin', title: palettePinned ? t().cmdUnpinNote : t().cmdPinNote,
+                description: activeFile.basename, type: 'command', icon: palettePinned ? 'pin-off' : 'pin',
+                action: () => this.togglePalettePin(activeFile),
+            }, {
                 id: 'cmd-calendar-pin', title: pinned ? t().cmdUnpinCalendarNote : t().cmdPinCalendarNote,
                 description: activeFile.basename, type: 'command', icon: pinned ? 'pin-off' : 'pin',
                 action: () => this.toggleCalendarPin(activeFile),
@@ -611,6 +647,11 @@ export default class SeamPlugin extends Plugin {
                 icon: 'trash-2',
                 action: () => this.deleteCurrentNote(activeFile),
             }];
+            if (currentNoteCompletion(this.app, activeFile).total > 0) {
+                actions.push({ id: 'cmd-note-completion', title: t().cmdShowNoteCompletion,
+                    description: activeFile.basename, type: 'command', icon: 'chart-no-axes-combined', file: activeFile,
+                    action: () => this.openNoteStatistics(activeFile, true) });
+            }
             if (!isFileInFolder(activeFile, this.settings.archiveFolder)) {
                 actions.push({
                     id: 'cmd-archive-current',
@@ -741,6 +782,9 @@ export default class SeamPlugin extends Plugin {
         } else {
             this.settings = Object.assign({}, DEFAULT_SETTINGS);
         }
+        this.settings.palettePinnedNotes = normalizePalettePins(this.settings.palettePinnedNotes);
+        this.settings.showPaletteGroups = this.settings.showPaletteGroups !== false;
+        this.settings.confirmPeriodicNoteCreation = this.settings.confirmPeriodicNoteCreation !== false;
         this.settings.calendarPins = normalizeCalendarPins(this.settings.calendarPins);
         this.settings.calendarUsePeriodicNotes = this.settings.calendarUsePeriodicNotes !== false;
         for (const key of ['calendarWeeklyFolder', 'calendarWeeklyFormat', 'calendarWeeklyTemplate', 'calendarYearlyFolder', 'calendarYearlyFormat', 'calendarYearlyTemplate'] as const) {

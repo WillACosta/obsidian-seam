@@ -41,6 +41,12 @@ export class SeamSettingsTab extends PluginSettingTab {
             type: 'group',
             heading: strings.settingsCalendarHeading,
             items: [
+                { name: strings.settingsConfirmPeriodic, desc: strings.settingsConfirmPeriodicDesc, render: setting => {
+                    setting.addToggle(toggle => toggle.setValue(this.plugin.settings.confirmPeriodicNoteCreation).onChange(async value => {
+                        this.plugin.settings.confirmPeriodicNoteCreation = value;
+                        await this.plugin.saveSettings();
+                    }));
+                } },
                 { name: strings.settingsWeeklyAuto, desc: strings.settingsWeeklyAutoDesc, render: (setting) => {
                     setting.addToggle(toggle => toggle.setValue(this.plugin.settings.calendarUsePeriodicNotes).onChange(async value => {
                         this.plugin.settings.calendarUsePeriodicNotes = value;
@@ -117,6 +123,12 @@ export class SeamSettingsTab extends PluginSettingTab {
             type: 'group',
             heading: strings.settingsInterfaceHeading,
             items: [
+                { name: strings.settingsPaletteGroups, desc: strings.settingsPaletteGroupsDesc, render: setting => {
+                    setting.addToggle(toggle => toggle.setValue(this.plugin.settings.showPaletteGroups).onChange(async value => {
+                        this.plugin.settings.showPaletteGroups = value;
+                        await this.plugin.saveSettings();
+                    }));
+                } },
                 { name: strings.settingsShowIcons, desc: strings.settingsShowIconsDesc, render: (setting) => this.renderShowIconsSetting(setting) },
                 { name: strings.settingsShowFileExtensionAndMatchCount, desc: strings.settingsShowFileExtensionAndMatchCountDesc, render: (setting) => this.renderShowFileExtensionAndMatchCountSetting(setting) },
                 { name: strings.settingsShowCommandsByDefault, desc: strings.settingsShowCommandsByDefaultDesc, render: (setting) => this.renderShowCommandsByDefaultSetting(setting) },
@@ -188,7 +200,9 @@ export class SeamSettingsTab extends PluginSettingTab {
         setting.controlEl.addClass('seam-custom-searches-control');
         const panel = setting.controlEl.createDiv({ cls: 'seam-custom-searches-panel' });
         const header = panel.createDiv({ cls: 'seam-custom-search-panel-header' });
-        header.createDiv({ cls: 'seam-custom-search-panel-title', text: t().settingsCustomSearchListTitle });
+        const titleRow = header.createDiv({ cls: 'seam-custom-search-panel-title-row' });
+        titleRow.createDiv({ cls: 'seam-custom-search-panel-title', text: t().settingsCustomSearchListTitle });
+        const pinnedCount = titleRow.createDiv({ cls: 'seam-search-pinned-count', attr: { 'aria-live': 'polite' } });
         header.createDiv({ cls: 'setting-item-description', text: t().settingsCustomSearchListDesc });
         const filterContainer = panel.createDiv({ cls: 'search-input-container seam-quick-add-filter' });
         const filterInput = filterContainer.createEl('input', {
@@ -201,6 +215,8 @@ export class SeamSettingsTab extends PluginSettingTab {
         let dragArmedSearchId: string | null = null;
         let draggedOrderKey: string | null = null;
         const render = (): void => {
+            pinnedCount.setText(t().settingsSearchPinnedCount(this.plugin.settings.customSpecialSearches.filter(search => search.pinned).length
+                + this.plugin.settings.specialSearchPreferences.filter(search => search.pinned).length));
             list.empty();
             const query = filterInput.value.trim().toLowerCase();
             const searches = this.plugin.settings.customSpecialSearches

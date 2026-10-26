@@ -6,7 +6,7 @@ export interface DailyTaskAvailability { tomorrow: boolean; yesterday: boolean }
 
 export class DailyTaskTransfer {
     private busy = false;
-    constructor(private app: App) {}
+    constructor(private app: App, private authorizeCreation: (path: string) => Promise<boolean> = async () => true) {}
 
     private openViews(file: TFile): MarkdownView[] {
         return this.app.workspace.getLeavesOfType('markdown').map(leaf => leaf.view)
@@ -45,7 +45,7 @@ export class DailyTaskTransfer {
         } catch { return unavailable; }
     }
 
-    async transfer(activeFile: TFile, direction: 'tomorrow' | 'yesterday'): Promise<number> {
+    async transfer(activeFile: TFile, direction: 'tomorrow' | 'yesterday'): Promise<number | null> {
         if (this.busy) throw new Error('A daily note transfer is already running.');
         this.busy = true;
         try {
@@ -57,6 +57,9 @@ export class DailyTaskTransfer {
             const source = this.app.vault.getAbstractFileByPath(dailyNotePath(sourceDate, settings));
             if (!(source instanceof TFile)) return 0;
             if (dailyNotePath(destinationDate, settings) === source.path) throw new Error('Daily Note format must distinguish consecutive days.');
+            const destinationPath = dailyNotePath(destinationDate, settings);
+            if (!(this.app.vault.getAbstractFileByPath(destinationPath) instanceof TFile)
+                && !await this.authorizeCreation(destinationPath)) return null;
             for (const view of this.openViews(source)) await view.save();
             const original = await this.app.vault.read(source);
             const { remaining, pending, count } = extractPendingTasks(original);

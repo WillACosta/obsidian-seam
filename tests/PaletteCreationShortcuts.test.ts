@@ -27,7 +27,7 @@ describe('Palette date-query creation shortcuts', () => {
     it('shows a recoverable settings error for an invalid yearly format without creating a note', async () => {
         let writes = 0;
         const app = { vault: { getAbstractFileByPath: () => null, create: async () => { writes++; } } };
-        const palette = new UniversalPalette(app, { ...DEFAULT_SETTINGS, calendarUsePeriodicNotes: false, calendarYearlyFormat: 'GGGG' }, { searchCombinedSpecialWithContent: async () => [] }, []);
+        const palette = new UniversalPalette(app, { ...DEFAULT_SETTINGS, confirmPeriodicNoteCreation: false, calendarUsePeriodicNotes: false, calendarYearlyFormat: 'GGGG' }, { searchCombinedSpecialWithContent: async () => [] }, []);
         palette.disposeBaseRender = () => {};
         palette.renderActiveSpecialQueryInput = () => {};
         palette.inputEl.value = '@thisYear';
@@ -58,7 +58,7 @@ describe('Palette date-query creation shortcuts', () => {
                     },
                     workspace: { getLeaf: (...args: unknown[]) => ({ openFile: async (file: MockTFile) => { opened.push([...args, file.path]); } }) },
                 };
-                const settings = { ...DEFAULT_SETTINGS, calendarUsePeriodicNotes: false, calendarWeeklyFolder: 'Weekly', calendarWeeklyFormat: 'GGGG/[W]WW', calendarWeeklyTemplate: 'Templates/Weekly', calendarYearlyFolder: 'Yearly', calendarYearlyFormat: 'YYYY/[Goals]', calendarYearlyTemplate: 'Templates/Yearly' };
+                const settings = { ...DEFAULT_SETTINGS, confirmPeriodicNoteCreation: false, calendarUsePeriodicNotes: false, calendarWeeklyFolder: 'Weekly', calendarWeeklyFormat: 'GGGG/[W]WW', calendarWeeklyTemplate: 'Templates/Weekly', calendarYearlyFolder: 'Yearly', calendarYearlyFormat: 'YYYY/[Goals]', calendarYearlyTemplate: 'Templates/Yearly' };
                 const palette = new UniversalPalette(app, settings, { searchCombinedSpecialWithContent: async () => [] }, []);
                 palette.disposeBaseRender = () => {};
                 palette.renderActiveSpecialQueryInput = () => {};
@@ -93,7 +93,7 @@ describe('Palette date-query creation shortcuts', () => {
 
 describe('Palette atomic special-query Backspace', () => {
     function host(value: string, caret = value.length) {
-        const palette = new UniversalPalette({}, { ...DEFAULT_SETTINGS, customSpecialSearches: [
+        const palette = new UniversalPalette({}, { ...DEFAULT_SETTINGS, confirmPeriodicNoteCreation: false, customSpecialSearches: [
             { id: 'custom', identifier: '@bookshelf', mode: 'base', hidden: false },
         ] }, {}, []);
         Object.assign(palette.inputEl, { value, selectionStart: caret, selectionEnd: caret,
@@ -147,5 +147,33 @@ describe('Palette atomic special-query Backspace', () => {
         const h = host('@todo');
         h.palette.inputEl.selectionStart = 0;
         assert.equal(h.palette.removeSpecialQueryBeforeCaret(h.event), false);
+    });
+});
+
+
+describe('Note report Backspace', () => {
+    for (const query of ['> percentage completion', '> statistics']) {
+        it(`${query} returns to usable Palette search and removes report controls`, () => {
+            const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, []);
+            let removedReport = false; let removedDismiss = false; let refreshed = false; let focused = false;
+            palette.mode = 'statistics';
+            palette.statisticsHost = { remove: () => { removedReport = true; } };
+            palette.modalEl = { removeClass: (cls: string) => assert.equal(cls, 'seam-palette-statistics'),
+                querySelector: () => ({ remove: () => { removedDismiss = true; } }) };
+            Object.assign(palette.inputEl, { value: query, disabled: true, focus: () => { focused = true; } });
+            palette.refreshSuggestions = () => { refreshed = true; };
+            palette.updateInstructions('');
+            assert.deepEqual(palette.instructions.map((entry: { purpose: string }) => entry.purpose), ['back', 'dismiss']);
+            let prevented = false;
+            assert.equal(palette.handlers.get('Backspace')({ preventDefault: () => { prevented = true; } }), false);
+            assert.equal(prevented && removedReport && removedDismiss && refreshed && focused, true);
+            assert.equal(palette.mode, 'search'); assert.equal(palette.statisticsHost, null);
+            assert.equal(palette.inputEl.disabled, false); assert.equal(palette.inputEl.value, '');
+        });
+    }
+    it('preserves normal input editing', () => {
+        const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, []);
+        palette.mode = 'search'; palette.inputEl.value = 'text';
+        assert.equal(palette.handlers.get('Backspace')({ preventDefault: () => assert.fail('Must not intercept') }), true);
     });
 });
