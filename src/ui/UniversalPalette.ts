@@ -1349,7 +1349,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             .map((search) => ({
                 id: `custom-search-${search.id}`,
                 title: search.identifier,
-                description: search.mode === 'base' ? search.basePath : search.filterQuery || 'Custom filter',
+                description: search.description?.trim() || (search.mode === 'base' ? search.basePath : search.filterQuery || 'Custom filter'),
                 type: 'special' as const,
                 customSearchId: search.id,
                 icon: search.icon || 'search',
@@ -1494,7 +1494,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 const pinEl = rowEl.createSpan({ cls: 'seam-palette-pinned-icon', attr: { 'aria-label': 'Pinned search' } });
                 setIcon(pinEl, 'pin');
             }
-            if (item.description && (!isSpecialSearch || this.settings.showSpecialSearchDescriptions)) {
+            if (item.description && this.settings.showPaletteDescriptions) {
                 const descEl = el.createDiv({ cls: 'seam-palette-description' });
                 descEl.setText(item.description);
             }

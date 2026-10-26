@@ -9,6 +9,7 @@
 ## Summary of Changes
 
 ### Added
+- **Palette descriptions**: Control command and special-query descriptions from Universal Palette settings, and add an optional description to each custom search query.
 - **Global Statistics**: Open a writing dashboard inside the Universal Palette through “Show global statistics,” grouped with note reports. Show current Markdown note/word totals, recorded active days, and a current writing streak. Use four overview cards in a row or a responsive 2×2 layout.
 - **Writing activity**: Explore 52 weekly columns or three months of daily contributions, with month/weekday labels and five themed intensity levels. Switch between gross words written, distinct notes edited, and writing sessions. Hover for details or select a day to see its notes and word contributions; open a note directly. Include mouse, keyboard, and touch support, horizontal heatmap scrolling, English/PT-BR text, and meaningful empty/untracked states.
 - **Writing over time**: Show six vertical monthly bars with a shared linear scale, axis ticks/grid lines, month labels and values, including the current month, for recorded words written or observed Markdown note creations. Do not invent history for existing notes.

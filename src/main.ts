@@ -747,6 +747,7 @@ export default class SeamPlugin extends Plugin {
                     return {
                         ...normalized,
                         icon: typeof search.icon === 'string' && search.icon.trim() ? search.icon : 'search',
+                        description: typeof search.description === 'string' ? search.description : '',
                         mode: search.mode === 'base' || search.basePath ? 'base' as const : 'tags' as const,
                         hidden: Boolean(search.hidden),
                         pinned: Boolean(search.pinned) && !search.hidden,
@@ -757,7 +758,10 @@ export default class SeamPlugin extends Plugin {
                     };
                 })
                 : [];
-            this.settings.showSpecialSearchDescriptions = Boolean(this.settings.showSpecialSearchDescriptions);
+            this.settings.showPaletteDescriptions = persistedData.showPaletteDescriptions === undefined
+                ? persistedData.showSpecialSearchDescriptions !== false
+                : Boolean(persistedData.showPaletteDescriptions);
+            delete (this.settings as SeamSettings & { showSpecialSearchDescriptions?: boolean }).showSpecialSearchDescriptions;
             this.settings.showFileExtensionAndMatchCount = Boolean(this.settings.showFileExtensionAndMatchCount);
             this.settings.showCommandsByDefault = Boolean(this.settings.showCommandsByDefault);
             const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences;

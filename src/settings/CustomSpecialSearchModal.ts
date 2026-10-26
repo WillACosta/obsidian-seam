@@ -68,6 +68,10 @@ export class CustomSpecialSearchModal extends Modal {
         identifierSetting
             .addText((text) => text.setValue(this.search.identifier).onChange((value) => { this.search.identifier = value; }));
 
+        const descriptionSetting = new Setting(this.contentEl).setName(t().customSearchModalDescription).setDesc(t().customSearchModalDescriptionDesc);
+        descriptionSetting.settingEl.addClass('seam-custom-search-text-setting');
+        descriptionSetting.addText((text) => text.setValue(this.search.description ?? '').onChange((value) => { this.search.description = value; }));
+
         const iconSetting = new Setting(this.contentEl).setName(t().customSearchModalIcon).setDesc(t().customSearchModalIconDesc);
         iconSetting.settingEl.addClass('seam-custom-search-text-setting');
         iconSetting.addText((text) => {
@@ -114,6 +118,7 @@ export class CustomSpecialSearchModal extends Modal {
             const identifier = normalizeIdentifier(this.search.identifier);
             if (!identifier) return;
             this.search.identifier = identifier;
+            this.search.description = this.search.description?.trim() ?? '';
             this.search.basePath = normalizePath(this.search.basePath.trim());
             this.search.filterQuery = this.search.filterQuery.trim();
             if (this.search.mode === 'base') await this.refreshBaseViewSuggestions();

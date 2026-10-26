@@ -44,7 +44,7 @@ export interface SeamSettings {
     updateAnnouncementMode: UpdateAnnouncementMode;
     lastAnnouncedVersion: string;
     customSpecialSearches: CustomSpecialSearch[];
-    showSpecialSearchDescriptions: boolean;
+    showPaletteDescriptions: boolean;
     specialSearchPreferences: SpecialSearchPreference[];
     specialSearchOrder: string[];
     showTodoCompletionPercent: boolean;
@@ -77,6 +77,7 @@ export interface QuickAddChoice {
 export interface CustomSpecialSearch {
     id: string;
     identifier: string;
+    description?: string;
     icon: string;
     mode: 'base' | 'tags';
     basePath: string;
@@ -124,7 +125,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     updateAnnouncementMode: 'major',
     lastAnnouncedVersion: '',
     customSpecialSearches: [],
-    showSpecialSearchDescriptions: true,
+    showPaletteDescriptions: true,
     specialSearchPreferences: [
         { search: 'today', pinned: false, hidden: false },
         { search: 'yesterday', pinned: false, hidden: false },

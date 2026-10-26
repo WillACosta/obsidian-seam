@@ -97,7 +97,6 @@ export class SeamSettingsTab extends PluginSettingTab {
             heading: strings.settingsCustomSearchHeading,
             items: [
                 { name: strings.settingsCustomSearches, desc: strings.settingsCustomSearchesDesc, render: (setting) => this.renderCustomSearchesSetting(setting) },
-                { name: strings.settingsCustomSearchDescriptions, desc: strings.settingsCustomSearchDescriptionsDesc, render: (setting) => this.renderSpecialSearchDescriptionsSetting(setting) },
                 { name: strings.settingsTodoCompletion, desc: strings.settingsTodoCompletionDesc, render: (setting) => this.renderTodoCompletionSetting(setting) },
             ],
         }, {
@@ -132,6 +131,7 @@ export class SeamSettingsTab extends PluginSettingTab {
                 { name: strings.settingsShowIcons, desc: strings.settingsShowIconsDesc, render: (setting) => this.renderShowIconsSetting(setting) },
                 { name: strings.settingsShowFileExtensionAndMatchCount, desc: strings.settingsShowFileExtensionAndMatchCountDesc, render: (setting) => this.renderShowFileExtensionAndMatchCountSetting(setting) },
                 { name: strings.settingsShowCommandsByDefault, desc: strings.settingsShowCommandsByDefaultDesc, render: (setting) => this.renderShowCommandsByDefaultSetting(setting) },
+                { name: strings.settingsShowPaletteDescriptions, desc: strings.settingsShowPaletteDescriptionsDesc, render: (setting) => this.renderPaletteDescriptionsSetting(setting) },
                 { name: strings.settingsPaletteRibbon, desc: strings.settingsPaletteRibbonDesc, render: (setting) => this.renderPaletteRibbonSetting(setting) },
                 { name: strings.settingsPaletteHotkey, desc: strings.settingsPaletteHotkeyDesc, render: (setting) => this.renderHotkeySetting(setting, `${this.plugin.manifest.id}:open-palette`) },
             ],
@@ -374,11 +374,11 @@ export class SeamSettingsTab extends PluginSettingTab {
         buttons.addButton((button) => button.setButtonText(`+ ${t().settingsCustomSearchNew}`).setCta().onClick(() => this.openCustomSearchModal(null)));
     }
 
-    private renderSpecialSearchDescriptionsSetting(setting: Setting): void {
+    private renderPaletteDescriptionsSetting(setting: Setting): void {
         setting.addToggle((toggle) => toggle
-            .setValue(this.plugin.settings.showSpecialSearchDescriptions)
+            .setValue(this.plugin.settings.showPaletteDescriptions)
             .onChange(async (value) => {
-                this.plugin.settings.showSpecialSearchDescriptions = value;
+                this.plugin.settings.showPaletteDescriptions = value;
                 await this.plugin.saveSettings();
             }));
     }
