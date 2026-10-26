@@ -403,6 +403,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
         // Keydown listener on inputEl for Backspace removal of chips
         this.inputEl.addEventListener('keydown', (evt: KeyboardEvent) => {
+            if (this.removeSpecialQueryBeforeCaret(evt)) return;
             if (evt.key === 'Backspace' && this.composedQueryPrefix && !this.inputEl.value
                 && !this.selectedTags.length && !this.excludedTags.length) {
                 evt.preventDefault();
@@ -436,25 +437,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 this.inputEl.value = this.inputEl.value.trimEnd().slice(0, -this.selectedDirectoryToken.length).trimEnd();
                 this.selectedDirectoryToken = null;
                 this.refreshSuggestions();
-                return;
-            }
-            if (
-                evt.key === 'Backspace'
-                && this.mode === 'search'
-                && this.inputEl.selectionStart === this.inputEl.value.length
-                && this.inputEl.selectionEnd === this.inputEl.value.length
-                && this.isExactActiveSpecialSearch(this.inputEl.value.trim())
-            ) {
-                evt.preventDefault();
-                evt.stopImmediatePropagation();
-                if (this.excludedTags.length > 0) {
-                    this.removeSelectedTag(this.excludedTags[this.excludedTags.length - 1], true);
-                } else if (this.selectedTags.length > 0) {
-                    this.removeSelectedTag(this.selectedTags[this.selectedTags.length - 1]);
-                } else {
-                    this.inputEl.value = '';
-                    this.refreshSuggestions();
-                }
                 return;
             }
             if (
@@ -1341,11 +1323,31 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         return orderSpecialSearches([...builtIns, ...custom], this.settings);
     }
 
-    private isExactActiveSpecialSearch(query: string): boolean {
-        if (!query) return false;
-        if (this.settings.customSpecialSearches.some((search) => !search.hidden && search.identifier.toLowerCase() === query.toLowerCase())) return true;
-        const parsed = parseSpecialSearch(query);
-        return parsed.search !== null && parsed.textQuery.length === 0;
+    /** Delete a complete query token atomically, leaving other filters and text intact. */
+    private removeSpecialQueryBeforeCaret(event: KeyboardEvent): boolean {
+        if (this.mode !== 'search' || event.key !== 'Backspace' || event.isComposing
+            || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+            || this.inputEl.selectionStart !== this.inputEl.selectionEnd) return false;
+        const inPrefix = !this.inputEl.value && Boolean(this.composedQueryPrefix)
+            && !this.selectedTags.length && !this.excludedTags.length;
+        const source = inPrefix ? this.composedQueryPrefix : this.inputEl.value;
+        const caret = inPrefix ? source.length : this.inputEl.selectionStart;
+        if (caret === null || (caret < source.length && !/\s/.test(source[caret])
+            && !/\s/.test(source[caret - 1] ?? ''))) return false;
+        const match = /(?:^|\s)(@[^\s]+)\s*$/.exec(source.slice(0, caret));
+        if (!match || this.getActiveSpecialQueryToken(match[1]) !== match[1]) return false;
+        const start = match.index + match[0].indexOf('@');
+        const before = source.slice(0, start);
+        const remaining = (before.trim() ? before : '') + source.slice(caret);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (inPrefix) this.composedQueryPrefix = remaining;
+        else {
+            this.inputEl.value = remaining;
+            this.inputEl.setSelectionRange(before.trim() ? start : 0, before.trim() ? start : 0);
+        }
+        this.refreshSuggestions();
+        return true;
     }
 
     private getActiveSpecialQueryToken(query: string): string | null {

@@ -142,7 +142,7 @@ Use estes tokens na Paleta Universal para filtrar buscas ou acessar outros modos
 | `OR` ou `||` | Busca por um termo ou pelo outro. | `#leitura OR #pesquisa` |
 | `>` | Mostra e executa comandos do Seam. | `>archive` |
 
-Fixe até **cinco buscas especiais**, entre integradas e personalizadas, nas configurações do Seam. As buscas fixadas aparecem primeiro na lista de `@`.
+Fixe até **cinco buscas especiais**, entre integradas e personalizadas, nas configurações do Seam. As buscas fixadas aparecem primeiro na lista de `@`. Pressione **Backspace** logo após uma busca ativa para removê-la de uma vez, incluindo o espaço final.
 
 Encontre arquivos nas pastas configuradas com `@fleeting` e `@permanent`, ou veja os dez arquivos abertos mais recentemente com `@recentlyOpened`. Combine essas buscas com outros filtros do Seam. Com o campo da Paleta vazio, pressione **↑** para percorrer as buscas anteriores da sessão; **↓** retorna em direção ao campo vazio.
 

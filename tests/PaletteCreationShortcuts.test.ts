@@ -90,3 +90,62 @@ describe('Palette date-query creation shortcuts', () => {
         }
     }
 });
+
+describe('Palette atomic special-query Backspace', () => {
+    function host(value: string, caret = value.length) {
+        const palette = new UniversalPalette({}, { ...DEFAULT_SETTINGS, customSpecialSearches: [
+            { id: 'custom', identifier: '@bookshelf', mode: 'base', hidden: false },
+        ] }, {}, []);
+        Object.assign(palette.inputEl, { value, selectionStart: caret, selectionEnd: caret,
+            setSelectionRange(start: number, end: number) { this.selectionStart = start; this.selectionEnd = end; } });
+        let refreshes = 0;
+        palette.refreshSuggestions = () => { refreshes++; };
+        const event = { key: 'Backspace', preventDefault() {}, stopImmediatePropagation() {} };
+        return { palette, event, refreshes: () => refreshes };
+    }
+
+    for (const token of ['@today', '@yesterday', '@calendar', '@thisWeek', '@thisYear', '@recentlyOpened',
+        '@fleeting', '@permanent', '@recent', '@untagged', '@docs', '@images', '@task', '@todo', '@done',
+        '@code', '@sources', '@last30days', '@bookshelf', '@CALENDAR', '@THISWEEK']) {
+        it(`removes ${token} and its separator with one Backspace`, () => {
+            const h = host(`${token} `);
+            assert.equal(h.palette.removeSpecialQueryBeforeCaret(h.event), true);
+            assert.equal(h.palette.inputEl.value, '');
+            assert.equal(h.refreshes(), 1);
+        });
+    }
+
+    it('removes only the query before the caret and preserves remaining filters', () => {
+        const h = host('@todo @thisWeek #work plan', '@todo @thisWeek '.length);
+        h.palette.selectedTags = ['reading'];
+        h.palette.excludedTags = ['archive'];
+        assert.equal(h.palette.removeSpecialQueryBeforeCaret(h.event), true);
+        assert.equal(h.palette.inputEl.value, '@todo #work plan');
+        assert.deepEqual(h.palette.selectedTags, ['reading']);
+        assert.deepEqual(h.palette.excludedTags, ['archive']);
+    });
+
+    it('removes one query at a time from a composed prefix', () => {
+        const h = host('');
+        h.palette.composedQueryPrefix = '@todo @thisWeek ';
+        assert.equal(h.palette.removeSpecialQueryBeforeCaret(h.event), true);
+        assert.equal(h.palette.composedQueryPrefix, '@todo ');
+        assert.equal(h.palette.removeSpecialQueryBeforeCaret(h.event), true);
+        assert.equal(h.palette.composedQueryPrefix, '');
+    });
+
+    it('leaves ordinary typing, incomplete queries, selections, and modified deletion alone', () => {
+        for (const [value, caret] of [['@cal', 4], ['@todo text', 10], ['@todone', 5]] as const) {
+            const h = host(value, caret);
+            assert.equal(h.palette.removeSpecialQueryBeforeCaret(h.event), false);
+            assert.equal(h.palette.inputEl.value, value);
+        }
+        for (const change of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }, { shiftKey: true }, { isComposing: true }]) {
+            const h = host('@todo');
+            assert.equal(h.palette.removeSpecialQueryBeforeCaret({ ...h.event, ...change }), false);
+        }
+        const h = host('@todo');
+        h.palette.inputEl.selectionStart = 0;
+        assert.equal(h.palette.removeSpecialQueryBeforeCaret(h.event), false);
+    });
+});
