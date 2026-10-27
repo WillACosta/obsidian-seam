@@ -225,6 +225,8 @@ export const en = {
     paletteSeamSearchPlaceholder: 'Search files or add #tags...',
     paletteHelpText: () => '↑↓ navigate · ↵ select · esc dismiss · > commands',
     paletteHelpNavigate: 'navigate',
+    paletteHelpReturnToSearch: 'return to search',
+    paletteBaseResultsLabel: 'Base results',
     paletteHelpSelect: 'select',
     paletteHelpDismiss: 'dismiss',
     paletteHelpCommands: 'commands',

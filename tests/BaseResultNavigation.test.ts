@@ -81,3 +81,65 @@ describe('Base result virtualization', () => {
         assert.equal(f.container.scrollTop, 0);
     });
 });
+
+function gridFixture(layout: 'cards' | 'table' = 'cards') {
+    const scroller = { scrollLeft: 0, clientWidth: 300, scrollWidth: 900 };
+    const container = {
+        scrollTop: 0, scrollHeight: 324, clientHeight: 100, clientWidth: 300,
+        getBoundingClientRect: () => ({ top: 0, bottom: 100, left: 0 }),
+        querySelector: (selector: string): unknown => selector === '.bases-table-container' ? scroller
+            : selector.includes(`data-view-type="${layout}"`) ? {} : null,
+        querySelectorAll: (selector: string): unknown[] => selector.includes('draggable') && layout === 'cards' || selector === '.bases-tr' && layout === 'table' ? rendered : [],
+    };
+    const entries = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((name, index) => {
+        const top = layout === 'cards' ? Math.floor(index / 3) * 112 : index * 32;
+        const left = layout === 'cards' ? index % 3 * 100 : 0;
+        const height = layout === 'cards' ? 100 : 32;
+        return { id: '', dataset: {} as Record<string, string>,
+            querySelector: () => ({ textContent: name, getAttribute: () => name }), querySelectorAll: () => [],
+            getBoundingClientRect: () => ({ top: top - container.scrollTop, bottom: top - container.scrollTop + height, left, height }),
+            toggleClass() {}, removeClass() {}, setAttribute() {}, removeAttribute() {},
+        };
+    });
+    let rendered = entries;
+    const navigation = new BaseResultNavigation(container as unknown as HTMLElement, 'No results');
+    return { navigation, container, scroller, show: (from: number, to: number) => { rendered = entries.slice(from, to); } };
+}
+
+describe('Base spatial navigation', () => {
+    it('uses Left/Right in reading order and Up/Down in the nearest column', () => {
+        const f = gridFixture(); f.navigation.refresh();
+        for (const [direction, expected] of [['right', 'B'], ['right', 'C'], ['down', 'F'], ['left', 'E'], ['up', 'B'], ['left', 'A'], ['up', 'A'], ['left', 'A']] as const) {
+            f.navigation.moveSelection(direction); assert.equal(f.navigation.activeFileRef, expected);
+        }
+    });
+    it('retains the preferred column through an incomplete last row and crosses row boundaries horizontally', () => {
+        const f = gridFixture(); f.navigation.refresh();
+        for (const [direction, expected] of [['right', 'B'], ['right', 'C'], ['down', 'F'], ['down', 'G'], ['up', 'F'], ['up', 'C'], ['right', 'D'], ['left', 'C']] as const) {
+            f.navigation.moveSelection(direction); assert.equal(f.navigation.activeFileRef, expected);
+        }
+    });
+    it('resolves a virtualized row in the preferred column and waits for rendering before repeating', () => {
+        const f = gridFixture(); f.show(0, 3); f.navigation.refresh(); f.navigation.moveSelection('right');
+        f.navigation.moveSelection('down'); assert.equal(f.container.scrollTop, 112);
+        f.navigation.moveSelection('down'); assert.equal(f.container.scrollTop, 112);
+        f.show(3, 6); f.navigation.refresh(); assert.equal(f.navigation.activeFileRef, 'E');
+        f.navigation.moveSelection('up'); assert.equal(f.container.scrollTop, 0);
+        f.show(0, 3); f.navigation.refresh(); assert.equal(f.navigation.activeFileRef, 'B');
+    });
+    it('moves table rows vertically and scrolls columns horizontally without changing the selected row', () => {
+        const f = gridFixture('table'); f.navigation.refresh();
+        f.navigation.moveSelection('down'); assert.equal(f.navigation.activeFileRef, 'B');
+        f.navigation.moveSelection('right'); assert.equal(f.scroller.scrollLeft, 150); assert.equal(f.navigation.activeFileRef, 'B');
+        f.navigation.moveSelection('left'); assert.equal(f.scroller.scrollLeft, 0);
+        f.navigation.moveSelection('up'); assert.equal(f.navigation.activeFileRef, 'A');
+    });
+    it('releases a pending move into bottom padding so Up still works at the final row', () => {
+        const f = gridFixture(); f.container.scrollHeight = 339; f.navigation.refresh();
+        f.navigation.moveSelection('down'); f.navigation.moveSelection('down'); assert.equal(f.navigation.activeFileRef, 'G');
+        f.navigation.moveSelection('down');
+        f.container.scrollTop = 239; // Native scrolling clamps to scrollHeight - clientHeight.
+        f.navigation.refresh(); assert.equal(f.navigation.activeFileRef, 'G');
+        f.navigation.moveSelection('up'); assert.equal(f.navigation.activeFileRef, 'D');
+    });
+});

@@ -227,6 +227,8 @@ export const ptBr: Translations = {
     paletteSeamSearchPlaceholder: 'Busque arquivos ou adicione #tags...',
     paletteHelpText: () => '↑↓ navegar · ↵ selecionar · esc fechar · > comandos',
     paletteHelpNavigate: 'navegar',
+    paletteHelpReturnToSearch: 'voltar à busca',
+    paletteBaseResultsLabel: 'Resultados da Base',
     paletteHelpSelect: 'selecionar',
     paletteHelpDismiss: 'fechar',
     paletteHelpCommands: 'comandos',

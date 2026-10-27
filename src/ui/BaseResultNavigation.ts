@@ -8,14 +8,15 @@ interface BaseResultEntry {
     height: number;
 }
 
-type BaseNavigationDirection = 'up' | 'down';
+export type BaseNavigationDirection = 'up' | 'down' | 'left' | 'right';
 
 /** Selects native Bases results without changing their virtualized layout. */
 export class BaseResultNavigation {
     private static nextId = 0;
     private entries: BaseResultEntry[] = [];
     private activeIdentity: string | null = null;
-    private pendingPosition: { top: number; left: number } | null = null;
+    private pendingPosition: { top: number; left: number; offset: number } | null = null;
+    private preferredLeft: number | null = null;
     private filterText = '';
     private emptyMessage: HTMLElement | null = null;
     private layout: BaseResultEntry['layout'] | null = null;
@@ -56,13 +57,24 @@ export class BaseResultNavigation {
         if (queryChanged) {
             this.activeIdentity = null;
             this.pendingPosition = null;
+            this.preferredLeft = null;
             this.scrollEl.scrollTop = 0;
         }
         this.collectEntries();
         if (this.pendingPosition) {
             const target = this.pendingPosition;
             const row = this.entries.filter((entry) => Math.abs(entry.top - target.top) < 8);
-            const nearest = row.sort((a, b) => Math.abs(a.left - target.left) - Math.abs(b.left - target.left))[0];
+            let nearest = row.sort((a, b) => Math.abs(a.left - target.left) - Math.abs(b.left - target.left))[0];
+            // A native viewport can clamp at padding below the final row. There
+            // is no next row to render; release the pending move at that edge.
+            const atBoundary = target.offset > 0
+                ? this.scrollEl.scrollTop + this.scrollEl.clientHeight >= this.scrollEl.scrollHeight - 1
+                : this.scrollEl.scrollTop <= 0;
+            if (!nearest && atBoundary && this.entries.length) {
+                const edge = target.offset > 0 ? Math.max(...this.entries.map(entry => entry.top)) : Math.min(...this.entries.map(entry => entry.top));
+                nearest = this.entries.filter(entry => Math.abs(entry.top - edge) < 8)
+                    .sort((a, b) => Math.abs(a.left - target.left) - Math.abs(b.left - target.left))[0];
+            }
             if (nearest) {
                 this.activeIdentity = nearest.identity;
                 this.pendingPosition = null;
@@ -110,16 +122,31 @@ export class BaseResultNavigation {
         // Coordinates must be read again: native Bases may have recycled nodes.
         this.collectEntries();
         const active = this.activeEntry;
+        if (this.pendingPosition) return true;
         if (!active) {
             this.activeIdentity = this.entries[0]?.identity ?? null;
             this.renderSelection(true);
             return true;
         }
         this.pendingPosition = null;
-        const offset = direction === 'down' ? 1 : -1;
+        const offset = direction === 'down' || direction === 'right' ? 1 : -1;
         const rows = [...new Set(this.entries.map((entry) => entry.top))].sort((a, b) => a - b);
         const activeIndex = this.entries.indexOf(active);
-        const target = this.entries[activeIndex + offset];
+        const horizontal = direction === 'left' || direction === 'right';
+        if (horizontal) this.preferredLeft = null;
+        else this.preferredLeft ??= active.left;
+        if (this.layout === 'table' && horizontal) {
+            const scroller = [this.containerEl.querySelector<HTMLElement>('.bases-view'),
+                this.containerEl.querySelector<HTMLElement>('.bases-table-container'), this.scrollEl]
+                .find((element): element is HTMLElement => Boolean(element && element.scrollWidth > element.clientWidth + 1));
+            if (!scroller) return true;
+            scroller.scrollLeft += offset * Math.max(80, scroller.clientWidth / 2);
+            return true;
+        }
+        const nextRow = rows.filter(top => offset * (top - active.top) > 8).sort((a, b) => Math.abs(a - active.top) - Math.abs(b - active.top))[0];
+        const target = this.layout === 'table' || horizontal ? this.entries[activeIndex + offset]
+            : this.entries.filter(entry => nextRow !== undefined && Math.abs(entry.top - nextRow) < 8)
+                .sort((a, b) => Math.abs(a.left - (this.preferredLeft ?? active.left)) - Math.abs(b.left - (this.preferredLeft ?? active.left)))[0];
         if (target) {
             this.activeIdentity = target.identity;
             this.renderSelection(true);
@@ -130,9 +157,10 @@ export class BaseResultNavigation {
         const pitch = rows.length > 1 ? rows[1] - rows[0] : active.height + (this.layout === 'cards' ? 12 : 0);
         const top = active.top + offset * pitch;
         const contentHeight = this.scrollEl.scrollHeight;
-        if (top >= 0 && top < contentHeight - 1) {
-            this.pendingPosition = { top, left: direction === 'down' ? 0 : this.scrollEl.clientWidth };
-            this.scrollEl.scrollTop = Math.max(0, top - (direction === 'up' ? 0 : this.scrollEl.clientHeight - active.height));
+        const canScroll = offset > 0 ? this.scrollEl.scrollTop + this.scrollEl.clientHeight < contentHeight - 1 : this.scrollEl.scrollTop > 0;
+        if (top >= 0 && top < contentHeight - 1 && canScroll) {
+            this.pendingPosition = { top, left: horizontal ? offset > 0 ? 0 : this.scrollEl.clientWidth : this.preferredLeft ?? active.left, offset };
+            this.scrollEl.scrollTop = Math.max(0, top - (offset < 0 ? 0 : this.scrollEl.clientHeight - active.height));
         }
         return true;
     }
@@ -157,6 +185,7 @@ export class BaseResultNavigation {
         this.entries = [];
         this.activeIdentity = null;
         this.pendingPosition = null;
+        this.preferredLeft = null;
         this.layout = null;
     }
 

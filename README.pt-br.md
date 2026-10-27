@@ -85,6 +85,8 @@ Deixe suas buscas favoritas sempre à mão. Crie atalhos para projetos, listas d
 - **Sistema de busca do Seam**: Combine tags, filtros por pasta e busca por texto em uma consulta reutilizável.
 - **Bases**: Use uma Base e suas visualizações para explorar os resultados em tabelas ou cartões na Paleta Universal.
 
+Em uma consulta Base como `@bookshelf`, use as setas para cima/baixo no campo de busca para entrar na navegação dos resultados. As quatro setas navegam pelos cartões; em tabelas, cima/baixo seleciona linhas e esquerda/direita revela colunas. Pressione `Esc` para voltar à busca e novamente para fechar. Enter abre a nota selecionada; Mod+Enter abre uma nova aba e Shift+Enter abre uma divisão.
+
 !["Buscas personalizadas e Bases"](./docs/images/custom_queries.png)
 
 ### Limpeza Automática ao Mover

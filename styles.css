@@ -311,6 +311,20 @@
     border-radius: var(--radius-m);
 }
 
+.seam-palette-base-navigation-active .seam-palette-base-result-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--interactive-accent);
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.seam-palette-base-embed:focus-visible {
+    outline: none;
+}
+
 .seam-palette-base-navigation .seam-palette-base-result-filtered {
     display: none;
 }

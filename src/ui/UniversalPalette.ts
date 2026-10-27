@@ -9,6 +9,7 @@ import { openSearchResult } from '../search/OpenSearchResult';
 import { hasDirectoryFilter, parseQuery } from '../search/QueryParser';
 import { createDailyNote, getMissingDailyNote } from '../daily/DailyNotes';
 import { BaseResultNavigation } from './BaseResultNavigation';
+import { BaseNavigationMode } from './BaseNavigationMode';
 import { GlobalStatistics } from '../statistics/GlobalStatistics';
 import { GlobalStatisticsView } from './GlobalStatisticsView';
 import { readNoteStatistics } from '../statistics/NoteStatistics';
@@ -110,6 +111,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private baseRenderKey = '';
     private baseRenderObserver: MutationObserver | null = null;
     private baseResultNavigation: BaseResultNavigation | null = null;
+    private baseNavigationMode: BaseNavigationMode | null = null;
     private baseNavigationEnabled = false;
     private baseSourcePath = '';
     private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
@@ -132,12 +134,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                 return;
             }
         }
-        if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return;
-        const target = event.target as Node | null;
-        if (!target?.instanceOf?.(HTMLElement) || !target.matches('.prompt-input')) return;
-        if (event.key === 'ArrowDown') this.handleBaseNavigationKey(event, 'down');
-        else if (event.key === 'ArrowUp') this.handleBaseNavigationKey(event, 'up');
-        else if (event.key === 'Enter') this.handleBaseNavigationEnter(event);
+        if (this.baseNavigationEnabled) this.baseNavigationMode?.handleKey(event);
     };
 
     constructor(
@@ -762,7 +759,6 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
                         ? t().paletteTagPlaceholder : t().palettePlaceholder;
             this.setPlaceholder(placeholder);
         }
-        this.updateInstructions(trimmed);
         const customSearch = this.mode === 'search' && trimmed.startsWith('@')
             ? this.getCustomSearchForQuery(trimmed)
             : null;
@@ -770,6 +766,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (customSearch?.mode !== 'base') this.disposeBaseRender();
         this.inputEl.closest<HTMLElement>('.prompt')?.toggleClass('seam-palette-custom-search-expanded', Boolean(customSearch?.expandModal));
         this.renderActiveSpecialQueryInput(query);
+        this.updateInstructions(trimmed);
 
         if (this.mode === 'quick-add') return this.getQuickAddChoices(trimmed);
 
@@ -1206,6 +1203,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             ]);
             return;
         }
+        if (this.mode === 'search' && this.baseNavigationEnabled && this.baseNavigationMode && this.baseResultNavigation?.isSupported) {
+            this.setInstructions([
+                { command: this.baseNavigationMode.active ? '↑↓←→' : '↑↓', purpose: t().paletteHelpNavigate },
+                { command: '↵', purpose: t().paletteHelpOpen },
+                { command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵', purpose: t().paletteHelpOpenNewTab },
+                { command: '⇧↵', purpose: t().paletteHelpOpenSplit },
+                { command: 'esc', purpose: this.baseNavigationMode.active ? t().paletteHelpReturnToSearch : t().paletteHelpDismiss },
+            ]);
+            return;
+        }
         if (this.calendarHost) {
             const instructions = [{ command: '↑↓←→', purpose: t().paletteHelpNavigate }];
             if (this.calendarView) instructions.push({ command: '↵', purpose: this.calendarView.footerAction });
@@ -1637,35 +1644,20 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         el.addClass('seam-palette-base-navigation');
         if (!this.baseResultNavigation) {
             this.baseResultNavigation = new BaseResultNavigation(this.baseRenderHost, t().paletteBaseNoMatches);
+            this.baseNavigationMode = new BaseNavigationMode(this.app, this.baseRenderHost, this.inputEl,
+                this.baseResultNavigation, this.scope, t().paletteBaseResultsLabel,
+                event => this.openSelectedBaseResult(event), () => this.updateInstructions(this.lastQuery));
         }
         this.baseResultNavigation.refresh(item.baseSearchText ?? '');
-        const activeId = this.baseResultNavigation.activeElementId;
-        if (activeId) this.inputEl.setAttribute('aria-activedescendant', activeId);
-        else this.inputEl.removeAttribute('aria-activedescendant');
+        this.baseNavigationMode?.refresh();
+        this.updateInstructions(this.lastQuery);
     }
 
     private refreshBaseNavigation(): void {
         if (!this.baseNavigationEnabled || !this.baseResultNavigation) return;
         this.baseResultNavigation.refresh();
-        const activeId = this.baseResultNavigation.activeElementId;
-        if (activeId) this.inputEl.setAttribute('aria-activedescendant', activeId);
-        else this.inputEl.removeAttribute('aria-activedescendant');
-    }
-
-    private handleBaseNavigationKey(event: KeyboardEvent, direction: 'up' | 'down'): boolean {
-        if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return true;
-        this.baseResultNavigation.moveSelection(direction);
-        const activeId = this.baseResultNavigation.activeElementId;
-        if (activeId) this.inputEl.setAttribute('aria-activedescendant', activeId);
-        else this.inputEl.removeAttribute('aria-activedescendant');
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        return false;
-    }
-
-    private handleBaseNavigationEnter(event: KeyboardEvent): boolean {
-        if (!this.baseNavigationEnabled || !this.baseResultNavigation?.isSupported) return true;
-        return this.openSelectedBaseResult(event) ? false : true;
+        this.baseNavigationMode?.refresh();
+        this.updateInstructions(this.lastQuery);
     }
 
     private openSelectedBaseResult(event: KeyboardEvent): boolean {
@@ -1686,6 +1678,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private disposeBaseRender(): void {
         this.baseRenderObserver?.disconnect();
         this.baseRenderObserver = null;
+        const navigationMode = this.baseNavigationMode;
+        this.baseNavigationMode = null;
+        navigationMode?.destroy();
         this.baseResultNavigation?.destroy();
         this.baseResultNavigation = null;
         this.baseRenderComponent?.unload();

@@ -85,6 +85,8 @@ Keep your favorite searches one step away. Create shortcuts for projects, readin
 - **Seam search system**: Combine tags, directory filters, and text search in a reusable query.
 - **Bases**: Use a Base and its views to explore results as tables or cards in the Universal Palette.
 
+In a Base query such as `@bookshelf`, press Up/Down from search to enter result navigation. All four arrows navigate cards; in tables, Up/Down selects rows and Left/Right reveals columns. Press `Esc` to return to search, then again to dismiss. Enter opens the selected note; Mod+Enter opens a new tab and Shift+Enter opens a split.
+
 !["Custom queries"](./docs/images/custom_queries.png)
 
 ### Automatic Cleanup on Move
