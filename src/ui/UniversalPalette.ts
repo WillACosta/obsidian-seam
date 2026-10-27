@@ -1057,6 +1057,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
               textQuery || inlineTagQuery || chipQuery,
               combined.some((entry) => entry.special?.search === 'todo'),
             )
+            if (!items.length && textQuery.trim()) {
+              const custom = combined.find((entry) => entry.custom?.mode === 'tags')?.custom
+              if (custom) items.push(this.customSearchCreateSuggestion(custom, textQuery))
+            }
             const dailySearch = combined.length === 1 ? combined[0].special?.search : null
             if (
               !items.length &&
@@ -1364,7 +1368,82 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       textQuery,
     )
     if (this.lastQuery !== inputQuery) return []
-    return this.mapSearchResults(results, textQuery)
+    const items = this.mapSearchResults(results, textQuery)
+    if (items.length === 0 && textQuery.trim())
+      items.push(this.customSearchCreateSuggestion(search, textQuery))
+    this.createSuggestionActive = items.some((item) => item.type === 'create')
+    this.updateInstructions(textQuery)
+    return items
+  }
+
+  private customSearchCreateSuggestion(
+    search: CustomSpecialSearch,
+    textQuery: string,
+  ): PaletteItem {
+    const title = textQuery.trim()
+    return {
+      id: `create-custom-note-${search.id}-${title}`,
+      title: t().paletteCreateNoteTitle(title || search.identifier),
+      description: search.filterQuery,
+      type: 'create',
+      icon: 'file-plus',
+      customSearchId: search.id,
+      action: async (openBehavior) => {
+        await this.createCustomSearchNote(search, title, openBehavior)
+      },
+    }
+  }
+
+  private async createCustomSearchNote(
+    search: CustomSpecialSearch,
+    title: string,
+    openBehavior: false | 'tab' | 'split' = false,
+  ): Promise<boolean> {
+    const parsed = parseQuery(search.filterQuery)
+    const directory = parsed.tokens.find((token) => token.type === 'directory')?.value ?? ''
+    const tags = [
+      ...new Set(parsed.tokens.filter((token) => token.type === 'tag').map((token) => token.value)),
+    ]
+    const folderPath = normalizePath(directory.replace(/^\/+/, '').replace(/\/$/, ''))
+    try {
+      const segments = folderPath.split('/').filter(Boolean)
+      let current = ''
+      for (const segment of segments) {
+        current = current ? `${current}/${segment}` : segment
+        if (!this.app.vault.getAbstractFileByPath(current)) {
+          try {
+            await this.app.vault.createFolder(current)
+          } catch {
+            if (!this.app.vault.getAbstractFileByPath(current))
+              throw new Error(`Unable to create ${current}`)
+          }
+        }
+      }
+      let basename = title.trim()
+      let path = normalizePath(`${folderPath ? `${folderPath}/` : ''}${basename}.md`)
+      let suffix = 1
+      while (this.app.vault.getAbstractFileByPath(path)) {
+        basename = `${title.trim()} ${suffix++}`
+        path = normalizePath(`${folderPath ? `${folderPath}/` : ''}${basename}.md`)
+      }
+      const file = await this.app.vault.create(path, '')
+      if (tags.length) {
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+          const existing = Array.isArray(frontmatter.tags) ? frontmatter.tags : []
+          frontmatter.tags = [...new Set([...existing, ...tags])]
+        })
+      }
+      const leaf = this.app.workspace.getLeaf(
+        openBehavior === 'split' ? 'split' : openBehavior === 'tab' ? 'tab' : false,
+      )
+      await leaf.openFile(file)
+      new Notice(t().noticeQuickAddCreated(basename))
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      new Notice(t().noticeQuickAddFailed(message))
+      return false
+    }
   }
 
   /**

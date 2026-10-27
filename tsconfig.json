@@ -10,8 +10,10 @@
     "lib": ["DOM", "ES2018", "ES2019.Array"],
     "types": ["node"],
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "isolatedModules": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts"],

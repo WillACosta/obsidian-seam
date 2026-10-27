@@ -1,4 +1,5 @@
-import { App, Component, Modifier, moment, Notice, Scope, setIcon, TFile } from 'obsidian'
+import { App, Component, Modifier, Notice, Scope, setIcon, TFile } from 'obsidian'
+import moment from 'moment'
 import { DailyNoteSettings, dailyNoteDate } from '../daily/DailyNotes'
 import { detectLocale, t } from '../i18n'
 import { CalendarPins } from './CalendarPins'

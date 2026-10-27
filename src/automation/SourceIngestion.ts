@@ -1,4 +1,5 @@
-import { App, TFile, TFolder, moment, normalizePath, parseYaml, stringifyYaml } from 'obsidian'
+import { App, TFile, TFolder, normalizePath, parseYaml, stringifyYaml } from 'obsidian'
+import moment from 'moment'
 import { SeamSettings, AutomationResult } from '../types'
 import { t } from '../i18n'
 import {

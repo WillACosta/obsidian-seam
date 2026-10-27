@@ -1,4 +1,5 @@
-import { App, moment, normalizePath, TFile } from 'obsidian'
+import { App, normalizePath, TFile } from 'obsidian'
+import moment from 'moment'
 import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } from '../types'
 import { hasDirectoryFilter, parseQuery } from './QueryParser'
 import { isFileInFolder } from '../utils/isFileInFolder'
@@ -811,7 +812,7 @@ export class SearchService {
   private getCachedSpecialSearchFiles(search: SpecialSearch, files: TFile[]): TFile[] {
     if (search === 'thisWeek' || search === 'thisYear') {
       const cached = this.periodPaths[search]
-      return cached?.day === moment().format('YYYY-MM-DD')
+      return cached && cached.day === moment().format('YYYY-MM-DD')
         ? files.filter((file) => file.path === cached.path)
         : []
     }
