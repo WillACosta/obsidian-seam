@@ -5,6 +5,7 @@
 - **Specs Directory:** [`docs/specs/iteration_15`](../specs/iteration_15/)
   - `initialize_seam.md`
   - `bases_keyboard_navigation.md`
+  - `calendar_opening_shortcuts.md`
 
 ## Summary of Changes
 
@@ -15,6 +16,8 @@
 
 ### Changed
 
+- **Calendar opening shortcuts**: Open daily, weekly, and pinned notes from `@calendar` with Mod+Enter in a new tab or Shift+Enter in a vertical split. Keep the requested destination through creation confirmation and show contextual open/create shortcut hints. Escape returns from calendar navigation to search before dismissing the Palette.
+
 - **Bases keyboard navigation**: Enter result navigation with Up/Down from search. Navigate cards with all four arrows, keep the preferred column through incomplete/virtualized rows, and use Left/Right to reveal columns in tables. Escape returns to the editable search input while preserving the query. Retain normal, new-tab, and split opening shortcuts, and show navigation-specific footer hints. Highlight the entire selected card, including its cover, without a border around the result container.
 - **Archive destination**: Initialize Seam creates and recommends `Resources/Archive` as the archive destination. Existing root-level archive folders and notes stay in place.
 - **Setup completion**: Show “Already configured,” a confirmation message, and OK when the current vault matches the recommendations, including after a verified successful setup. Keep configuration details collapsed on repeat visits and retain restart requirements in the completion report. Missing or drifted settings return to the preview/apply flow; conflicts and unsupported items do not produce a completed state.
@@ -23,6 +26,10 @@
 ### Fixed
 
 ### Tests
+
+- Calendar-opening follow-up: all 370 tests, typecheck, formatting/ESLint quality checks, and production build passed. Twenty-nine new cases cover Enter/Mod+Enter/Shift+Enter/Mod+Shift+Enter across the input, day cells, daily/weekly buttons, and pinned notes; Ctrl+Enter; destination retention through creation and cancellation; rolling weekly pins; picker/pin controls; contextual open/create state; and modifier/IME guards.
+- Live `seam_test_vault` checks used existing `Resources/Daily/2026-10-24.md`. Cmd+Enter added a tab and Shift+Enter added a vertical split from the input, date cell, and daily action button. Cmd+Shift+Enter opened a split; plain Enter retained the current pane. Each opening dismissed the Palette and released the calendar scope. Missing-date Cmd+Enter and Shift+Enter displayed creation confirmation; cancelling preserved the note's absence and the pane count. Existing-note, missing-note, year-picker, and Escape helper text matched the current action. The footer wrapped within 478 px without horizontal overflow. These were synthesized CDP events, not physical keyboard/device acceptance.
+- No live fixture notes were created. The original workspace was restored, and original note/Base hashes plus app/Daily Notes/hotkey/Seam settings/statistics bytes matched the validation snapshot. Runtime and console error buffers were empty.
 
 - Typecheck, lint, production build, and all 321 unit tests passed. The initializer has 16 focused tests for fresh-vault fixtures, repeat runs, alternate configuration directories, unrelated settings/types/hotkeys, unknown Seam properties, existing templates/Base files, both core-plugin JSON formats, default/custom/runtime shortcut conflicts, alias collisions, missing views/capabilities, malformed JSON, read-only targets, snapshot failures, concurrent configuration changes, disposed services, and plan replay.
 - Public `Vault.configDir`, `Vault.create`, `Vault.createFolder`, and `DataAdapter` signatures were checked against installed Obsidian definitions. Bases syntax, functions, and cards behavior were checked against the [official syntax reference](https://help.obsidian.md/bases/syntax), [functions reference](https://help.obsidian.md/bases/functions), and [cards reference](https://help.obsidian.md/bases/views/cards). Read-only access to undocumented configuration/command/core-plugin state is isolated in `SetupCompatibility`; setup does not call private runtime mutation APIs or use Node filesystem APIs.

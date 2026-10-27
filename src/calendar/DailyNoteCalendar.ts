@@ -1,4 +1,4 @@
-import { App, Component, moment, Notice, Scope, setIcon, TFile } from 'obsidian'
+import { App, Component, Modifier, moment, Notice, Scope, setIcon, TFile } from 'obsidian'
 import { DailyNoteSettings, dailyNoteDate } from '../daily/DailyNotes'
 import { detectLocale, t } from '../i18n'
 import { CalendarPins } from './CalendarPins'
@@ -17,9 +17,11 @@ import { confirmPeriodicNote } from '../ui/PeriodicNoteConfirmation'
 import { dailyNotePath } from '../daily/DailyNotes'
 import { CalendarModel, findCalendarNote, resolveCalendarNote } from './CalendarModel'
 
+export type CalendarOpenTarget = false | 'tab' | 'split'
+
 interface CalendarCallbacks {
   changed: () => void
-  open: (file: TFile) => Promise<void>
+  open: (file: TFile, target: CalendarOpenTarget) => Promise<void>
 }
 
 /** A scoped, disposable calendar using native buttons and a roving grid focus. */
@@ -29,6 +31,7 @@ export class DailyNoteCalendar extends Component {
   private busy = false
   private navigationScope: Scope
   private scopeActive = false
+  private noteActions = new Map<string, (target: CalendarOpenTarget) => void>()
 
   constructor(
     private app: App,
@@ -69,6 +72,12 @@ export class DailyNoteCalendar extends Component {
         this.handleKey(event) ? false : true,
       )
     }
+    const openingModifiers: Modifier[][] = [['Mod'], ['Shift'], ['Mod', 'Shift']]
+    for (const modifiers of openingModifiers) {
+      this.navigationScope.register(modifiers, 'Enter', (event) =>
+        this.handleKey(event) ? false : true,
+      )
+    }
     this.navigationScope.register([], 'Escape', (event) => {
       this.consume(event)
       this.exitNavigation()
@@ -81,6 +90,17 @@ export class DailyNoteCalendar extends Component {
   }
   get picking(): boolean {
     return this.model.page !== 'days'
+  }
+  get navigationActive(): boolean {
+    return this.scopeActive
+  }
+  get openingAction(): 'open' | 'create' | null {
+    const active = this.host.ownerDocument.activeElement
+    if (active && this.host.contains(active) && active.matches('[data-calendar-control]')) {
+      const action = active.getAttribute('data-calendar-action')
+      return action === 'open' || action === 'create' ? action : null
+    }
+    return this.picking ? null : this.hasNote ? 'open' : 'create'
   }
   get footerAction(): string {
     const active = this.host.ownerDocument.activeElement
@@ -147,6 +167,7 @@ export class DailyNoteCalendar extends Component {
 
   onunload(): void {
     this.destroyed = true
+    this.noteActions.clear()
     this.exitNavigation(false)
     this.host.remove()
   }
@@ -163,12 +184,20 @@ export class DailyNoteCalendar extends Component {
   handleKey(event: KeyboardEvent): boolean {
     const target = event.target as Node | null
     const inCalendar = Boolean(target && this.host.contains(target))
-    if (event.altKey || event.ctrlKey || event.metaKey) return false
+    if (event.isComposing || event.altKey) return false
+    if ((event.ctrlKey || event.metaKey) && event.key !== 'Enter') return false
+    const modified = event.ctrlKey || event.metaKey || event.shiftKey
+    const openTarget: CalendarOpenTarget = event.shiftKey
+      ? 'split'
+      : event.metaKey || event.ctrlKey
+        ? 'tab'
+        : false
     if (target === this.input) {
+      if (modified && event.key !== 'Enter') return false
       if (['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) {
         this.consume(event)
-        if (event.key === 'Enter' && !this.picking) void this.activate()
-        else this.focusSelected()
+        if (event.key === 'Enter' && !this.picking) void this.activate(openTarget)
+        else if (!modified) this.focusSelected()
         return true
       }
       return false
@@ -185,19 +214,25 @@ export class DailyNoteCalendar extends Component {
       (event.key === 'Enter' || event.key === ' ')
     ) {
       this.consume(event)
-      element.click()
+      if (modified) {
+        const id = element.getAttribute('data-calendar-control') ?? ''
+        const action = element.getAttribute('data-calendar-action')
+        if (event.key === 'Enter' && (action === 'open' || action === 'create'))
+          this.noteActions.get(id)?.(openTarget)
+      } else element.click()
       return true
     }
     if (!element?.matches('[data-calendar-cell]')) return false
     if (event.key === 'Enter' || event.key === ' ') {
       this.consume(event)
+      if (modified && (this.picking || event.key !== 'Enter')) return true
       if (this.model.page === 'years') {
         this.model.chooseYear(this.model.selected.year())
         this.render(true)
       } else if (this.model.page === 'months') {
         this.model.chooseMonth(this.model.selected.month())
         this.render(true)
-      } else void this.activate()
+      } else void this.activate(openTarget)
       return true
     }
     if (
@@ -245,6 +280,7 @@ export class DailyNoteCalendar extends Component {
     const active = this.host.ownerDocument.activeElement
     const activeControl = active?.getAttribute('data-calendar-control')
     const wasCell = active?.hasAttribute('data-calendar-cell')
+    this.noteActions.clear()
     this.host.empty()
     this.renderPins()
     const body = this.host.createDiv({ cls: 'seam-calendar-scroll' })
@@ -319,6 +355,9 @@ export class DailyNoteCalendar extends Component {
       )
       action.disabled = this.busy
       this.control(action, 'action', this.hasNote ? 'open' : 'create')
+      this.noteActions.set('action', (target) => {
+        void this.activate(target)
+      })
       this.renderWeeklyAction(body)
     }
     if (focus || wasCell) this.focusSelected()
@@ -393,6 +432,9 @@ export class DailyNoteCalendar extends Component {
         `open-pin-${pin.kind === 'file' ? pin.path : 'weekly'}`,
         exists ? 'open' : pin.kind === 'weekly' ? 'create' : 'select',
       )
+      this.noteActions.set(`open-pin-${pin.kind === 'file' ? pin.path : 'weekly'}`, (target) => {
+        void this.openPin(pin, target)
+      })
       open.setAttribute(
         'aria-label',
         `${label}: ${pin.kind === 'weekly' && !exists ? t().calendarCreateWeekly : path}`,
@@ -412,7 +454,7 @@ export class DailyNoteCalendar extends Component {
       setIcon(unpin, 'pin-off')
     }
   }
-  private async openPin(pin: CalendarPin): Promise<void> {
+  private async openPin(pin: CalendarPin, target: CalendarOpenTarget = false): Promise<void> {
     await this.perform(async () => {
       if (!this.pins) return
       const now = this.now()
@@ -427,7 +469,7 @@ export class DailyNoteCalendar extends Component {
         await this.pins.reconcile()
         throw new Error(t().calendarPinUnavailable)
       }
-      if (!this.destroyed) await this.callbacks.open(file)
+      if (!this.destroyed) await this.callbacks.open(file, target)
     })
   }
   private renderWeeklyAction(parent: HTMLElement): void {
@@ -440,24 +482,14 @@ export class DailyNoteCalendar extends Component {
       row,
       `${file ? t().calendarOpenWeekly : t().calendarCreateWeekly} · ${this.weekRange(this.model.selected)}`,
       () => {
-        const date = this.model.selected.clone()
-        void this.perform(async () => {
-          if (
-            !(await confirmPeriodicNote(
-              this.app,
-              weeklyNotePath(date, this.weekly),
-              this.askBeforeCreation,
-            )) ||
-            this.destroyed
-          )
-            return
-          const target = await resolveWeeklyNote(this.app, date, this.weekly)
-          if (!this.destroyed) await this.callbacks.open(target)
-        })
+        void this.openWeekly()
       },
       'seam-calendar-action',
     )
     this.control(open, 'weekly-action', file ? 'open' : 'create')
+    this.noteActions.set('weekly-action', (target) => {
+      void this.openWeekly(target)
+    })
     open.disabled = this.busy
     if (!this.pins) return
     const pins = this.pins
@@ -488,6 +520,23 @@ export class DailyNoteCalendar extends Component {
       this.control(pin, 'weekly-pin', pinned && !currentWeek ? 'unpin' : 'pin')
       setIcon(pin, pinned && !currentWeek ? 'pin-off' : 'pin')
     }
+  }
+
+  private async openWeekly(target: CalendarOpenTarget = false): Promise<void> {
+    const date = this.model.selected.clone()
+    await this.perform(async () => {
+      if (
+        !(await confirmPeriodicNote(
+          this.app,
+          weeklyNotePath(date, this.weekly),
+          this.askBeforeCreation,
+        )) ||
+        this.destroyed
+      )
+        return
+      const file = await resolveWeeklyNote(this.app, date, this.weekly)
+      if (!this.destroyed) await this.callbacks.open(file, target)
+    })
   }
 
   private renderDays(grid: HTMLElement): void {
@@ -570,7 +619,7 @@ export class DailyNoteCalendar extends Component {
     }
   }
 
-  private async activate(): Promise<void> {
+  private async activate(target: CalendarOpenTarget = false): Promise<void> {
     if (this.busy || this.destroyed || this.picking) return
     this.busy = true
     const date = this.model.selected.clone()
@@ -586,7 +635,7 @@ export class DailyNoteCalendar extends Component {
       )
         return
       const file = await resolveCalendarNote(this.app, date, this.settings)
-      if (!this.destroyed) await this.callbacks.open(file)
+      if (!this.destroyed) await this.callbacks.open(file, target)
     } catch (error) {
       this.report(error)
     } finally {

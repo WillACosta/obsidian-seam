@@ -314,9 +314,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
           settings,
           {
             changed: () => this.updateInstructions(''),
-            open: async (file) => {
+            open: async (file, target) => {
               this.close()
-              await leaf.openFile(file)
+              const destination =
+                target === 'split'
+                  ? this.app.workspace.getLeaf('split', 'vertical')
+                  : target === 'tab'
+                    ? this.app.workspace.getLeaf('tab')
+                    : leaf
+              await destination.openFile(file)
             },
           },
           this.scope,
@@ -1558,9 +1564,29 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
     if (this.calendarHost) {
       const instructions = [{ command: '↑↓←→', purpose: t().paletteHelpNavigate }]
-      if (this.calendarView)
+      if (this.calendarView) {
         instructions.push({ command: '↵', purpose: this.calendarView.footerAction })
-      instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
+        const action = this.calendarView.openingAction
+        if (action) {
+          instructions.push(
+            {
+              command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵',
+              purpose:
+                action === 'create' ? t().paletteHelpCreateNewTab : t().paletteHelpOpenNewTab,
+            },
+            {
+              command: '⇧↵',
+              purpose: action === 'create' ? t().paletteHelpCreateSplit : t().paletteHelpOpenSplit,
+            },
+          )
+        }
+      }
+      instructions.push({
+        command: 'esc',
+        purpose: this.calendarView?.navigationActive
+          ? t().paletteHelpReturnToSearch
+          : t().paletteHelpDismiss,
+      })
       this.setInstructions(instructions)
       return
     }

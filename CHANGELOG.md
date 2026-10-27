@@ -2,7 +2,7 @@
 
 What's new and changed in each Seam release.
 
-## [Unreleased] - 2026-10-26
+## [Unreleased] - 2026-10-27
 <!-- iterations: iteration_13..iteration_15 -->
 
 ### Added
@@ -26,6 +26,7 @@ What's new and changed in each Seam release.
 - **Background totals**: Index current notes after layout readiness with bounded concurrent reads. Maintain totals from subsequent file/editor events rather than rescanning when a dashboard opens. Include current unsaved editor text and keep imports/sync/automated updates separate from writing activity.
 - **Activity definitions**: Count direct editor transactions with user input, deletion, or movement origins. Preserve word credit while typing/composing, count new replacement words, and exclude undo/redo from new contributions. Group sessions per note/day with a five-minute inactivity gap. A streak may end yesterday while today is still in progress. Notes Created records actual post-enable Markdown create events as vault growth, including imports, without treating creation alone as writing activity.
 - **Report navigation**: Reuse Palette report framing, dismissal, and Backspace navigation. Chip radio groups and date-cell keys avoid the hidden suggestion chooser. Dispose dashboard subscriptions/timers when returning, dismissing, or unloading.
+- **Calendar opening shortcuts**: Open daily, weekly, and pinned notes from `@calendar` with Mod+Enter in a new tab or Shift+Enter in a vertical split. Keep the requested destination through creation confirmation and show contextual open/create shortcut hints. Escape returns from calendar navigation to search before dismissing the Palette.
 - **Bases keyboard navigation**: Enter result navigation with Up/Down from search. Navigate cards with all four arrows, keep the preferred column through incomplete/virtualized rows, and use Left/Right to reveal columns in tables. Escape returns to the editable search input while preserving the query. Retain normal, new-tab, and split opening shortcuts, and show navigation-specific footer hints. Highlight the entire selected card, including its cover, without a border around the result container.
 - **Archive destination**: Initialize Seam creates and recommends `Resources/Archive` as the archive destination. Existing root-level archive folders and notes stay in place.
 - **Setup completion**: Show “Already configured,” a confirmation message, and OK when the current vault matches the recommendations, including after a verified successful setup. Keep configuration details collapsed on repeat visits and retain restart requirements in the completion report. Missing or drifted settings return to the preview/apply flow; conflicts and unsupported items do not produce a completed state.
