@@ -12,14 +12,14 @@ Seam é um plugin leve para Obsidian que organiza notas por meio de tags. Inspir
 
 O Seam simplifica a organização e não interrompe seu trabalho:
 
-| Fluxo Tradicional | Com o Seam |
-|:---|:---|
-| ❌ Mover arquivos manualmente entre pastas | ✅ Adicione `#permanent` para organizar uma nota |
-| ❌ Misturar notas concluídas com trabalhos ativos | ✅ Adicione `#archive` para tirá-las do caminho |
-| ❌ Alternar entre várias ferramentas de busca | ✅ Pesquise notas, conteúdo, tags e comandos em uma paleta |
+| Fluxo Tradicional                                                | Com o Seam                                                                                                     |
+| :--------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
+| ❌ Mover arquivos manualmente entre pastas                       | ✅ Adicione `#permanent` para organizar uma nota                                                               |
+| ❌ Misturar notas concluídas com trabalhos ativos                | ✅ Adicione `#archive` para tirá-las do caminho                                                                |
+| ❌ Alternar entre várias ferramentas de busca                    | ✅ Pesquise notas, conteúdo, tags e comandos em uma paleta                                                     |
 | ❌ Usar ferramentas diferentes para buscar e criar notas rápidas | ✅ Faça buscas especiais, crie notas com o Quick Capture e mantenha notas de documentos vinculadas ao original |
-| ❌ Manter uma estrutura complexa de pastas | ✅ Use um fluxo simples guiado por tags |
-| ❌ Depender de recursos exclusivos para desktop | ✅ Use o Seam no computador ou no celular |
+| ❌ Manter uma estrutura complexa de pastas                       | ✅ Use um fluxo simples guiado por tags                                                                        |
+| ❌ Depender de recursos exclusivos para desktop                  | ✅ Use o Seam no computador ou no celular                                                                      |
 
 ## Como o Seam se integra à sua rotina
 
@@ -30,6 +30,7 @@ Abra a **Paleta Universal** pela paleta de comandos do Obsidian ou com o atalho 
 ```
 Paleta Universal → "Reunião com Equipe de Design" → [Criar nova nota]
 ```
+
 !["Criando nova nota"](./docs/images/creating_new_note.png)
 
 ### 2. Salve Notas Permanentes (`#permanent`)
@@ -135,14 +136,14 @@ Personalize o Seam em **Configurações → Plugins da comunidade → Seam**.
 
 Use estes tokens na Paleta Universal para filtrar buscas ou acessar outros modos:
 
-| Token | O que faz | Exemplo |
-|:---|:---|:---|
-| `#tag` | Filtra notas por tag. | `#leitura` |
-| `!#tag` ou `-#tag` | Exclui notas com uma tag. | `!#arquivado` |
-| `/` | Filtra notas por pasta. Coloque entre aspas os caminhos com espaços. | `/Fleeting` · `/"Arquivo de Projetos"` |
-| `@` | Executa uma busca especial integrada ou personalizada. | `@today` · `@sources` · `@livros` |
-| `OR` ou `||` | Busca por um termo ou pelo outro. | `#leitura OR #pesquisa` |
-| `>` | Mostra e executa comandos do Seam. | `>archive` |
+| Token              | O que faz                                                            | Exemplo                                |
+| :----------------- | :------------------------------------------------------------------- | :------------------------------------- |
+| `#tag`             | Filtra notas por tag.                                                | `#leitura`                             |
+| `!#tag` ou `-#tag` | Exclui notas com uma tag.                                            | `!#arquivado`                          |
+| `/`                | Filtra notas por pasta. Coloque entre aspas os caminhos com espaços. | `/Fleeting` · `/"Arquivo de Projetos"` |
+| `@`                | Executa uma busca especial integrada ou personalizada.               | `@today` · `@sources` · `@livros`      |
+| `OR` ou `          |                                                                      | `                                      | Busca por um termo ou pelo outro. | `#leitura OR #pesquisa` |
+| `>`                | Mostra e executa comandos do Seam.                                   | `>archive`                             |
 
 Fixe até **cinco buscas especiais**, entre integradas e personalizadas, nas configurações do Seam. As buscas fixadas aparecem primeiro na lista de `@`. Pressione **Backspace** logo após uma busca ativa para removê-la de uma vez, incluindo o espaço final.
 

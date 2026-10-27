@@ -12,6 +12,7 @@
 ## Summary of Changes
 
 ### Added
+
 - **Custom Special Searches**: Added configurable `@` queries with explicit Bases or Seam-tags filtering modes, `.base` and Base-view suggestions, reusable tag completion, visibility controls, ordering, duplication, and up to three pinned queries.
 - **Base Rendering**: Added in-palette rendering for configured Obsidian `.base` views using native Markdown embeds.
 - **Custom Search Icons**: Added an editable Lucide/Obsidian icon to each custom search, defaulting to `search` and shown in the custom query listing and palette suggestions.
@@ -24,6 +25,7 @@
 - **Command Visibility Setting**: Show Seam commands by default or limit them to the `>` prefix.
 
 ### Changed
+
 - **Universal Palette special-search suggestions**: Custom searches are listed alongside Seam's built-in searches, with note results for tag filters and Base-backed result layouts.
 - **Settings**: Added native settings controls and modal editors for custom searches, including custom icons and Base views rendered through Seam's result navigation.
 - **Settings text**: Updated the Universal Palette icon setting subtitle.
@@ -39,6 +41,7 @@
 - **Custom query highlights**: Applied the existing search highlight treatment to custom Seam-tags results and matching text inside filtered Base cards and table rows.
 
 ### Fixed
+
 - **Custom query persistence**:
   - **Root Cause**: Iteration 08 had no persisted settings model or editor for custom searches.
   - **Fix**: Added typed settings, defaults, save/load normalization, and settings UI editors.
@@ -77,6 +80,7 @@
   - **Verified Scenarios**: Inspected the live special-search input and mirror after plugin reload; confirmed no console errors.
 
 ### Tests
+
 - `pnpm typecheck`
 - `pnpm lint`
 - `pnpm build`

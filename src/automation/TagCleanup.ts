@@ -1,4 +1,4 @@
-import { SeamSettings } from '../types';
+import { SeamSettings } from '../types'
 
 /**
  * Resolves the tags to remove when moving a note to Permanent.
@@ -6,32 +6,32 @@ import { SeamSettings } from '../types';
  * plus any configured moveCleanupTags if enableMoveCleanup is true.
  */
 export function getPermanentCleanupTags(settings: SeamSettings): string[] {
-    const removeTagsList: string[] = [
-        settings.permanentTag,
-        settings.archiveTag,
-        settings.archivedTag,
-    ];
+  const removeTagsList: string[] = [
+    settings.permanentTag,
+    settings.archiveTag,
+    settings.archivedTag,
+  ]
 
-    if (settings.enableMoveCleanup && settings.moveCleanupTags) {
-        const cleanupTags = settings.moveCleanupTags
-            .split(',')
-            .map((t) => t.trim())
-            .filter((t) => t.length > 0);
-        removeTagsList.push(...cleanupTags);
-    }
+  if (settings.enableMoveCleanup && settings.moveCleanupTags) {
+    const cleanupTags = settings.moveCleanupTags
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+    removeTagsList.push(...cleanupTags)
+  }
 
-    return Array.from(
-        new Set(
-            removeTagsList
-                .map((t) => t.replace(/^#/, '').trim().toLowerCase())
-                .filter((t) => t.length > 0),
-        ),
-    );
+  return Array.from(
+    new Set(
+      removeTagsList
+        .map((t) => t.replace(/^#/, '').trim().toLowerCase())
+        .filter((t) => t.length > 0),
+    ),
+  )
 }
 
 /** Moving back to Fleeting clears the same action and archived-state tags. */
 export function getFleetingCleanupTags(settings: SeamSettings): string[] {
-    return getPermanentCleanupTags(settings);
+  return getPermanentCleanupTags(settings)
 }
 
 /**
@@ -40,41 +40,38 @@ export function getFleetingCleanupTags(settings: SeamSettings): string[] {
  * plus any configured moveCleanupTags if enableMoveCleanup is true.
  */
 export function getArchiveCleanupTags(settings: SeamSettings): string[] {
-    const removeTagsList: string[] = [
-        settings.archiveTag,
-        settings.permanentTag,
-    ];
+  const removeTagsList: string[] = [settings.archiveTag, settings.permanentTag]
 
-    if (settings.enableMoveCleanup && settings.moveCleanupTags) {
-        const cleanupTags = settings.moveCleanupTags
-            .split(',')
-            .map((t) => t.trim())
-            .filter((t) => t.length > 0);
-        removeTagsList.push(...cleanupTags);
-    }
+  if (settings.enableMoveCleanup && settings.moveCleanupTags) {
+    const cleanupTags = settings.moveCleanupTags
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+    removeTagsList.push(...cleanupTags)
+  }
 
-    return Array.from(
-        new Set(
-            removeTagsList
-                .map((t) => t.replace(/^#/, '').trim().toLowerCase())
-                .filter((t) => t.length > 0),
-        ),
-    );
+  return Array.from(
+    new Set(
+      removeTagsList
+        .map((t) => t.replace(/^#/, '').trim().toLowerCase())
+        .filter((t) => t.length > 0),
+    ),
+  )
 }
 
 /**
  * Resolves the frontmatter properties to remove when moving or archiving a note.
  */
 export function getMoveCleanupProperties(settings: SeamSettings): string[] {
-    if (!settings.enableMoveCleanup || !settings.moveCleanupProperties) {
-        return [];
-    }
-    return Array.from(
-        new Set(
-            settings.moveCleanupProperties
-                .split(',')
-                .map((p) => p.trim())
-                .filter((p) => p.length > 0),
-        ),
-    );
+  if (!settings.enableMoveCleanup || !settings.moveCleanupProperties) {
+    return []
+  }
+  return Array.from(
+    new Set(
+      settings.moveCleanupProperties
+        .split(',')
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0),
+    ),
+  )
 }

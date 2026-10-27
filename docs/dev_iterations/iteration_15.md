@@ -9,10 +9,12 @@
 ## Summary of Changes
 
 ### Added
+
 - **Initialize Seam**: Preview an optional vault setup from Seam Settings, the Obsidian command palette, or the Universal Palette. Review grouped folders/files, Obsidian preferences, and Seam searches before confirming. Create only missing workflow directories and templates, configure selected preferences with new notes directed to `Fleeting`, and report applied, skipped, failed, and restart-required items. Existing notes are never scanned, moved, deleted, or edited by setup.
 - **Bookshelf setup**: Create a native four-view Bookshelf Base and reusable `@bookshelf` / `@reading` queries. Include book properties, priority icons/order, zero-safe ratings, estimated reading hours, bounded progress bars, and unread/missing-value handling. Exclude the templates folder from every view and preserve customized files and alias collisions.
 
 ### Changed
+
 - **Bases keyboard navigation**: Enter result navigation with Up/Down from search. Navigate cards with all four arrows, keep the preferred column through incomplete/virtualized rows, and use Left/Right to reveal columns in tables. Escape returns to the editable search input while preserving the query. Retain normal, new-tab, and split opening shortcuts, and show navigation-specific footer hints. Highlight the entire selected card, including its cover, without a border around the result container.
 - **Archive destination**: Initialize Seam creates and recommends `Resources/Archive` as the archive destination. Existing root-level archive folders and notes stay in place.
 - **Setup completion**: Show “Already configured,” a confirmation message, and OK when the current vault matches the recommendations, including after a verified successful setup. Keep configuration details collapsed on repeat visits and retain restart requirements in the completion report. Missing or drifted settings return to the preview/apply flow; conflicts and unsupported items do not produce a completed state.
@@ -21,6 +23,7 @@
 ### Fixed
 
 ### Tests
+
 - Typecheck, lint, production build, and all 321 unit tests passed. The initializer has 16 focused tests for fresh-vault fixtures, repeat runs, alternate configuration directories, unrelated settings/types/hotkeys, unknown Seam properties, existing templates/Base files, both core-plugin JSON formats, default/custom/runtime shortcut conflicts, alias collisions, missing views/capabilities, malformed JSON, read-only targets, snapshot failures, concurrent configuration changes, disposed services, and plan replay.
 - Public `Vault.configDir`, `Vault.create`, `Vault.createFolder`, and `DataAdapter` signatures were checked against installed Obsidian definitions. Bases syntax, functions, and cards behavior were checked against the [official syntax reference](https://help.obsidian.md/bases/syntax), [functions reference](https://help.obsidian.md/bases/functions), and [cards reference](https://help.obsidian.md/bases/views/cards). Read-only access to undocumented configuration/command/core-plugin state is isolated in `SetupCompatibility`; setup does not call private runtime mutation APIs or use Node filesystem APIs.
 - Obsidian 1.14.5 in `seam_test_vault`: native command opened the preview; existing aliases were reported as conflicts. Cancel left all seven targeted configuration files and missing resources unchanged. With temporary test aliases removed, Apply completed with 10 applied, 16 skipped, and zero failures. A second preview contained no pending changes. Existing templates were preserved, and all 93 original nonconfiguration file hashes remained unchanged.

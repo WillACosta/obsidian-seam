@@ -9,6 +9,7 @@
 ## Summary of Changes
 
 ### Added
+
 - **Core Automation Engine**: Implemented `AutomationService` and `AutomationQueue` with 750ms debounce and serialization to prevent concurrent mutations.
 - **Tag-Driven Routing**:
   - `#permanent` moves notes to `Permanent/` and strips the action tag.

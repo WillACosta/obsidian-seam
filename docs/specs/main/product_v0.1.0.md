@@ -227,11 +227,11 @@ If the user disables the "add archived state" option, the result should simply o
 
 The initial special-tag set is intentionally small.
 
-| Tag | Type | Behavior |
-|---|---|---|
-| `#archive` | Action | Move to archive, remove tag |
-| `#permanent` | Action | Move to permanent folder, remove tag |
-| `#archived` | State | Durable marker indicating archived status |
+| Tag          | Type   | Behavior                                  |
+| ------------ | ------ | ----------------------------------------- |
+| `#archive`   | Action | Move to archive, remove tag               |
+| `#permanent` | Action | Move to permanent folder, remove tag      |
+| `#archived`  | State  | Durable marker indicating archived status |
 
 These tags must be configurable in settings.
 
@@ -1510,32 +1510,32 @@ These are explicitly outside the v0.1 core.
 
 # 43. Design Decisions Summary
 
-| Decision | Choice |
-|---|---|
-| Organization model | Tags first |
-| Physical folders | Secondary |
-| Archive trigger | `#archive` |
-| Permanent trigger | `#permanent` |
-| Archived state | `#archived` |
-| Archive folder | `Archive/` |
-| Permanent folder | `Permanent/` |
-| Action tag removal | After successful operation |
-| Automation | Event-driven + reconciliation |
-| OS scheduler | No |
-| Background daemon | No |
-| Mobile | First-class |
-| Search | Native Obsidian-compatible |
-| Search UI | Floating Universal Palette |
-| Search | Live |
-| Query syntax | Simplified tag syntax |
-| Database | No |
-| Telemetry | No |
-| Network | No |
-| UI framework | Native Obsidian APIs preferred |
-| Dependencies | Minimal |
-| Manual automation | Supported |
-| Conflict handling | Safe failure, no overwrite |
-| Development | Separate test vault |
+| Decision           | Choice                         |
+| ------------------ | ------------------------------ |
+| Organization model | Tags first                     |
+| Physical folders   | Secondary                      |
+| Archive trigger    | `#archive`                     |
+| Permanent trigger  | `#permanent`                   |
+| Archived state     | `#archived`                    |
+| Archive folder     | `Archive/`                     |
+| Permanent folder   | `Permanent/`                   |
+| Action tag removal | After successful operation     |
+| Automation         | Event-driven + reconciliation  |
+| OS scheduler       | No                             |
+| Background daemon  | No                             |
+| Mobile             | First-class                    |
+| Search             | Native Obsidian-compatible     |
+| Search UI          | Floating Universal Palette     |
+| Search             | Live                           |
+| Query syntax       | Simplified tag syntax          |
+| Database           | No                             |
+| Telemetry          | No                             |
+| Network            | No                             |
+| UI framework       | Native Obsidian APIs preferred |
+| Dependencies       | Minimal                        |
+| Manual automation  | Supported                      |
+| Conflict handling  | Safe failure, no overwrite     |
+| Development        | Separate test vault            |
 
 ---
 

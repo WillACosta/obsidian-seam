@@ -4,5 +4,5 @@
 > Show recent files
 ```
 
-- It will show the last  10 modified files, ordered by "Modified Time" -> Newer to Oldest.
+- It will show the last 10 modified files, ordered by "Modified Time" -> Newer to Oldest.
 - Include only `.md` files

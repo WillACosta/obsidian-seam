@@ -1,16 +1,16 @@
-import { en, Translations } from './locales/en';
-import { ptBr } from './locales/pt-br';
+import { en, Translations } from './locales/en'
+import { ptBr } from './locales/pt-br'
 
-export type Locale = 'en' | 'pt-br';
+export type Locale = 'en' | 'pt-br'
 
-let testLocale: Locale | null = null;
+let testLocale: Locale | null = null
 
 /**
  * Explicitly sets a test locale for unit tests or manual override.
  * Pass null to revert to automatic Obsidian detection.
  */
 export function setTestLocale(locale: Locale | null): void {
-    testLocale = locale;
+  testLocale = locale
 }
 
 /**
@@ -18,50 +18,50 @@ export function setTestLocale(locale: Locale | null): void {
  * Falls back to 'en' for any unsupported languages.
  */
 interface GlobalWithMoment {
-    moment?: {
-        locale?: () => string;
-    };
+  moment?: {
+    locale?: () => string
+  }
 }
 
 export function detectLocale(): Locale {
-    if (testLocale) return testLocale;
+  if (testLocale) return testLocale
 
-    let lang = 'en';
+  let lang = 'en'
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const obsidian = require('obsidian')
+    if (typeof obsidian.getLanguage === 'function') {
+      lang = obsidian.getLanguage()
+    } else {
+      const globalWithMoment = globalThis as unknown as GlobalWithMoment
+      if (typeof globalWithMoment.moment?.locale === 'function') {
+        lang = globalWithMoment.moment.locale()
+      }
+    }
+  } catch {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const obsidian = require('obsidian');
-        if (typeof obsidian.getLanguage === 'function') {
-            lang = obsidian.getLanguage();
-        } else {
-            const globalWithMoment = globalThis as unknown as GlobalWithMoment;
-            if (typeof globalWithMoment.moment?.locale === 'function') {
-                lang = globalWithMoment.moment.locale();
-            }
-        }
+      const globalWithMoment = globalThis as unknown as GlobalWithMoment
+      lang = globalWithMoment.moment?.locale?.() || 'en'
     } catch {
-        try {
-            const globalWithMoment = globalThis as unknown as GlobalWithMoment;
-            lang = globalWithMoment.moment?.locale?.() || 'en';
-        } catch {
-            lang = 'en';
-        }
+      lang = 'en'
     }
+  }
 
-    const normalized = (lang || '').toLowerCase().trim();
-    if (normalized.startsWith('pt')) {
-        return 'pt-br';
-    }
+  const normalized = (lang || '').toLowerCase().trim()
+  if (normalized.startsWith('pt')) {
+    return 'pt-br'
+  }
 
-    return 'en';
+  return 'en'
 }
 
 /**
  * Returns the current localized strings dictionary.
  */
 export function t(): Translations {
-    const locale = detectLocale();
-    return locale === 'pt-br' ? ptBr : en;
+  const locale = detectLocale()
+  return locale === 'pt-br' ? ptBr : en
 }
 
-export { en, ptBr };
-export type { Translations };
+export { en, ptBr }
+export type { Translations }

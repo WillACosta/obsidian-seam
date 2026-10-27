@@ -19,7 +19,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm lint
+      - run: pnpm ci:quality
       - run: pnpm test
       - run: pnpm build
       - name: Validate Obsidian plugin
@@ -27,8 +27,8 @@ jobs:
         with:
           type: plugin
           mode: pr
-          build: "false"
-          scanner-lint: "true"
-          strict: "true"
+          build: 'false'
+          scanner-lint: 'true'
+          strict: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}

@@ -10,7 +10,7 @@ Provide a user-initiated **Initialize Seam** action that configures a vault for 
 
 - Add a compact **Initialize Seam** section in **Seam Settings**, with a short description and **Preview setup** / **Initialize Seam** action. Also register an Obsidian/Seam command to open the same setup flow.
 - Never run automatically, including during plugin installation or upgrade.
-- Before applying, show a confirmation modal with grouped changes: **Folders and files**, **Obsidian settings**, **Seam searches**. Distinguish *create*, *update*, *already configured*, *skip/conflict*, and *unsupported*.
+- Before applying, show a confirmation modal with grouped changes: **Folders and files**, **Obsidian settings**, **Seam searches**. Distinguish _create_, _update_, _already configured_, _skip/conflict_, and _unsupported_.
 - Tell users: **Existing notes will not be moved, deleted, or edited. This changes vault folders and selected Obsidian/Seam preferences. There is no one-click undo.** Make any overwrite of existing settings explicit.
 - Provide **Cancel** and **Apply setup** actions. On completion, display a concise report listing applied, skipped, failed, and restart/reload-required items.
 - A second run should preview only missing or drifted settings. Do not reset user-customized templates, queries, or Base files.
@@ -155,12 +155,12 @@ Use only functions and syntax supported by the project's minimum Obsidian/Bases 
 
 All four views use cards, `image: note.cover`, `imageFit: contain`, `imageAspectRatio: 1.5`, `cardSize: 150`, ordered by `priority_value` descending unless otherwise noted.
 
-| View | Additional filter | Visible fields | Sort |
-| --- | --- | --- | --- |
-| **Bookshelf** | All `#books` notes | Filename, rating, reading time, authors, priority | Priority ↓ |
-| **Reading** | `#reading`, `current_page > 0`, `current_page < total_pages` | Filename, authors, priority, progress, reading time | Priority ↓, progress ↓ |
-| **Stopped** | `#stopped`, `current_page > 0`, `current_page < total_pages` | Same as Reading | Priority ↓, progress ↓ |
-| **Unread** | `status` is `unread` or empty; `current_page` is absent or `0` | Filename, authors, priority, reading time | Priority ↓ |
+| View          | Additional filter                                              | Visible fields                                      | Sort                   |
+| ------------- | -------------------------------------------------------------- | --------------------------------------------------- | ---------------------- |
+| **Bookshelf** | All `#books` notes                                             | Filename, rating, reading time, authors, priority   | Priority ↓             |
+| **Reading**   | `#reading`, `current_page > 0`, `current_page < total_pages`   | Filename, authors, priority, progress, reading time | Priority ↓, progress ↓ |
+| **Stopped**   | `#stopped`, `current_page > 0`, `current_page < total_pages`   | Same as Reading                                     | Priority ↓, progress ↓ |
+| **Unread**    | `status` is `unread` or empty; `current_page` is absent or `0` | Filename, authors, priority, reading time           | Priority ↓             |
 
 The `Unread` view **must not** require `current_page > 0`. All views inherit the global `#books` and template-directory filters. `Reading` and `Stopped` remain tag-based as in the proposal. Use `authors` consistently in the Base and template (not `author`).
 
@@ -168,10 +168,10 @@ The `Unread` view **must not** require `current_page > 0`. All views inherit the
 
 Register custom searches via **Seam's existing custom-search settings and Bases provider**:
 
-| Alias | Base file | View |
-| --- | --- | --- |
+| Alias        | Base file                        | View        |
+| ------------ | -------------------------------- | ----------- |
 | `@bookshelf` | `Resources/Bases/Bookshelf.base` | `Bookshelf` |
-| `@reading` | `Resources/Bases/Bookshelf.base` | `Reading` |
+| `@reading`   | `Resources/Bases/Bookshelf.base` | `Reading`   |
 
 - Use existing custom-search data models and presentation. Avoid special-casing the aliases in the search engine.
 - Do not duplicate searches on re-run. Preserve existing user-defined searches that already use either alias; identify the collision in the preview and skip without replacing.

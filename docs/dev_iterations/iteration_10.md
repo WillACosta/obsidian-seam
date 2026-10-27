@@ -8,6 +8,7 @@
 ## Summary of Changes
 
 ### Added
+
 - **Source notes**: Automatically create a `#source` note in the configured Fleeting folder for documents and images exported to `Sources/` or its subfolders, with a capture date and an embedded or linked original. Common formats include PDF, Word, OpenDocument, spreadsheets, presentations, text, CSV/TSV, EPUB, HTML, and Apple iWork files.
 - **Source note settings**: Configure the source folder, independently enable or disable automatic note creation, and use a custom Markdown template with `{{attachment}}`, `{{attachment_path}}`, `{{title}}`, and `{{date}}` placeholders.
 - **Create note from attachment**: Pick a document or image from the configured source folder to create and open its companion manually, even when automatic creation is disabled; open the existing companion when already registered.
@@ -15,12 +16,14 @@
 - **Continuous PDF pages**: Generated PDF source notes include `cssclasses: [seam-source-pdf]` to remove viewer gaps, borders, and shadows between embedded pages while preserving custom template classes.
 
 ### Changed
+
 - **Automation pipeline**: Source ingestion shares Seam's vault events, automation delay, startup scan, and periodic reconciliation while retaining its own enable setting and the existing tag-driven lifecycle.
 - **Source templates**: Use a minimal default containing `tags: [source]`, `captured`, the PDF class when applicable, and an Original section with a blank line before the document. Preserve custom template tags and properties; embed PDFs and supported images, and link other document types. Existing links and embeds provide duplicate detection without generated `source_attachment` or `source_app` properties.
 
 - **Source note wording and command order**: Label the settings group and search description “Source notes,” describe document creation in the subtitles, and keep Create note from attachment immediately after Create a new note in every Seam command listing.
 
 ### Fixed
+
 - **Existing documents after changing source folders**:
   - **Root Cause**: Saving a different source folder updated settings without scanning its existing documents, leaving them to periodic reconciliation or the manual command.
   - **Fix**: Scan existing source documents when the watched folder changes or source automation is enabled, then process them through the existing queue and delay. Unrelated settings changes do not restart processing.
@@ -31,6 +34,7 @@
   - **Verified Scenarios**: Automated concurrency, stale rename metadata, filename conflicts, and existing companion tests; live Permanent/Archive moves and attachment renaming without additional companions.
 
 ### Tests
+
 - 121 passing unit tests, including a queue regression for importing attachments without an active file or any navigation event, plus 19 source ingestion regressions covering folder boundaries, populated source folder changes, re-enabling automation, custom templates, registration races, lifecycle folders, filename conflicts, disabled automation, unload cancellation, invalid templates, deleted attachments, reconciliation, and composed `@sources` filters; expanded document format coverage, minimal default properties, original links, native link text, and PDF class merging without duplicates.
 - Typecheck, lint, production build, release metadata validation, and whitespace checks.
 - Obsidian CLI validation in the Git-ignored `seam_test_vault`: automatic image ingestion with tag automation disabled; manual PDF ingestion with source automation disabled; real YAML template rendering; picker filtering and selection; `#permanent` and `#archive` workflows; attachment renames; settings rendering; and `@sources` results in mobile emulation, with screenshot inspection. Refinement checks cover automatic Word document import, exact minimal PDF layout, embed-only duplicate detection, `@docs` document results, removal of Source app, and command ordering in empty and `>` modes with and without an active note.

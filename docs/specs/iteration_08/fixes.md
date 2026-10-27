@@ -43,4 +43,3 @@ The Canvas implementation should use the official Canvas API from Obsidian, the 
 !["Pipeline demo"](./seam_pipeline_demo.png)
 
 > Note that it is the same UI as the native canvas; we're just rendering them in the predefined order (a visual pipeline).
-

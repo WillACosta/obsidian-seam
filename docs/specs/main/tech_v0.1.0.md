@@ -206,10 +206,10 @@ Conceptually:
 
 ```ts
 AutomationQueue
-    enqueue(file)
-    enqueuePath(path)
-    flush()
-    isPending(path)
+enqueue(file)
+enqueuePath(path)
+flush()
+isPending(path)
 ```
 
 Responsibilities:
@@ -269,8 +269,8 @@ Conceptually:
 
 ```ts
 interface AutomationAction {
-    canApply(file): Promise<boolean>
-    apply(file): Promise<AutomationResult>
+  canApply(file): Promise<boolean>
+  apply(file): Promise<AutomationResult>
 }
 ```
 
@@ -377,8 +377,8 @@ Conceptually:
 
 ```ts
 Reconciler
-    scan()
-    enqueuePending()
+scan()
+enqueuePending()
 ```
 
 Startup sequence:
@@ -517,11 +517,11 @@ Example:
 
 ```ts
 interface SearchResult {
-    file: TFile;
-    title: string;
-    path: string;
-    tags: string[];
-    snippet?: string;
+  file: TFile
+  title: string
+  path: string
+  tags: string[]
+  snippet?: string
 }
 ```
 
@@ -610,14 +610,14 @@ Conceptually:
 
 ```ts
 interface SeamSettings {
-    permanentFolder: string;
-    archiveFolder: string;
-    archiveTag: string;
-    permanentTag: string;
-    archivedTag: string;
-    automaticProcessing: boolean;
-    addArchivedState: boolean;
-    reconciliationIntervalMinutes: number;
+  permanentFolder: string
+  archiveFolder: string
+  archiveTag: string
+  permanentTag: string
+  archivedTag: string
+  automaticProcessing: boolean
+  addArchivedState: boolean
+  reconciliationIntervalMinutes: number
 }
 ```
 

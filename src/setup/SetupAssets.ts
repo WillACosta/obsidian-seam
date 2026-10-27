@@ -1,15 +1,25 @@
 /** Content is created once. Existing templates and Bases always belong to the user. */
 export const SETUP_FOLDERS = [
-    'Fleeting', 'Permanent', 'Resources', 'Resources/Archive', 'Resources/Attachments', 'Resources/Daily',
-    'Resources/Sources', 'Resources/Templates', 'Resources/Bases',
-];
+  'Fleeting',
+  'Permanent',
+  'Resources',
+  'Resources/Archive',
+  'Resources/Attachments',
+  'Resources/Daily',
+  'Resources/Sources',
+  'Resources/Templates',
+  'Resources/Bases',
+]
 
-export const BOOKSHELF_PATH = 'Resources/Bases/Bookshelf.base';
+export const BOOKSHELF_PATH = 'Resources/Bases/Bookshelf.base'
 export const SETUP_FILES: Record<string, string> = {
-    'Resources/Templates/Fleeting Note Template.md': '---\ncreated: "{{date:YYYY-MM-DD}}"\n---\n\n# {{title}}\n\n',
-    'Resources/Templates/Daily Note Template.md': '# {{date:YYYY-MM-DD}}\n\n## Notes\n\n\n## Tasks\n\n- [ ] \n',
-    'Resources/Templates/Book Template.md': '---\ntags: [books]\nauthors: []\nstatus: unread\npriority: medium\ncover: ""\nstart_date:\nend_date:\ncurrent_page: 0\ntotal_pages: 0\nrating:\nsummary: ""\n---\n\n# {{title}}\n\n',
-    [BOOKSHELF_PATH]: `filters:
+  'Resources/Templates/Fleeting Note Template.md':
+    '---\ncreated: "{{date:YYYY-MM-DD}}"\n---\n\n# {{title}}\n\n',
+  'Resources/Templates/Daily Note Template.md':
+    '# {{date:YYYY-MM-DD}}\n\n## Notes\n\n\n## Tasks\n\n- [ ] \n',
+  'Resources/Templates/Book Template.md':
+    '---\ntags: [books]\nauthors: []\nstatus: unread\npriority: medium\ncover: ""\nstart_date:\nend_date:\ncurrent_page: 0\ntotal_pages: 0\nrating:\nsummary: ""\n---\n\n# {{title}}\n\n',
+  [BOOKSHELF_PATH]: `filters:
   and:
     - file.ext == "md"
     - file.hasTag("books")
@@ -109,9 +119,17 @@ views:
       - property: formula.priority_value
         direction: DESC
 `,
-};
+}
 
 export const SETUP_PROPERTY_TYPES: Record<string, string> = {
-    start_date: 'date', end_date: 'date', current_page: 'number', total_pages: 'number', authors: 'multitext',
-    rating: 'number', priority: 'text', cover: 'text', summary: 'text', status: 'text',
-};
+  start_date: 'date',
+  end_date: 'date',
+  current_page: 'number',
+  total_pages: 'number',
+  authors: 'multitext',
+  rating: 'number',
+  priority: 'text',
+  cover: 'text',
+  summary: 'text',
+  status: 'text',
+}

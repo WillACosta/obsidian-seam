@@ -17,18 +17,27 @@ pnpm run build
 # Run unit tests
 pnpm test
 
+# Check formatting and TypeScript ESLint rules
+pnpm ci:quality
+
+# Apply the repository's Prettier formatting
+pnpm format
+
 # Link compiled plugin to test vault (seam_test_vault/)
 pnpm run symlink
 
-# Build and copy the plugin files to the personal Obsidian vault
+# Build, copy, and reload Seam in personal_vault (Obsidian must be running)
 pnpm run install:personal
 ```
 
 Test against `seam_test_vault/` using the Obsidian CLI:
+
 ```bash
 obsidian plugin:reload id=seam
 obsidian dev:errors
 ```
+
+`pnpm ci:quality` runs `pnpm format:check` and `pnpm lint` without modifying files. Prettier uses `.prettierrc.json`; generated changelogs, the pnpm lockfile, build output, and local vaults are excluded. ESLint retains the repository's TypeScript rules, with formatting delegated to Prettier. `install:personal` runs the CLI reload only after all plugin files have been copied and exits with an error if the copy or reload fails.
 
 ---
 
@@ -56,10 +65,12 @@ Each release in [`CHANGELOG.md`](CHANGELOG.md) stores an iteration range marker:
 
 ```markdown
 ## [1.0.0] - 2026-09-13
+
 <!-- iterations: iteration_00..iteration_05 -->
 ```
 
 ### Automatic Iteration Grouping
+
 The release script (`scripts/changelog.mjs`) reads this marker to determine where the previous release ended. When generating notes for the next release, it **automatically detects and groups all newer iteration files**:
 
 ```bash
@@ -69,6 +80,7 @@ pnpm run changelog:generate 1.1.0 --update
 ```
 
 You can also target specific ranges manually if needed:
+
 ```bash
 # Group iterations starting after iteration_05:
 pnpm run changelog:generate 1.1.0 --since iteration_05 --update
@@ -95,9 +107,11 @@ Releases are automated by the [merged version PR workflow](.github/workflows/tag
    - `versions.json` (`"<new-version>": "<manifest.minAppVersion>"`)
 
 2. **Generate the Changelog entry**:
+
    ```bash
    pnpm run changelog:generate <new-version> --update
    ```
+
    If an earlier release did not become available in the Obsidian Community Directory, carry its user-facing notes into the corrected patch release so users can see those features.
 
 3. **Open a PR** from `feat/<new-version>` into `main` with the version files and changelog committed. Merge it after review. Do not create the release tag manually.
@@ -107,7 +121,9 @@ Releases are automated by the [merged version PR workflow](.github/workflows/tag
 PR checks run typecheck, lint, tests, a production build, and `obsidianmd/obsidian-workflows@v1` with the community scanner rules and strict policy enforcement. The same Obsidian check gates version tagging and release publication. It uses validation mode, preserving the existing automated release flow. Review and resolve findings in the workflow summary before merging a release PR.
 
 ### What GitHub Actions Does Automatically
+
 After a `feat/x.y.z` PR is merged into `main`, the merged version PR workflow:
+
 1. Verifies the branch name, merged commit, release files, typecheck, lint, tests, and build.
 2. Creates and pushes the unprefixed version tag on the merged commit.
 3. Starts the Release Pipeline for that tag. The Release Pipeline validates the version again, extracts release notes, and publishes the GitHub Release with `main.js`, `manifest.json`, and `styles.css`.

@@ -3,11 +3,11 @@ name: Release Plugin
 on:
   push:
     tags:
-      - "*"
+      - '*'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. 1.0.0)"
+        description: 'Release tag (e.g. 1.0.0)'
         required: true
 
 permissions:
@@ -30,10 +30,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Quality checks
+        run: pnpm ci:quality
 
       - name: Run tests
         run: pnpm test
@@ -49,9 +52,9 @@ jobs:
         with:
           type: plugin
           mode: pr
-          build: "false"
-          scanner-lint: "true"
-          strict: "true"
+          build: 'false'
+          scanner-lint: 'true'
+          strict: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
 

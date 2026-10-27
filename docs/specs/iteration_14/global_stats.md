@@ -18,12 +18,12 @@ Organize the view into three sections, in this order.
 
 Display four compact statistics:
 
-| Metric | Description |
-|---|---|
-| Total Notes | Total Markdown files in the vault |
-| Total Words | Combined word count of all Markdown notes |
-| Active Days | Days with recorded writing activity |
-| Writing Streak | Current consecutive active days |
+| Metric         | Description                               |
+| -------------- | ----------------------------------------- |
+| Total Notes    | Total Markdown files in the vault         |
+| Total Words    | Combined word count of all Markdown notes |
+| Active Days    | Days with recorded writing activity       |
+| Writing Streak | Current consecutive active days           |
 
 Use a responsive 2×2 grid on narrow layouts and a single row when space allows.
 
@@ -44,6 +44,7 @@ Implement a GitHub-style calendar heatmap.
 - Show month labels and a compact intensity legend.
 
 **Interactions:**
+
 - Hovering over a cell reveals its date and contribution details.
 - Clicking/tapping a cell displays the notes edited that day, including individual word contributions.
 - Clicking a note opens it in Obsidian.

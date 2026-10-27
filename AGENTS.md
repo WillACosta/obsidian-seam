@@ -1,7 +1,7 @@
 # Seam — AI Agent Instructions
 
 **Project:** Seam (Obsidian Plugin)
-**Philosophy:** *"Simplicity is the new Luxury."*
+**Philosophy:** _"Simplicity is the new Luxury."_
 **Dev Instructions:** README.dev.md
 
 ---
@@ -50,15 +50,18 @@ When the user requests work on a new iteration, follow this standard process:
 ## 3. Obsidian Docs, CLI, and Skills
 
 ### Official Resources
+
 - **Obsidian Developer Documentation:** [https://docs.obsidian.md/](https://docs.obsidian.md/)
 - **Obsidian Skills:** `obsidian-skills` repository (`obsidian-cli`, `obsidian-markdown`).
 
 ### Mandatory Test Vault
+
 - Always test against the dedicated development vault: `seam_test_vault/` at project root.
 - **Never** develop or test against a user's production vault.
 - `seam_test_vault/` must remain Git-ignored.
 
 ### Obsidian CLI Validation Cycle
+
 Always validate code changes against the running test vault:
 
 ```bash
@@ -99,22 +102,27 @@ The file must strictly adhere to the following template, as the automated change
 ## Summary of Changes
 
 ### Added
+
 - **Feature Name**: Description of new capability or user-facing addition.
 
 ### Changed
+
 - **Component or Behavior**: Description of modified architecture or UI behavior.
 
 ### Fixed
+
 - **Bug or Issue Fixed**:
   - **Root Cause**: What caused the defect.
   - **Fix**: Summary of code changes that resolved it.
   - **Verified Scenarios**: How the fix was validated.
 
 ### Tests
+
 - Summary of new automated unit tests and runtime CLI verifications performed.
 ```
 
 ### Update Changelog
+
 Immediately after creating `iteration_$id.md`, update the changelog:
 
 ```bash

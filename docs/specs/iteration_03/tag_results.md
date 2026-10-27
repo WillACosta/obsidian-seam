@@ -33,4 +33,4 @@ Lists: |
 	#ai/concept
 ```
 
-> Note that we still display nested tags, in the above example the "#architecture/concepts" and "architecture/tools", because the user didn't select them earlier, but its major tag (#architecture), so it may be able to refine the search for something like: "#architecture #architecture/concept  #ai/sdd "
+> Note that we still display nested tags, in the above example the "#architecture/concepts" and "architecture/tools", because the user didn't select them earlier, but its major tag (#architecture), so it may be able to refine the search for something like: "#architecture #architecture/concept #ai/sdd "

@@ -16,6 +16,7 @@
 ## Summary of Changes
 
 ### Added
+
 - **Daily Notes calendar**: Browse `@calendar` inside the Universal Palette with note dots, month controls, Today, and year/month pickers. Open existing notes or explicitly create missing dates using core Daily Notes paths and templates. Navigate dates and pickers with the keyboard; Escape first returns to the input, then dismisses. Keep daily queries adjacent and localize labels and dates for English/Brazilian Portuguese.
 - **Delete current note**: Add a contextual command in Obsidian and Seam for the current Markdown note. Use Obsidian’s native confirmation and deletion flow to honor system trash, vault `.trash`, or permanent deletion settings. Cancellation leaves the note intact; duplicate pending prompts and stale targets are guarded. Includes English and Brazilian Portuguese copy and error notices.
 - **Note outline**: Show all headings for the current Markdown note inside the Universal Palette, in document order with nested indentation. Navigate with Up/Down, click or press Enter to jump to the heading in the current pane, and dismiss with Escape. Commands are contextual; the footer contains navigate, select, and dismiss, plus Backspace to return to Palette search while the input is empty. Includes heading filtering, an empty state, and English/Brazilian Portuguese copy.
@@ -26,11 +27,13 @@
 - **Palette history**: Press Up with an empty query to recall and cycle through previous queries, including composed filters, across Palette openings during the plugin session. Down moves toward an empty input; typing exits history navigation. History is deduplicated and kept in memory.
 
 ### Changed
+
 - **Daily task command visibility**: Hide Move when today's note has no eligible pending tasks, and hide Pull when yesterday's note is missing or has no eligible pending tasks. Palette checks read the two source notes and any open editor buffers; synchronous Obsidian command checks use open editor content or public task metadata.
 - **Daily Note results**: Display readable dates such as `2 Oct. 2026` and a calendar subtitle, using the configured Daily Notes format and location to identify notes. Filenames and links remain intact. English and Brazilian Portuguese labels and usage guides cover the additions.
 - **Release metadata**: Prepare version `3.1.0`, retaining Obsidian `1.13.0` as the minimum version. These additive capabilities warrant a minor release.
 
 ### Fixed
+
 - **Daily Note creation shortcuts**:
   - **Root Cause**: Missing Daily Notes were generic actions skipped by the tab/split handlers, and special-query instructions always used open labels before asynchronous results arrived.
   - **Fix**: Treat missing Daily Notes as creation suggestions, pass the requested tab/split destination through each suggestion's action, and refresh creation labels after the async search. Ordinary note creation shares the same destination-aware routing.
@@ -41,6 +44,7 @@
   - **Verified Scenarios**: Real key events for recall after reopening, multiple Up presses, wrapping, Down to an empty input, composed query restoration, and typing before result navigation.
 
 ### Tests
+
 - Calendar follow-up: all 181 unit tests passed, including nine cases for six-week grids, leap days, day/week/month/year boundaries, year/month picking, configured nested paths, template creation, existing/concurrent notes, folder conflicts, and daily-query grouping. Typecheck, lint, and production build passed. In `seam_test_vault`, real CDP keyboard events verified date movement, conditional open/create/select footer labels, Tab/Enter year and month picking, Page Up/Down and Shift+Page Down, template-based creation, Enter from the input, toolbar activation, and the two-stage Escape behavior. Mouse selection offered creation for a missing date without writing until the action was activated; clicking an existing leap-day note preserved its content. Dots updated after an external fixture creation; Today, adjacent daily-query ordering, a 390 px viewport with no horizontal overflow, query-change cancellation, and unload/reload cleanup passed. A deliberately malformed Daily Notes settings fixture produced the expected error and recovered through keyboard-activated retry. Settings were restored exactly, the original layout restored, viewport overrides removed, and the fixture folder moved to local trash. Physical-device acceptance was not performed.
 - Delete-note follow-up: all 172 unit tests passed, including native-flow delegation without double deletion, cancellation, attachment/empty/stale-target guards, duplicate-prompt suppression, and retry after failure. Typecheck, lint, and production build passed. Live `seam_test_vault` validation covered native confirmation cancellation with unchanged content, confirmed deletion from Seam commands into `.trash` with content preserved, no-prompt local trash, no-prompt permanent deletion, and system trash (fixture verified in the OS trash). The permanent-deletion dialog displayed its native warning, duplicate invocations produced one dialog, and Markdown/empty/attachment command visibility passed. Restored the original layout and exact settings file; temporary fixtures were deleted only through the tested native flow or moved to trash. Physical-device acceptance was not performed.
 - Outline Backspace follow-up: all 168 unit tests passed, including a regression for deleting text normally and returning to search only on an empty input. Typecheck, lint, and production build passed. Real CDP Backspace events verified deletion first, conditional back helper visibility, then in-place return to search from both the direct Obsidian command and Seam commands. The returned Palette retained its command list; runtime and console error checks were empty. Restored the original test-vault layout and trashed the temporary fixture.

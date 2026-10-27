@@ -10,17 +10,20 @@
 ## Summary of Changes
 
 ### Added
+
 - **Current-period queries**: Open or explicitly create the current week’s note with `@thisWeek` and the current year’s note with `@thisYear`. Reuse the date-query tab/split shortcuts, compose with tags/text/folders, and avoid offering creation when filters hide an existing note. Add yearly folder, calendar-year format, template, and Periodic Notes settings support.
 - **Weekly notes**: Open or create the selected week's note from `@calendar`, with an explicit date range, templates, and consistent locale/ISO week boundaries. Read enabled Periodic Notes settings or use Seam's weekly folder, format, and template settings.
 - **Calendar pins**: Keep up to three notes visible above the calendar, with a searchable note picker, contextual pin/unpin commands, persistence, rename/move tracking, and deletion cleanup.
 - **Rolling weekly pin**: Keep the real current week's note pinned while browsing other dates. Offer explicit creation when the new week has no note, keep annual goals fixed, and avoid duplicate weekly actions.
 
 ### Changed
+
 - **Atomic query removal**: One Backspace after an active special query removes its whole token and separator, including calendar, custom/Base, date-range, and combined queries. Preserve remaining filters and ordinary text editing.
 - **Special-query pins**: Raise the shared built-in/custom query limit to five, including custom-query creation/editing. Refresh an open query listing when settings change. Calendar note pins keep their separate three-note limit.
 - **Calendar keyboard and layout**: Keep pins outside the scrolling date/picker area; describe the focused action in the footer and preserve keyboard access with the existing two-stage Escape.
 
 ### Fixed
+
 - **Palette dismissal and pin priority**:
   - **Root Cause**: The native X cleared the input instead of dismissing the Palette. Grouping date queries after sorting pins could pull unpinned queries ahead of pinned ones.
   - **Fix**: Use an explicit accessible dismiss button with focused keyboard handling. Group date queries separately within pinned and unpinned sections.
@@ -31,6 +34,7 @@
   - **Verified Scenarios**: Automated coverage for concurrent pinning, failed saves/retries, same-week creation, existing notes, and folder conflicts.
 
 ### Tests
+
 - Atomic query-removal follow-up: all 243 unit tests passed, including 24 new cases for every built-in query, calendar, custom/Base, case-insensitive identifiers, combined/composed queries, preserved filters, partial input, selections, modifiers, and composition. Typecheck, lint, and production build passed. Real CDP Backspace events in `seam_test_vault` verified 20 query variants, removal within a combined query, normal trailing-text deletion, and calendar cleanup without closing the Palette. Original settings were restored byte-for-byte.
 - Palette controls follow-up: all 219 unit tests passed, including four ordering regressions for mixed pins, date grouping, configured/unknown order, and input immutability. Typecheck, lint, and production build passed. Live tests in `seam_test_vault` exercised the dismiss button using CDP mouse/key events and settings pin controls, including five-pin enforcement and open-list refresh.
 - All 199 unit tests passed, including 18 new cases for locale/ISO New Year and leap-day boundaries, calendar alignment, legacy/modern Periodic Notes settings, invalid formats, nested creation and weekday templates, same-week creation concurrency, conflicts, pin migration/deduplication, the three-slot limit under concurrency, save rollback, moves/deletes, contextual rolling unpin, rollover without creation, and reconciliation during a rename.

@@ -1,285 +1,319 @@
-import { TFile } from 'obsidian';
+import { TFile } from 'obsidian'
 
-export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000';
-export type UpdateAnnouncementMode = 'major' | 'all' | 'never';
-export type PaletteRibbonMode = 'both' | 'mobile' | 'hidden';
-export const SPECIAL_SEARCH_PIN_LIMIT = 5;
+export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000'
+export type UpdateAnnouncementMode = 'major' | 'all' | 'never'
+export type PaletteRibbonMode = 'both' | 'mobile' | 'hidden'
+export const SPECIAL_SEARCH_PIN_LIMIT = 5
 
-export type CalendarPin = { kind: 'file'; path: string } | { kind: 'weekly'; week?: string; path?: string };
+export type CalendarPin =
+  { kind: 'file'; path: string } | { kind: 'weekly'; week?: string; path?: string }
 
 export interface SeamSettings {
-    palettePinnedNotes: string[];
-    showPaletteGroups: boolean;
-    confirmPeriodicNoteCreation: boolean;
-    calendarPins: CalendarPin[];
-    calendarUsePeriodicNotes: boolean;
-    calendarWeeklyFolder: string;
-    calendarWeeklyFormat: string;
-    calendarWeeklyTemplate: string;
-    calendarYearlyFolder: string;
-    calendarYearlyFormat: string;
-    calendarYearlyTemplate: string;
-    permanentFolder: string;
-    archiveFolder: string;
-    fleetingFolder: string;
-    fleetingNoteTemplate: string;
-    sourcesFolder: string;
-    sourceNoteTemplate: string;
-    sourceAutomation: boolean;
-    archiveTag: string;
-    permanentTag: string;
-    archivedTag: string;
-    automaticProcessing: boolean;
-    automationDelay: AutomationDelayMode;
-    addArchivedState: boolean;
-    enableMoveCleanup: boolean;
-    moveCleanupTags: string;
-    moveCleanupProperties: string;
-    showIcons: boolean;
-    showFileExtensionAndMatchCount: boolean;
-    showCommandsByDefault: boolean;
-    quickAddChoices: QuickAddChoice[];
-    persistQuickAddDrafts: boolean;
-    reconciliationIntervalMinutes: number;
-    updateAnnouncementMode: UpdateAnnouncementMode;
-    lastAnnouncedVersion: string;
-    customSpecialSearches: CustomSpecialSearch[];
-    showPaletteDescriptions: boolean;
-    specialSearchPreferences: SpecialSearchPreference[];
-    specialSearchOrder: string[];
-    showTodoCompletionPercent: boolean;
-    paletteRibbonMode: PaletteRibbonMode;
+  palettePinnedNotes: string[]
+  showPaletteGroups: boolean
+  confirmPeriodicNoteCreation: boolean
+  calendarPins: CalendarPin[]
+  calendarUsePeriodicNotes: boolean
+  calendarWeeklyFolder: string
+  calendarWeeklyFormat: string
+  calendarWeeklyTemplate: string
+  calendarYearlyFolder: string
+  calendarYearlyFormat: string
+  calendarYearlyTemplate: string
+  permanentFolder: string
+  archiveFolder: string
+  fleetingFolder: string
+  fleetingNoteTemplate: string
+  sourcesFolder: string
+  sourceNoteTemplate: string
+  sourceAutomation: boolean
+  archiveTag: string
+  permanentTag: string
+  archivedTag: string
+  automaticProcessing: boolean
+  automationDelay: AutomationDelayMode
+  addArchivedState: boolean
+  enableMoveCleanup: boolean
+  moveCleanupTags: string
+  moveCleanupProperties: string
+  showIcons: boolean
+  showFileExtensionAndMatchCount: boolean
+  showCommandsByDefault: boolean
+  quickAddChoices: QuickAddChoice[]
+  persistQuickAddDrafts: boolean
+  reconciliationIntervalMinutes: number
+  updateAnnouncementMode: UpdateAnnouncementMode
+  lastAnnouncedVersion: string
+  customSpecialSearches: CustomSpecialSearch[]
+  showPaletteDescriptions: boolean
+  specialSearchPreferences: SpecialSearchPreference[]
+  specialSearchOrder: string[]
+  showTodoCompletionPercent: boolean
+  paletteRibbonMode: PaletteRibbonMode
 }
 
 export interface SpecialSearchPreference {
-    search: SpecialSearch;
-    pinned: boolean;
-    hidden: boolean;
+  search: SpecialSearch
+  pinned: boolean
+  hidden: boolean
 }
 
-export type QuickAddLocation = 'default' | 'specific';
-export type QuickAddOpenBehavior = 'tab' | 'current' | 'split';
-export type QuickAddConflictBehavior = 'ask' | 'replace' | 'create-new';
+export type QuickAddLocation = 'default' | 'specific'
+export type QuickAddOpenBehavior = 'tab' | 'current' | 'split'
+export type QuickAddConflictBehavior = 'ask' | 'replace' | 'create-new'
 
 export interface QuickAddChoice {
-    id: string;
-    name: string;
-    templatePath: string;
-    location: QuickAddLocation;
-    folderPath: string;
-    open: boolean;
-    openBehavior: QuickAddOpenBehavior;
-    focus: boolean;
-    icon: string;
-    conflictBehavior: QuickAddConflictBehavior;
+  id: string
+  name: string
+  templatePath: string
+  location: QuickAddLocation
+  folderPath: string
+  open: boolean
+  openBehavior: QuickAddOpenBehavior
+  focus: boolean
+  icon: string
+  conflictBehavior: QuickAddConflictBehavior
 }
 
 export interface CustomSpecialSearch {
-    id: string;
-    identifier: string;
-    description?: string;
-    icon: string;
-    mode: 'base' | 'tags';
-    basePath: string;
-    baseView: string;
-    expandModal?: boolean;
-    filterQuery: string;
-    pinned: boolean;
-    hidden: boolean;
+  id: string
+  identifier: string
+  description?: string
+  icon: string
+  mode: 'base' | 'tags'
+  basePath: string
+  baseView: string
+  expandModal?: boolean
+  filterQuery: string
+  pinned: boolean
+  hidden: boolean
 }
 
 export const DEFAULT_SETTINGS: SeamSettings = {
-    palettePinnedNotes: [],
-    showPaletteGroups: true,
-    confirmPeriodicNoteCreation: true,
-    calendarPins: [],
-    calendarUsePeriodicNotes: true,
-    calendarWeeklyFolder: 'Weekly',
-    calendarWeeklyFormat: 'gggg-[W]ww',
-    calendarWeeklyTemplate: '',
-    calendarYearlyFolder: 'Yearly',
-    calendarYearlyFormat: 'YYYY',
-    calendarYearlyTemplate: '',
-    permanentFolder: 'Permanent',
-    archiveFolder: 'Archive',
-    fleetingFolder: 'Fleeting',
-    fleetingNoteTemplate: '',
-    sourcesFolder: 'Sources',
-    sourceNoteTemplate: '',
-    sourceAutomation: true,
-    archiveTag: 'archive',
-    permanentTag: 'permanent',
-    archivedTag: 'archived',
-    automaticProcessing: true,
-    automationDelay: 'on-switch',
-    addArchivedState: true,
-    enableMoveCleanup: true,
-    moveCleanupTags: '#permanent, #todo',
-    moveCleanupProperties: 'status',
-    showIcons: true,
-    showFileExtensionAndMatchCount: true,
-    showCommandsByDefault: true,
-    quickAddChoices: [],
-    persistQuickAddDrafts: false,
-    reconciliationIntervalMinutes: 15,
-    updateAnnouncementMode: 'major',
-    lastAnnouncedVersion: '',
-    customSpecialSearches: [],
-    showPaletteDescriptions: true,
-    specialSearchPreferences: [
-        { search: 'today', pinned: false, hidden: false },
-        { search: 'yesterday', pinned: false, hidden: false },
-        { search: 'calendar', pinned: false, hidden: false },
-        { search: 'thisWeek', pinned: false, hidden: false },
-        { search: 'thisYear', pinned: false, hidden: false },
-        { search: 'recent', pinned: false, hidden: false },
-        { search: 'recentlyOpened', pinned: false, hidden: false },
-        { search: 'fleeting', pinned: false, hidden: false },
-        { search: 'permanent', pinned: false, hidden: false },
-        { search: 'lastDays', pinned: false, hidden: false },
-        { search: 'untagged', pinned: false, hidden: false },
-        { search: 'docs', pinned: false, hidden: false },
-        { search: 'images', pinned: false, hidden: false },
-        { search: 'task', pinned: false, hidden: false },
-        { search: 'todo', pinned: false, hidden: false },
-        { search: 'done', pinned: false, hidden: false },
-        { search: 'code', pinned: false, hidden: false },
-        { search: 'sources', pinned: false, hidden: false },
-    ],
-    specialSearchOrder: [
-        'builtin:today', 'builtin:yesterday', 'builtin:calendar', 'builtin:thisWeek', 'builtin:thisYear',
-        'builtin:recent', 'builtin:recentlyOpened', 'builtin:fleeting', 'builtin:permanent', 'builtin:lastDays',
-        'builtin:untagged', 'builtin:docs', 'builtin:images',
-        'builtin:task', 'builtin:todo', 'builtin:done', 'builtin:code', 'builtin:sources',
-    ],
-    showTodoCompletionPercent: true,
-    paletteRibbonMode: 'both',
-};
+  palettePinnedNotes: [],
+  showPaletteGroups: true,
+  confirmPeriodicNoteCreation: true,
+  calendarPins: [],
+  calendarUsePeriodicNotes: true,
+  calendarWeeklyFolder: 'Weekly',
+  calendarWeeklyFormat: 'gggg-[W]ww',
+  calendarWeeklyTemplate: '',
+  calendarYearlyFolder: 'Yearly',
+  calendarYearlyFormat: 'YYYY',
+  calendarYearlyTemplate: '',
+  permanentFolder: 'Permanent',
+  archiveFolder: 'Archive',
+  fleetingFolder: 'Fleeting',
+  fleetingNoteTemplate: '',
+  sourcesFolder: 'Sources',
+  sourceNoteTemplate: '',
+  sourceAutomation: true,
+  archiveTag: 'archive',
+  permanentTag: 'permanent',
+  archivedTag: 'archived',
+  automaticProcessing: true,
+  automationDelay: 'on-switch',
+  addArchivedState: true,
+  enableMoveCleanup: true,
+  moveCleanupTags: '#permanent, #todo',
+  moveCleanupProperties: 'status',
+  showIcons: true,
+  showFileExtensionAndMatchCount: true,
+  showCommandsByDefault: true,
+  quickAddChoices: [],
+  persistQuickAddDrafts: false,
+  reconciliationIntervalMinutes: 15,
+  updateAnnouncementMode: 'major',
+  lastAnnouncedVersion: '',
+  customSpecialSearches: [],
+  showPaletteDescriptions: true,
+  specialSearchPreferences: [
+    { search: 'today', pinned: false, hidden: false },
+    { search: 'yesterday', pinned: false, hidden: false },
+    { search: 'calendar', pinned: false, hidden: false },
+    { search: 'thisWeek', pinned: false, hidden: false },
+    { search: 'thisYear', pinned: false, hidden: false },
+    { search: 'recent', pinned: false, hidden: false },
+    { search: 'recentlyOpened', pinned: false, hidden: false },
+    { search: 'fleeting', pinned: false, hidden: false },
+    { search: 'permanent', pinned: false, hidden: false },
+    { search: 'lastDays', pinned: false, hidden: false },
+    { search: 'untagged', pinned: false, hidden: false },
+    { search: 'docs', pinned: false, hidden: false },
+    { search: 'images', pinned: false, hidden: false },
+    { search: 'task', pinned: false, hidden: false },
+    { search: 'todo', pinned: false, hidden: false },
+    { search: 'done', pinned: false, hidden: false },
+    { search: 'code', pinned: false, hidden: false },
+    { search: 'sources', pinned: false, hidden: false },
+  ],
+  specialSearchOrder: [
+    'builtin:today',
+    'builtin:yesterday',
+    'builtin:calendar',
+    'builtin:thisWeek',
+    'builtin:thisYear',
+    'builtin:recent',
+    'builtin:recentlyOpened',
+    'builtin:fleeting',
+    'builtin:permanent',
+    'builtin:lastDays',
+    'builtin:untagged',
+    'builtin:docs',
+    'builtin:images',
+    'builtin:task',
+    'builtin:todo',
+    'builtin:done',
+    'builtin:code',
+    'builtin:sources',
+  ],
+  showTodoCompletionPercent: true,
+  paletteRibbonMode: 'both',
+}
 
-export type AutomationResultStatus = 'success' | 'conflict' | 'error' | 'skipped';
+export type AutomationResultStatus = 'success' | 'conflict' | 'error' | 'skipped'
 
 export interface AutomationResult {
-    status: AutomationResultStatus;
-    file: TFile;
-    action: string;
-    message: string;
-    newPath?: string;
+  status: AutomationResultStatus
+  file: TFile
+  action: string
+  message: string
+  newPath?: string
 }
 
 export interface SearchResult {
-    file: TFile;
-    title: string;
-    path: string;
-    tags: string[];
-    snippet?: string;
-    matchSnippet?: MatchSnippet;
-    matchCount?: number;
-    searchTerms?: string[];
+  file: TFile
+  title: string
+  path: string
+  tags: string[]
+  snippet?: string
+  matchSnippet?: MatchSnippet
+  matchCount?: number
+  searchTerms?: string[]
 }
 
 export interface MatchSnippet {
-    text: string;
-    matchStart: number;
-    matchEnd: number;
+  text: string
+  matchStart: number
+  matchEnd: number
 }
 
-export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text';
+export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text'
 
-export type SpecialSearch = 'thisWeek' | 'thisYear' | 'calendar' | 'today' | 'yesterday' | 'recent' | 'lastDays' | 'untagged' | 'docs' | 'images' | 'task' | 'todo' | 'done' | 'code' | 'sources' | 'recentlyOpened' | 'fleeting' | 'permanent';
+export type SpecialSearch =
+  | 'thisWeek'
+  | 'thisYear'
+  | 'calendar'
+  | 'today'
+  | 'yesterday'
+  | 'recent'
+  | 'lastDays'
+  | 'untagged'
+  | 'docs'
+  | 'images'
+  | 'task'
+  | 'todo'
+  | 'done'
+  | 'code'
+  | 'sources'
+  | 'recentlyOpened'
+  | 'fleeting'
+  | 'permanent'
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
-    thisWeek: 'calendar-range',
-    thisYear: 'calendar',
-    calendar: 'calendar-days',
-    today: 'calendar-days',
-    yesterday: 'history',
-    recent: 'clock-3',
-    recentlyOpened: 'history',
-    fleeting: 'folder',
-    permanent: 'folder',
-    lastDays: 'calendar-days',
-    untagged: 'tag',
-    docs: 'file-text',
-    images: 'image',
-    task: 'list-checks',
-    todo: 'square-check-big',
-    done: 'list-checks',
-    code: 'code',
-    sources: 'files',
-};
+  thisWeek: 'calendar-range',
+  thisYear: 'calendar',
+  calendar: 'calendar-days',
+  today: 'calendar-days',
+  yesterday: 'history',
+  recent: 'clock-3',
+  recentlyOpened: 'history',
+  fleeting: 'folder',
+  permanent: 'folder',
+  lastDays: 'calendar-days',
+  untagged: 'tag',
+  docs: 'file-text',
+  images: 'image',
+  task: 'list-checks',
+  todo: 'square-check-big',
+  done: 'list-checks',
+  code: 'code',
+  sources: 'files',
+}
 
 export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
-    thisWeek: '@thisWeek',
-    thisYear: '@thisYear',
-    calendar: '@calendar',
-    today: '@today',
-    yesterday: '@yesterday',
-    recent: '@recent',
-    recentlyOpened: '@recentlyOpened',
-    fleeting: '@fleeting',
-    permanent: '@permanent',
-    lastDays: '@lastXdays',
-    untagged: '@untagged',
-    docs: '@docs',
-    images: '@images',
-    task: '@task',
-    todo: '@todo',
-    done: '@done',
-    code: '@code',
-    sources: '@sources',
-};
+  thisWeek: '@thisWeek',
+  thisYear: '@thisYear',
+  calendar: '@calendar',
+  today: '@today',
+  yesterday: '@yesterday',
+  recent: '@recent',
+  recentlyOpened: '@recentlyOpened',
+  fleeting: '@fleeting',
+  permanent: '@permanent',
+  lastDays: '@lastXdays',
+  untagged: '@untagged',
+  docs: '@docs',
+  images: '@images',
+  task: '@task',
+  todo: '@todo',
+  done: '@done',
+  code: '@code',
+  sources: '@sources',
+}
 
 export interface QueryToken {
-    type: QueryTokenType;
-    value: string;
+  type: QueryTokenType
+  value: string
 }
 
 export interface ParsedQuery {
-    tokens: QueryToken[];
-    isValid: boolean;
-    error?: string;
+  tokens: QueryToken[]
+  isValid: boolean
+  error?: string
 }
 
 export interface SpecialSearchOption {
-    search: SpecialSearch;
-    label: string;
-    description: string;
+  search: SpecialSearch
+  label: string
+  description: string
 }
 
 export interface AutomationStatus {
-    pending: number;
-    processed: number;
-    failed: number;
-    errors: AutomationError[];
+  pending: number
+  processed: number
+  failed: number
+  errors: AutomationError[]
 }
 
 export interface AutomationError {
-    filePath: string;
-    action: string;
-    message: string;
-    timestamp: number;
+  filePath: string
+  action: string
+  message: string
+  timestamp: number
 }
 
 export interface PaletteItem {
-    id: string;
-    title: string;
-    description: string;
-    type: 'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory' | 'heading';
-    groupLabel?: string;
-    headingLevel?: number;
-    icon?: string;
-    file?: TFile;
-    tags?: string[];
-    matchSnippet?: MatchSnippet;
-    matchCount?: number;
-    searchTerms?: string[];
-    taskCompletionPercent?: number;
-    tagMode?: 'include' | 'exclude';
-    specialSearch?: SpecialSearch;
-    specialSearchInput?: string;
-    customSearchId?: string;
-    basePath?: string;
-    baseView?: string;
-    baseContent?: string;
-    baseSearchText?: string;
-    action?: (openBehavior?: false | 'tab' | 'split') => void | Promise<void>;
+  id: string
+  title: string
+  description: string
+  type:
+    'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory' | 'heading'
+  groupLabel?: string
+  headingLevel?: number
+  icon?: string
+  file?: TFile
+  tags?: string[]
+  matchSnippet?: MatchSnippet
+  matchCount?: number
+  searchTerms?: string[]
+  taskCompletionPercent?: number
+  tagMode?: 'include' | 'exclude'
+  specialSearch?: SpecialSearch
+  specialSearchInput?: string
+  customSearchId?: string
+  basePath?: string
+  baseView?: string
+  baseContent?: string
+  baseSearchText?: string
+  action?: (openBehavior?: false | 'tab' | 'split') => void | Promise<void>
 }

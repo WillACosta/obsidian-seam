@@ -16,6 +16,7 @@ This feature is an inspiration of [QuickAdd](https://github.com/chhoumann/quicka
 ** Quick add note options **:
 
 Choices:
+
 - Add a choice (See UI details on the next section)
 
 When creating a new choice, we open a modal with some additional settings:
@@ -31,8 +32,8 @@ Icon (optional): "Lucide Icon name"
 ```
 
 Input;
-- Persist input prompt drafts (boolean) -> Keep drafts when closing input prompt, kept only during session.
 
+- Persist input prompt drafts (boolean) -> Keep drafts when closing input prompt, kept only during session.
 
 ## UI/UX Definition
 
@@ -53,4 +54,4 @@ $icon Add Project
 
 2. The choices settings section should list all choices with their icons (if set), and display a button to add a new choice ("+ New choice").
 
-2. When `esc` is pressed we cancel the choice selection and return back to the default UP behavior (search).
+3. When `esc` is pressed we cancel the choice selection and return back to the default UP behavior (search).

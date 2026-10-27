@@ -8,6 +8,7 @@
 ## Summary of Changes
 
 ### Added
+
 - **Note match navigation**: Opening a searched note selects and scrolls to its first content match; normal editor interaction clears the selection.
 - **Result metadata**: Note results show their extension and content match count.
 - **Directory filtering**: `dir:` works with tags in Palette and saved Seam-tag searches, with vault folder suggestions including paths with spaces.
@@ -17,6 +18,7 @@
 - **Composable special searches**: Combine built-in and saved Seam-mode queries by intersection, then narrow their results with additional tag or directory filters. Base-mode searches remain standalone.
 
 ### Changed
+
 - **Placeholder audit**: Shorten Palette and Quick Add prompts, correct the Seam search grammar, show the `>` command prefix, and align English and Portuguese wording. Settings placeholders with short path examples and filter labels remain concise.
 - **Placeholder copy and visibility**: Shorten general, tag, and Base view placeholders; use the requested file-and-tag hint for Seam special searches with a visible gap after the query, and hide it for Base searches.
 - **Search results**: Commands appear only for an empty Palette input or in `>` mode.
@@ -26,6 +28,7 @@
 - **Composed-search tag chips**: Tags selected alongside special searches use the standard removable Seam chips, including excluded-tag styling. Chip removal preserves the special query and updates its filters.
 
 ### Fixed
+
 - **Active filter placeholders**:
   - **Root Cause**: The selected special query occupied the input, hiding its native placeholder until a tag converted it to a separate prefix.
   - **Fix**: Display the tag guidance next to the mirrored special token and use consistent placeholder copy for special, tag, and directory filters.
@@ -52,4 +55,5 @@
   - **Verified Scenarios**: Mobile emulation of `@bookshelf` shows the viewport with the final row reachable by scrolling.
 
 ### Tests
+
 - Parser, directory boundary, combined-filter, attachment filename/extension, and literal match-count regression tests; typecheck, lint, unit tests, build, and Obsidian CLI validation in `seam_test_vault`, including quick-note creation from a template and root-folder fallback.

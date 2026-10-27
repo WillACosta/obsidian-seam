@@ -12,14 +12,14 @@ Seam is a lightweight Obsidian plugin that organizes notes through tags. Inspire
 
 Seam keeps organization simple and stays out of your way:
 
-| Traditional Workflow | With Seam |
-|:---|:---|
-| ❌ Move files between folders by hand | ✅ Add `#permanent` to file a note automatically |
-| ❌ Leave completed notes mixed with active work | ✅ Add `#archive` to move them out of the way |
-| ❌ Switch between different search tools | ✅ Search notes, content, tags, and commands in one palette |
+| Traditional Workflow                                              | With Seam                                                                                                       |
+| :---------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| ❌ Move files between folders by hand                             | ✅ Add `#permanent` to file a note automatically                                                                |
+| ❌ Leave completed notes mixed with active work                   | ✅ Add `#archive` to move them out of the way                                                                   |
+| ❌ Switch between different search tools                          | ✅ Search notes, content, tags, and commands in one palette                                                     |
 | ❌ Use separate tools for search, quick capture, and source notes | ✅ Explore Special Search, create notes with Quick Capture, and keep Source notes linked from the same workflow |
-| ❌ Maintain a deep folder hierarchy | ✅ Use a simple workflow guided by tags |
-| ❌ Depend on desktop-only features | ✅ Use Seam on desktop and mobile |
+| ❌ Maintain a deep folder hierarchy                               | ✅ Use a simple workflow guided by tags                                                                         |
+| ❌ Depend on desktop-only features                                | ✅ Use Seam on desktop and mobile                                                                               |
 
 ## How Seam Fits into Your Workflow
 
@@ -30,6 +30,7 @@ Open the **Universal Palette** from the command palette or with your chosen shor
 ```
 Universal Palette → "Meeting with Design Team" → [Create new note]
 ```
+
 !["Creating new note"](./docs/images/creating_new_note.png)
 
 ### 2. File Permanent Notes (`#permanent`)
@@ -135,14 +136,14 @@ Customize Seam under **Settings → Community Plugins → Seam**.
 
 Use these tokens in the Universal Palette to narrow a search or switch modes:
 
-| Token | What it does | Example |
-|:---|:---|:---|
-| `#tag` | Filter notes by tag. | `#reading` |
-| `!#tag` or `-#tag` | Exclude notes with a tag. | `!#archived` |
-| `/` | Filter notes by directory. Put paths with spaces in quotes. | `/Fleeting` · `/"Project Archive"` |
-| `@` | Run a built-in or custom Special Search. | `@today` · `@sources` · `@books` |
-| `OR` or `||` | Match either side of a search. | `#reading OR #research` |
-| `>` | Browse and run Seam commands. | `>archive` |
+| Token              | What it does                                                | Example                            |
+| :----------------- | :---------------------------------------------------------- | :--------------------------------- |
+| `#tag`             | Filter notes by tag.                                        | `#reading`                         |
+| `!#tag` or `-#tag` | Exclude notes with a tag.                                   | `!#archived`                       |
+| `/`                | Filter notes by directory. Put paths with spaces in quotes. | `/Fleeting` · `/"Project Archive"` |
+| `@`                | Run a built-in or custom Special Search.                    | `@today` · `@sources` · `@books`   |
+| `OR` or `          |                                                             | `                                  | Match either side of a search. | `#reading OR #research` |
+| `>`                | Browse and run Seam commands.                               | `>archive`                         |
 
 Pin up to **five special queries**, shared between built-in and custom queries, in Seam settings. Pinned queries appear first in the `@` listing. Press **Backspace** immediately after an active query to remove it in one step, including its trailing space.
 
