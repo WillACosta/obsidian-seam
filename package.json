@@ -13,13 +13,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "ci:quality": "pnpm format:check && pnpm lint",
-    "symlink": "node scripts/symlink.mjs --dir=seam_test_vault",
-    "install:personal": "pnpm build && node scripts/copy-personal-vault.mjs",
     "changelog:extract": "node scripts/changelog.mjs extract",
     "changelog:generate": "node scripts/changelog.mjs generate",
     "changelog:validate": "node scripts/changelog.mjs validate",
-    "release:check": "node scripts/changelog.mjs validate",
-    "install:local": "pnpm build && pnpm symlink && obsidian vault='seam_test_vault' plugin:reload id=seam"
+    "release:check": "node scripts/changelog.mjs validate"
   },
   "devDependencies": {
     "@codemirror/state": "6.5.0",

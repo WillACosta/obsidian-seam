@@ -56,9 +56,9 @@ When the user requests work on a new iteration, follow this standard process:
 
 ### Mandatory Test Vault
 
-- Always test against the dedicated development vault: `seam_test_vault/` at project root.
+- Always test against the dedicated development vault: `../seam_test_vault/` at the workspace root (or a dedicated local vault in a standalone checkout).
 - **Never** develop or test against a user's production vault.
-- `seam_test_vault/` must remain Git-ignored.
+- Test vaults must remain Git-ignored.
 
 ### Obsidian CLI Validation Cycle
 

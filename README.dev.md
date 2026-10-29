@@ -23,21 +23,21 @@ pnpm ci:quality
 # Apply the repository's Prettier formatting
 pnpm format
 
-# Link compiled plugin to test vault (seam_test_vault/)
-pnpm run symlink
+# From the workspace root: build and copy Seam into the shared test vault
+# mise run install:seam
 
-# Build, copy, and reload Seam in personal_vault (Obsidian must be running)
-pnpm run install:personal
+# From the workspace root: build, copy, and reload Seam in personal_vault
+# mise run install:personal
 ```
 
-Test against `seam_test_vault/` using the Obsidian CLI:
+Test against the workspace root `seam_test_vault/` using the Obsidian CLI:
 
 ```bash
 obsidian plugin:reload id=seam
 obsidian dev:errors
 ```
 
-`pnpm ci:quality` runs `pnpm format:check` and `pnpm lint` without modifying files. Prettier uses `.prettierrc.json`; generated changelogs, the pnpm lockfile, build output, and local vaults are excluded. ESLint retains the repository's TypeScript rules, with formatting delegated to Prettier. `install:personal` runs the CLI reload only after all plugin files have been copied and exits with an error if the copy or reload fails.
+`pnpm ci:quality` runs `pnpm format:check` and `pnpm lint` without modifying files. Prettier uses `.prettierrc.json`; generated changelogs, the pnpm lockfile, build output, and local vaults are excluded. ESLint retains the repository's TypeScript rules, with formatting delegated to Prettier. The workspace task `mise run install:personal` runs the CLI reload only after all plugin files have been copied and exits with an error if the copy or reload fails.
 
 ---
 
