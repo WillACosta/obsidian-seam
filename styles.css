@@ -1421,7 +1421,7 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
 }
 .seam-global-overview {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin: 24px 0;
 }
@@ -1783,4 +1783,17 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
 }
 .seam-global-month-bar.is-selected .seam-global-bar-popover {
   display: block;
+}
+
+.seam-global-overview-card {
+  padding: 16px;
+  border-radius: var(--radius-l);
+  background: var(--background-secondary);
+  min-width: 0;
+}
+.seam-global-overview-card dd.seam-global-overview-insight {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-normal);
 }

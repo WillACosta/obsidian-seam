@@ -10,6 +10,7 @@ import {
   intensity,
   monthlyTrends,
   monthlyChartScale,
+  overviewInsights,
   TrendMetric,
 } from '../statistics/GlobalStatisticsModel'
 
@@ -186,22 +187,43 @@ export class GlobalStatisticsView {
       attr: { 'aria-label': t().globalOverview },
     })
     const totals = activityTotals(state, today)
-    for (const [key, label, value] of [
-      ['notes', t().globalTotalNotes, snapshot.loading ? '—' : number.format(snapshot.totalNotes)],
+    const insights = overviewInsights(state, today)
+    const percent = new Intl.NumberFormat(detectLocale(), {
+      style: 'percent',
+      maximumFractionDigits: 1,
+      signDisplay: 'exceptZero',
+    })
+    const yearPercent = new Intl.NumberFormat(detectLocale(), {
+      style: 'percent',
+      maximumFractionDigits: 0,
+    })
+    const ready = !snapshot.loading && !snapshot.error
+    for (const [key, label, value, insight] of [
       [
         'words',
         t().globalTotalWords,
-        snapshot.loading || snapshot.error ? '—' : number.format(snapshot.totalWords),
+        ready ? number.format(snapshot.totalWords) : '—',
+        insights.monthlyWordChange === null
+          ? t().globalNoMonthBaseline
+          : t().globalWordsMonthChange(percent.format(insights.monthlyWordChange)),
+      ],
+      [
+        'notes',
+        t().globalTotalNotes,
+        snapshot.loading ? '—' : number.format(snapshot.totalNotes),
+        t().globalNotesThisMonth(number.format(insights.monthlyNotes)),
       ],
       [
         'days',
         t().globalActiveDays,
-        snapshot.loading || snapshot.error ? '—' : number.format(totals.activeDays),
+        ready ? number.format(totals.activeDays) : '—',
+        t().globalActiveYear(yearPercent.format(insights.activeYearPercent)),
       ],
       [
         'streak',
         t().globalStreak,
-        snapshot.loading || snapshot.error ? '—' : number.format(totals.streak),
+        ready ? number.format(totals.streak) : '—',
+        t().globalLongestStreak(number.format(insights.longestStreak)),
       ],
     ]) {
       const card = overview.createDiv({
@@ -210,6 +232,7 @@ export class GlobalStatisticsView {
       })
       card.createEl('dt', { text: label })
       card.createEl('dd', { text: value })
+      if (ready) card.createEl('dd', { cls: 'seam-global-overview-insight', text: insight })
     }
     const contributions = this.host.createEl('section', {
       cls: 'seam-global-section',

@@ -72,3 +72,44 @@ export function monthlyChartScale(values: number[]): {
     heights: values.map((value) => Math.max(0, Math.min(100, (value / max) * 100))),
   }
 }
+
+export function overviewInsights(
+  state: ActivityState,
+  today: string,
+): {
+  monthlyWordChange: number | null
+  monthlyNotes: number
+  activeYearPercent: number
+  longestStreak: number
+} {
+  const date = new Date(`${today}T12:00:00`)
+  const month = today.slice(0, 7)
+  const previousMonth = localDay(new Date(date.getFullYear(), date.getMonth() - 1, 1)).slice(0, 7)
+  const wordsIn = (prefix: string): number =>
+    Object.keys(state.days)
+      .filter((day) => day <= today && day.startsWith(prefix))
+      .reduce((sum, day) => sum + contribution(state, day, 'words'), 0)
+  const previousWords = wordsIn(previousMonth)
+  const active = Object.keys(state.days)
+    .filter((day) => day <= today && contribution(state, day, 'sessions') > 0)
+    .sort()
+  const yearDays =
+    (Date.UTC(date.getFullYear() + 1, 0, 1) - Date.UTC(date.getFullYear(), 0, 1)) / 86400000
+  let longestStreak = 0
+  let streak = 0
+  let previous = -Infinity
+  for (const day of active) {
+    const current = Date.parse(`${day}T00:00:00Z`) / 86400000
+    streak = current === previous + 1 ? streak + 1 : 1
+    longestStreak = Math.max(longestStreak, streak)
+    previous = current
+  }
+  return {
+    monthlyWordChange: previousWords > 0 ? (wordsIn(month) - previousWords) / previousWords : null,
+    monthlyNotes: Object.values(state.created).filter(
+      (day) => day <= today && day.startsWith(month),
+    ).length,
+    activeYearPercent: active.filter((day) => day.startsWith(today.slice(0, 4))).length / yearDays,
+    longestStreak,
+  }
+}
