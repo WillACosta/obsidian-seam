@@ -404,7 +404,7 @@ function fixture(
     ['B.md', 'three'],
   ],
 ) {
-  const path = `.obsidian/plugins/seam-${fixtureNumber++}/statistics.json`
+  const path = `Resources/Seam/Statistics/test-${fixtureNumber++}.json`
   const files = new Map<string, MockTFile>()
   const texts = new Map<string, string>(seed)
   for (const [path] of seed) files.set(path, new MockTFile(path))
@@ -415,7 +415,14 @@ function fixture(
   let fail = false
   const app = {
     vault: {
+      createFolder: async (path: string) => {
+        files.set(path, new MockTFolder(path) as MockTFile)
+      },
       adapter: {
+        list: async (folder: string) => ({
+          files: [...disk.keys()].filter((path) => path.startsWith(folder + '/')),
+          folders: [],
+        }),
         getResourcePath: (path: string) => path,
         exists: async (path: string) => disk.has(path),
         read: async (path: string) => disk.get(path),
@@ -428,7 +435,7 @@ function fixture(
         events.set(name, handler)
       },
       getAbstractFileByPath: (path: string) => files.get(path) ?? null,
-      getMarkdownFiles: () => [...files.values()],
+      getMarkdownFiles: () => [...files.values()].filter((file) => file instanceof MockTFile),
       cachedRead: async (file: TFile) => {
         reads++
         return texts.get(file.path) ?? ''
@@ -436,7 +443,11 @@ function fixture(
     },
     workspace: { onLayoutReady: (ready: () => void) => ready(), getLeavesOfType: () => [] },
   } as unknown as App
-  const service = new GlobalStatistics(app, path.slice(0, -'/statistics.json'.length))
+  const service = new GlobalStatistics(
+    app,
+    'test-plugin',
+    path.split('/').pop()!.replace('.json', ''),
+  )
   Object.assign(service, { registerEvent() {}, registerDomEvent() {} })
   return {
     app,
@@ -453,6 +464,41 @@ function fixture(
   }
 }
 describe('Background global statistics and persistence', () => {
+  it('creates metadata folders without setup and combines arriving device snapshots once', async () => {
+    const f = fixture()
+    await f.service.initialize()
+    assert.ok(f.files.has('Resources/Seam/Statistics'))
+    const localFile = f.files.get('A.md')! as TFile
+    f.service.recordEdit(localFile, 2, {})
+    await f.service.flush()
+    const remote = emptyActivity(localDay())
+    record(remote, 'remote-note', localDay(), 5, Date.now())
+    remote.notes['remote-note'].path = 'A.md'
+    const remotePath = 'Resources/Seam/Statistics/ipad.json'
+    f.disk.set(remotePath, JSON.stringify(remote))
+    await f.service.refreshRemote()
+    await f.service.refreshRemote()
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 7)
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'notes'), 1)
+    remote.days[localDay()]['remote-note'].words = 8
+    f.disk.set(remotePath, JSON.stringify(remote))
+    await f.service.refreshRemote()
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 10)
+    assert.equal(
+      JSON.parse(f.disk.get(f.path)!).days[localDay()][
+        Object.keys(JSON.parse(f.disk.get(f.path)!).notes)[0]
+      ].words,
+      2,
+    )
+    f.disk.set(remotePath, '{broken')
+    await f.service.refreshRemote()
+    assert.equal(f.service.snapshot().error, true)
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 10)
+    f.disk.delete(remotePath)
+    await f.service.refreshRemote()
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 2)
+    f.service.onunload()
+  })
   it('supports an empty vault without fabricated activity', async () => {
     const f = fixture(undefined, [])
     await f.service.initialize()
@@ -525,7 +571,11 @@ describe('Background global statistics and persistence', () => {
     await new Promise((resolve) => setImmediate(resolve))
     f.service.recordEdit(f.files.get('A.md')! as TFile, 1, {})
     f.service.onunload()
-    const restored = new GlobalStatistics(f.app, f.path.slice(0, -'/statistics.json'.length))
+    const restored = new GlobalStatistics(
+      f.app,
+      'test-plugin',
+      f.path.split('/').pop()!.replace('.json', ''),
+    )
     const secondInitialization = restored.initialize()
     release()
     await firstInitialization
@@ -553,7 +603,11 @@ describe('Background global statistics and persistence', () => {
     f.service.recordEdit(file, 1, {})
     await new Promise((resolve) => setImmediate(resolve))
     f.service.onunload()
-    const restored = new GlobalStatistics(f.app, f.path.slice(0, -'/statistics.json'.length))
+    const restored = new GlobalStatistics(
+      f.app,
+      'test-plugin',
+      f.path.split('/').pop()!.replace('.json', ''),
+    )
     let ready = false
     const initialization = restored.initialize().then(() => {
       ready = true
@@ -585,7 +639,11 @@ describe('Background global statistics and persistence', () => {
     f.service.onunload()
     await f.service.flush()
     f.fail(false)
-    const restored = new GlobalStatistics(f.app, f.path.slice(0, -'/statistics.json'.length))
+    const restored = new GlobalStatistics(
+      f.app,
+      'test-plugin',
+      f.path.split('/').pop()!.replace('.json', ''),
+    )
     await restored.initialize()
     await restored.flush()
     assert.equal(contribution(restored.snapshot().activity, localDay(), 'words'), 3)

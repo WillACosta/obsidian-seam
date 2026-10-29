@@ -236,12 +236,8 @@ export class GlobalStatisticsView {
     this.days = days
     if (!days.includes(this.focusDay)) this.focusDay = today
     const max = Math.max(0, ...days.map((day) => contribution(state, day, this.metric)))
-    const scroll = contributions.createDiv({ cls: 'seam-global-heatmap-scroll' })
-    const heatmap = scroll.createDiv({
-      cls: 'seam-global-heatmap',
-      attr: { 'aria-label': t().globalContributions },
-    })
-    const weekdays = heatmap.createDiv({
+    const activityGrid = contributions.createDiv({ cls: 'seam-global-activity-grid' })
+    const weekdays = activityGrid.createDiv({
       cls: 'seam-global-week seam-global-weekdays',
       attr: { 'aria-hidden': 'true' },
     })
@@ -252,6 +248,11 @@ export class GlobalStatisticsView {
         cls: 'seam-global-weekday',
         text: i % 2 === 1 ? weekdayFormat.format(new Date(2026, 0, 4 + i)) : '',
       })
+    const scroll = activityGrid.createDiv({ cls: 'seam-global-heatmap-scroll' })
+    const heatmap = scroll.createDiv({
+      cls: 'seam-global-heatmap',
+      attr: { 'aria-label': t().globalContributions },
+    })
     let previousMonth = ''
     for (const week of weeks) {
       const column = heatmap.createDiv({ cls: 'seam-global-week' })
@@ -296,7 +297,7 @@ export class GlobalStatisticsView {
           })
         })
         button.addEventListener('click', () => {
-          this.selectedDay = day
+          this.selectedDay = this.selectedDay === day ? null : day
           this.focusDay = day
           this.render()
         })
@@ -327,6 +328,7 @@ export class GlobalStatisticsView {
       cls: 'seam-global-day-detail',
       attr: { 'aria-label': t().globalDayDetails },
     })
+    detail.hidden = this.selectedDay === null
     detail.createEl('h4', {
       text: this.selectedDay ? formatDay(this.selectedDay) : t().globalChooseDay,
     })
@@ -408,13 +410,35 @@ export class GlobalStatisticsView {
       const column = bars.createDiv({
         cls: 'seam-global-month-bar',
         attr: {
-          role: 'img',
+          role: 'button',
+          tabindex: '0',
           'aria-label': description,
+          'aria-pressed': 'false',
           'data-chart-month': month.month,
           'data-chart-value': String(month.value),
         },
       })
       setTooltip(column, description, { placement: 'top' })
+      const value = column.createDiv({ cls: 'seam-global-bar-popover', text: description })
+      value.style.bottom = `${scale.heights[index]}%`
+      const toggle = (): void => {
+        const selected = column.classList.contains('is-selected')
+        bars.querySelectorAll('.seam-global-month-bar').forEach((bar) => {
+          bar.classList.remove('is-selected')
+          bar.setAttribute('aria-pressed', 'false')
+        })
+        if (!selected) {
+          column.classList.add('is-selected')
+          column.setAttribute('aria-pressed', 'true')
+        }
+      }
+      column.addEventListener('click', toggle)
+      column.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          toggle()
+        }
+      })
       const svg = column.createSvg('svg', {
         attr: { viewBox: '0 0 100 100', preserveAspectRatio: 'none', 'aria-hidden': 'true' },
       })

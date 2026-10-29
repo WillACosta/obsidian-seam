@@ -11,6 +11,12 @@ import {
   wordCount,
 } from './WritingActivity'
 import { t } from '../i18n'
+import {
+  STATISTICS_FOLDER,
+  ensureStatisticsFolder,
+  statisticsDeviceId,
+  combineActivity,
+} from './StatisticsStorage'
 
 // Share only in-flight writes across module reloads, then release each queue entry.
 const pendingWritesKey = Symbol.for('seam.statistics.pending-writes')
@@ -55,14 +61,18 @@ export class GlobalStatistics extends Component {
   private journal: ActivityEvent[] = []
   private buffered: ActivityChange[] = []
   private readyOperation: Promise<void> | null = null
+  private remote = new Map<string, ActivityState>()
+  private remoteError = false
+  private remoteRefresh: Promise<void> | null = null
   private readonly path: string
   private readonly journalKey: string
   constructor(
     private app: App,
     pluginDirectory: string,
+    deviceId = statisticsDeviceId(app, pluginDirectory),
   ) {
     super()
-    this.path = normalizePath(`${pluginDirectory}/statistics.json`)
+    this.path = normalizePath(`${STATISTICS_FOLDER}/${deviceId}.json`)
     this.journalKey = `seam-writing:${app.vault.adapter.getResourcePath(this.path)}`
   }
   onload(): void {
@@ -70,6 +80,7 @@ export class GlobalStatistics extends Component {
       if (this.stopped) return
       this.registerEvent(
         this.app.vault.on('create', (file) => {
+          this.refreshMetadata(file.path)
           if (!(file instanceof TFile) || file.extension !== 'md') return
           this.files.set(file, 0)
           this.record({
@@ -83,11 +94,14 @@ export class GlobalStatistics extends Component {
       )
       this.registerEvent(
         this.app.vault.on('modify', (file) => {
+          this.refreshMetadata(file.path)
           if (file instanceof TFile && file.extension === 'md') void this.refresh(file)
         }),
       )
       this.registerEvent(
         this.app.vault.on('rename', (file, from) => {
+          this.refreshMetadata(file.path)
+          this.refreshMetadata(from)
           this.record({ kind: 'rename', from, to: file.path })
           if (file instanceof TFile) {
             if (file.extension === 'md') void this.refresh(file)
@@ -101,6 +115,7 @@ export class GlobalStatistics extends Component {
       )
       this.registerEvent(
         this.app.vault.on('delete', (file) => {
+          this.refreshMetadata(file.path)
           this.record({ kind: 'delete', path: file.path })
           for (const note of this.files.keys())
             if (note.path === file.path || note.path.startsWith(file.path + '/')) {
@@ -113,6 +128,9 @@ export class GlobalStatistics extends Component {
       )
       this.registerDomEvent(document, 'visibilitychange', () => {
         if (document.hidden) void this.flush()
+      })
+      this.registerDomEvent(document, 'visibilitychange', () => {
+        if (!document.hidden) void this.refreshRemote()
       })
       void this.initialize()
     })
@@ -129,11 +147,13 @@ export class GlobalStatistics extends Component {
   }
   snapshot(): GlobalStatisticsSnapshot {
     return {
-      activity: this.state,
+      activity: this.remote.size
+        ? combineActivity([this.state, ...this.remote.values()])
+        : this.state,
       totalNotes: this.files.size,
       totalWords: [...this.files.values()].reduce((a, b) => a + b, 0),
       loading: !this.initialized,
-      error: this.historyError || this.failedReads.size > 0,
+      error: this.historyError || this.remoteError || this.failedReads.size > 0,
       saveError: this.saveError,
     }
   }
@@ -158,6 +178,7 @@ export class GlobalStatistics extends Component {
     if (!this.historyReady) {
       try {
         await pendingWrites.get(this.journalKey)
+        await ensureStatisticsFolder(this.app)
         const exists = await this.app.vault.adapter.exists(this.path)
         this.state = exists
           ? parseActivity(JSON.parse(await this.app.vault.adapter.read(this.path)))
@@ -196,6 +217,7 @@ export class GlobalStatistics extends Component {
       }),
     )
     await this.flush()
+    await this.refreshRemote()
     this.initialized = true
     this.notify()
   }
@@ -291,6 +313,7 @@ export class GlobalStatistics extends Component {
       try {
         while (this.savedSequence < this.state.sequence) {
           const sequence = this.state.sequence
+          await ensureStatisticsFolder(this.app)
           await this.app.vault.adapter.write(this.path, JSON.stringify(this.state))
           this.savedSequence = sequence
           this.journal = this.journal.filter((event) => event.sequence > sequence)
@@ -312,6 +335,39 @@ export class GlobalStatistics extends Component {
       if (this.saving === operation) this.saving = null
       if (pendingWrites.get(this.journalKey) === operation) pendingWrites.delete(this.journalKey)
     })
+    return operation
+  }
+  private refreshMetadata(path: string): void {
+    if (path === STATISTICS_FOLDER || path.startsWith(STATISTICS_FOLDER + '/'))
+      void this.refreshRemote()
+  }
+  /** Replace remote snapshots on arrival; repeated sync notifications never add activity twice. */
+  refreshRemote(): Promise<void> {
+    const previous = this.remoteRefresh ?? Promise.resolve()
+    const operation = previous.then(async () => {
+      if (this.stopped) return
+      try {
+        const listing = await this.app.vault.adapter.list(STATISTICS_FOLDER)
+        const next = new Map<string, ActivityState>()
+        let error = false
+        for (const path of listing.files) {
+          if (path === this.path || !/\/[a-zA-Z0-9-]+\.json$/.test(path)) continue
+          try {
+            next.set(path, parseActivity(JSON.parse(await this.app.vault.adapter.read(path))))
+          } catch {
+            error = true
+            const previous = this.remote.get(path)
+            if (previous) next.set(path, previous)
+          }
+        }
+        this.remote = next
+        this.remoteError = error
+      } catch {
+        this.remoteError = true
+      }
+      this.notify()
+    })
+    this.remoteRefresh = operation
     return operation
   }
   private notify(): void {

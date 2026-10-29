@@ -143,3 +143,10 @@ Before opening a version PR, check the current [Obsidian plugin checklist](https
 - Keep values and calls type-safe under `@typescript-eslint/no-unsafe-assignment`, `no-unsafe-call`, and `no-unsafe-member-access`. Ensure types for Obsidian's `moment` import resolve, and remove redundant Boolean conversions and unused imports.
 - Enumerate vault files only for features that need it, such as the Universal Palette's vault-wide results and source discovery. Prefer direct path lookup when the path is known; avoid repeated full-vault scans and do not read file contents unless the feature needs them. Seam keeps these operations within Obsidian's vault APIs.
 - Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm run release:check <version>`. Then reload Seam in `seam_test_vault`, exercise the affected UI and workflow, and check `obsidian dev:errors` and `obsidian dev:console level=error` before release.
+
+Global writing statistics are stored in `Resources/Seam/Statistics/<device-id>.json`.
+Each installation writes its own file and combines incoming device snapshots for the dashboard.
+The device identity and recovery journal stay local. The folder is created automatically,
+including when Initialize Seam has not been run, and is also included in setup previews.
+For Obsidian Sync, enable **Sync all other types** on every device and leave this folder included.
+Unreleased `statistics.json` history is not migrated. Sessions are counted per device.

@@ -9,6 +9,8 @@ export const SETUP_FOLDERS = [
   'Resources/Sources',
   'Resources/Templates',
   'Resources/Bases',
+  'Resources/Seam',
+  'Resources/Seam/Statistics',
 ]
 
 export const BOOKSHELF_PATH = 'Resources/Bases/Bookshelf.base'
