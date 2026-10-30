@@ -1836,3 +1836,72 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
   width: 16px;
   height: 16px;
 }
+
+.seam-settings-search-group .setting-items {
+  background: transparent;
+}
+
+.seam-settings-filter-row {
+  padding: 0 0 var(--size-4-4);
+  border: 0;
+}
+
+.seam-settings-filter-row .setting-item-control {
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.seam-settings-filter-row .search-input-container,
+.seam-settings-filter-row input {
+  width: 100%;
+}
+
+.seam-settings-no-results {
+  color: var(--text-muted);
+  padding: var(--size-4-3) 0;
+}
+
+.seam-settings-filtered,
+.seam-settings-group.seam-settings-collapsed > .setting-items {
+  display: none !important;
+}
+
+.seam-pinned-commands-title-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.seam-pinned-commands-add {
+  margin-inline-start: var(--size-4-3);
+}
+
+.seam-settings-group-name-toggle {
+  cursor: pointer;
+}
+
+.seam-setup-preview-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.seam-setup-configured-icon {
+  display: inline-flex;
+  color: var(--text-success);
+}
+
+.seam-setup-configured-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.seam-outline-disclosure,
+.seam-outline-disclosure-spacer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+}

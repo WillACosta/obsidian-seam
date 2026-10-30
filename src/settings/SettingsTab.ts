@@ -1,11 +1,14 @@
 import {
   App,
+  ExtraButtonComponent,
   getIcon,
   Notice,
   PluginSettingTab,
   setIcon,
   Setting,
   SettingDefinitionItem,
+  SettingDefinitionGroup,
+  SettingDefinitionRender,
 } from 'obsidian'
 import type SeamPlugin from '../main'
 import {
@@ -18,6 +21,7 @@ import {
   SPECIAL_SEARCH_ICONS,
   SPECIAL_SEARCH_LABELS,
   SPECIAL_SEARCH_PIN_LIMIT,
+  PALETTE_COMMAND_PIN_LIMIT,
 } from '../types'
 import { t } from '../i18n'
 import { QuickAddChoiceModal } from './QuickAddChoiceModal'
@@ -25,12 +29,20 @@ import { PinnedCommandModal } from './PinnedCommandModal'
 import { CustomSpecialSearchModal } from './CustomSpecialSearchModal'
 import { VaultPathSuggest } from '../ui/VaultPathSuggest'
 import { getCommandHotkeyDisplay, openHotkeyAssignment, showShortcutHints } from '../utils/hotkey'
+import { normalizeSettingsFilter } from './SettingsFilter'
+import { isSetupConfigured } from '../setup/SeamInitializer'
+import { SETUP_FILES, SETUP_FOLDERS } from '../setup/SetupAssets'
 
 export class SeamSettingsTab extends PluginSettingTab {
   plugin: SeamPlugin
   private moveCleanupTagsSetting: Setting | null = null
   private moveCleanupPropertiesSetting: Setting | null = null
   private latestNotesSetting: Setting | null = null
+  private settingsFilter = ''
+  private collapsedGroups = new Set<string>()
+  private filteredCollapsedGroups = new Set<string>()
+  private groupToggles = new Map<string, ExtraButtonComponent>()
+  private setupStatusRefresh: (() => void) | null = null
 
   constructor(app: App, plugin: SeamPlugin) {
     super(app, plugin)
@@ -44,21 +56,15 @@ export class SeamSettingsTab extends PluginSettingTab {
    */
   getSettingDefinitions(): SettingDefinitionItem[] {
     const strings = t()
-    return [
+    const definitions: SettingDefinitionItem[] = [
       {
         type: 'group',
-        heading: strings.setupTitle,
+        cls: 'seam-settings-standalone',
         items: [
           {
             name: strings.setupTitle,
             desc: strings.setupDescription,
-            render: (setting) => {
-              setting.addButton((button) =>
-                button
-                  .setButtonText(strings.setupPreview)
-                  .onClick(() => this.plugin.openSetup(() => this.update())),
-              )
-            },
+            render: (setting) => this.renderSetupSetting(setting),
           },
         ],
       },
@@ -229,11 +235,6 @@ export class SeamSettingsTab extends PluginSettingTab {
             desc: strings.settingsQuickAddChoicesDesc,
             render: (setting) => this.renderQuickAddSetting(setting),
           },
-        ],
-      },
-      {
-        type: 'group',
-        items: [
           {
             name: strings.settingsQuickAddPersistDrafts,
             desc: strings.settingsQuickAddPersistDraftsDesc,
@@ -337,9 +338,14 @@ export class SeamSettingsTab extends PluginSettingTab {
             render: (setting) => this.renderShowIconsSetting(setting),
           },
           {
-            name: strings.settingsShowFileExtensionAndMatchCount,
-            desc: strings.settingsShowFileExtensionAndMatchCountDesc,
-            render: (setting) => this.renderShowFileExtensionAndMatchCountSetting(setting),
+            name: strings.settingsShowFileExtension,
+            desc: strings.settingsShowFileExtensionDesc,
+            render: (setting) => this.renderResultMetadataSetting(setting, 'showFileExtension'),
+          },
+          {
+            name: strings.settingsShowMatchCount,
+            desc: strings.settingsShowMatchCountDesc,
+            render: (setting) => this.renderResultMetadataSetting(setting, 'showMatchCount'),
           },
           {
             name: strings.settingsShowCommandsByDefault,
@@ -392,6 +398,229 @@ export class SeamSettingsTab extends PluginSettingTab {
         ],
       },
     ]
+    const search: SettingDefinitionItem = {
+      type: 'group',
+      cls: 'seam-settings-search-group',
+      items: [
+        {
+          name: strings.settingsFilter,
+          searchable: false,
+          render: (setting) => this.renderSettingsFilter(setting),
+        },
+      ],
+    }
+    return [search, ...definitions.map((entry) => this.decorateSettingsGroup(entry))]
+  }
+
+  private decorateSettingsGroup(entry: SettingDefinitionItem): SettingDefinitionItem {
+    if (!('type' in entry) || entry.type !== 'group') return entry
+    const group = entry as SettingDefinitionGroup
+    const key = group.heading ?? ''
+    return {
+      ...group,
+      cls: [group.cls, 'seam-settings-group'].filter(Boolean).join(' '),
+      extraButtons: !group.heading
+        ? group.extraButtons
+        : [
+            ...(group.extraButtons ?? []),
+            (button) => {
+              this.groupToggles.set(key, button)
+              button.extraSettingsEl.addClass('seam-settings-group-toggle')
+              button.extraSettingsEl.setAttribute('role', 'button')
+              button.extraSettingsEl.setAttribute('tabindex', '0')
+              const headingName = button.extraSettingsEl
+                .closest('.setting-item-heading')
+                ?.querySelector<HTMLElement>('.setting-item-name')
+              if (headingName) {
+                headingName.addClass('seam-settings-group-name-toggle')
+                headingName.addEventListener('click', () => button.extraSettingsEl.click())
+              }
+              button.onClick(() => {
+                const groups = this.settingsFilter.trim()
+                  ? this.filteredCollapsedGroups
+                  : this.collapsedGroups
+                if (groups.has(key)) groups.delete(key)
+                else groups.add(key)
+                this.applySettingsFilter()
+              })
+              queueMicrotask(() => this.applySettingsFilter())
+            },
+          ],
+      items: group.items?.map((item) => {
+        if (!('render' in item) || typeof item.render !== 'function') return item
+        const original = item as SettingDefinitionRender
+        return {
+          ...original,
+          render: (setting, settingGroup) => {
+            setting.settingEl.dataset.seamSearch = [
+              original.name,
+              typeof original.desc === 'string'
+                ? original.desc
+                : (original.desc?.textContent ?? ''),
+              ...(original.aliases ?? []),
+            ].join(' ')
+            const cleanup = original.render(setting, settingGroup)
+            queueMicrotask(() => this.applySettingsFilter())
+            return cleanup
+          },
+        }
+      }),
+    }
+  }
+
+  /** Recheck while the settings view is open when Seam preferences change. */
+  refreshSetupStatus(): void {
+    this.setupStatusRefresh?.()
+  }
+
+  private renderSetupSetting(setting: Setting): () => void {
+    let disposed = false
+    let generation = 0
+    let timer: number | undefined
+    let refresh = (): void => {}
+    setting.addButton((button) => {
+      button
+        .setButtonText(t().setupPreview)
+        .onClick(() => this.plugin.openSetup(() => this.update()))
+      button.buttonEl.addClass('seam-setup-preview-button')
+      const update = (): void => {
+        if (disposed || !button.buttonEl.isConnected) return
+        const current = ++generation
+        button.buttonEl.querySelector('.seam-setup-configured-icon')?.remove()
+        button.buttonEl.setAttribute('aria-label', t().setupPreview)
+        void this.plugin.initializer
+          .preview()
+          .then((plan) => {
+            if (
+              disposed ||
+              current !== generation ||
+              !button.buttonEl.isConnected ||
+              !isSetupConfigured(plan)
+            )
+              return
+            const icon = button.buttonEl.createSpan({
+              cls: 'seam-setup-configured-icon',
+              attr: { 'aria-hidden': 'true' },
+            })
+            setIcon(icon, 'check')
+            button.buttonEl.setAttribute(
+              'aria-label',
+              `${t().setupPreview} — ${t().setupStatuses.existing}`,
+            )
+          })
+          .catch(() => {
+            /* Do not claim setup is complete if it cannot be checked. */
+          })
+      }
+      refresh = (): void => {
+        generation++
+        button.buttonEl.querySelector('.seam-setup-configured-icon')?.remove()
+        button.buttonEl.setAttribute('aria-label', t().setupPreview)
+        if (timer !== undefined) window.clearTimeout(timer)
+        timer = window.setTimeout(update, 150)
+      }
+      this.setupStatusRefresh = refresh
+      queueMicrotask(update)
+    })
+    const targets = [...SETUP_FOLDERS, ...Object.keys(SETUP_FILES)]
+    const affectsSetup = (path: string): boolean =>
+      targets.some((target) => target === path || target.startsWith(path + '/'))
+    const changed = (path: string): void => {
+      if (affectsSetup(path)) refresh()
+    }
+    const events = [
+      this.app.vault.on('create', (file) => changed(file.path)),
+      this.app.vault.on('delete', (file) => changed(file.path)),
+      this.app.vault.on('modify', (file) => changed(file.path)),
+      this.app.vault.on('rename', (file, oldPath) => {
+        changed(file.path)
+        changed(oldPath)
+      }),
+    ]
+    return () => {
+      disposed = true
+      generation++
+      if (timer !== undefined) window.clearTimeout(timer)
+      if (this.setupStatusRefresh === refresh) this.setupStatusRefresh = null
+      events.forEach((event) => this.app.vault.offref(event))
+    }
+  }
+
+  private renderSettingsFilter(setting: Setting): void {
+    setting.infoEl.remove()
+    setting.settingEl.addClass('seam-settings-filter-row')
+    setting.addSearch((search) => {
+      search.setPlaceholder(t().settingsFilterPlaceholder).setValue(this.settingsFilter)
+      search.inputEl.parentElement?.addClass('seam-quick-add-filter')
+      search.inputEl.setAttribute('autocapitalize', 'off')
+      search.inputEl.setAttribute('autocorrect', 'off')
+      search.inputEl.setAttribute('aria-label', t().settingsFilter)
+      search.onChange((value) => {
+        if (normalizeSettingsFilter(value) !== normalizeSettingsFilter(this.settingsFilter))
+          this.filteredCollapsedGroups.clear()
+        this.settingsFilter = value
+        this.applySettingsFilter()
+      })
+    })
+    setting.controlEl
+      .createDiv({
+        cls: 'seam-settings-no-results',
+        text: t().settingsFilterNoResults,
+        attr: { role: 'status', 'aria-live': 'polite' },
+      })
+      .hide()
+    queueMicrotask(() => this.applySettingsFilter())
+  }
+
+  private applySettingsFilter(): void {
+    const query = normalizeSettingsFilter(this.settingsFilter)
+    let visibleGroups = 0
+    let groupIndex = 0
+    for (const element of this.containerEl.querySelectorAll<HTMLElement>('.seam-settings-group')) {
+      const heading =
+        element.querySelector<HTMLElement>(':scope > .setting-item-heading .setting-item-name')
+          ?.textContent ?? ''
+      const matchesGroup = Boolean(query) && normalizeSettingsFilter(heading).includes(query)
+      let matches = 0
+      for (const row of element.querySelectorAll<HTMLElement>(
+        ':scope > .setting-items > .setting-item',
+      )) {
+        const matched =
+          !query ||
+          matchesGroup ||
+          normalizeSettingsFilter(row.dataset.seamSearch ?? '').includes(query)
+        row.toggleClass('seam-settings-filtered', !matched)
+        if (matched && row.style.display !== 'none') matches++
+      }
+      element.toggleClass('seam-settings-filtered', Boolean(query) && matches === 0)
+      if (matches) visibleGroups++
+      const collapsed = query
+        ? this.filteredCollapsedGroups.has(heading)
+        : this.collapsedGroups.has(heading)
+      element.toggleClass('seam-settings-collapsed', collapsed)
+      const button = this.groupToggles.get(heading)
+      if (button && element.contains(button.extraSettingsEl)) {
+        const content = element.querySelector<HTMLElement>(':scope > .setting-items')
+        if (content) {
+          content.id = `seam-settings-group-${groupIndex}`
+          button.extraSettingsEl.setAttribute('aria-controls', content.id)
+        }
+        button.setIcon(collapsed ? 'chevron-right' : 'chevron-down')
+        button.setTooltip(
+          collapsed ? t().settingsExpandGroup(heading) : t().settingsCollapseGroup(heading),
+        )
+        button.extraSettingsEl.setAttribute(
+          'aria-label',
+          collapsed ? t().settingsExpandGroup(heading) : t().settingsCollapseGroup(heading),
+        )
+        button.extraSettingsEl.setAttribute('aria-expanded', String(!collapsed))
+        button.setDisabled(false)
+      }
+      groupIndex++
+    }
+    this.containerEl
+      .querySelector<HTMLElement>('.seam-settings-no-results')
+      ?.toggle(Boolean(query) && visibleGroups === 0)
   }
 
   private folderDefinition(
@@ -441,9 +670,16 @@ export class SeamSettingsTab extends PluginSettingTab {
     setting.controlEl.addClass('seam-quick-add-choices-control')
     const panel = setting.controlEl.createDiv({ cls: 'seam-pinned-commands-panel' })
     const header = panel.createDiv({ cls: 'seam-pinned-commands-header' })
-    header.createDiv({ cls: 'seam-quick-add-panel-title', text: t().settingsPinnedCommands })
+    const titleRow = header.createDiv({
+      cls: 'seam-custom-search-panel-title-row seam-pinned-commands-title-row',
+    })
+    titleRow.createDiv({ cls: 'seam-quick-add-panel-title', text: t().settingsPinnedCommands })
+    const pinnedCount = titleRow.createDiv({
+      cls: 'seam-search-pinned-count',
+      attr: { 'aria-live': 'polite' },
+    })
     const add = this.addChoiceButton(header, 'plus', t().settingsPinnedCommandsAdd, () => {
-      if (this.plugin.settings.palettePinnedCommands.length >= 3) {
+      if (this.plugin.settings.palettePinnedCommands.length >= PALETTE_COMMAND_PIN_LIMIT) {
         new Notice(t().paletteCommandPinLimit)
         return
       }
@@ -453,7 +689,7 @@ export class SeamSettingsTab extends PluginSettingTab {
         this.plugin.getPinnableCommands().filter((command) => !pinned.includes(command.id)),
         (command) => {
           if (this.plugin.settings.palettePinnedCommands.includes(command.id)) return
-          if (this.plugin.settings.palettePinnedCommands.length >= 3) {
+          if (this.plugin.settings.palettePinnedCommands.length >= PALETTE_COMMAND_PIN_LIMIT) {
             new Notice(t().paletteCommandPinLimit)
             return
           }
@@ -488,6 +724,7 @@ export class SeamSettingsTab extends PluginSettingTab {
       list.empty()
       const commands = this.plugin.getPinnableCommands()
       const pins = this.plugin.settings.palettePinnedCommands
+      pinnedCount.setText(t().settingsCommandPinnedCount(pins.length))
       if (!pins.length)
         list.createDiv({ cls: 'seam-quick-add-empty', text: t().settingsPinnedCommandsEmpty })
       for (const [index, id] of pins.entries()) {
@@ -1291,14 +1528,15 @@ export class SeamSettingsTab extends PluginSettingTab {
     )
   }
 
-  private renderShowFileExtensionAndMatchCountSetting(setting: Setting): void {
+  private renderResultMetadataSetting(
+    setting: Setting,
+    key: 'showFileExtension' | 'showMatchCount',
+  ): void {
     setting.addToggle((toggle) =>
-      toggle
-        .setValue(this.plugin.settings.showFileExtensionAndMatchCount)
-        .onChange(async (value) => {
-          this.plugin.settings.showFileExtensionAndMatchCount = value
-          await this.plugin.saveSettings()
-        }),
+      toggle.setValue(this.plugin.settings[key]).onChange(async (value) => {
+        this.plugin.settings[key] = value
+        await this.plugin.saveSettings()
+      }),
     )
   }
 

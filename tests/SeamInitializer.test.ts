@@ -19,7 +19,7 @@ Object.assign(require.cache['obsidian']!.exports, {
         }
       : JSON.parse(source),
 })
-const { SeamInitializer } =
+const { SeamInitializer, isSetupConfigured } =
   require('../src/setup/SeamInitializer') as typeof import('../src/setup/SeamInitializer')
 
 function fixture() {
@@ -141,6 +141,8 @@ describe('Initialize Seam safety and application', () => {
     const f = fixture()
     f.resource('User note.md', '# untouched')
     const plan = await f.service.preview()
+    assert.equal(isSetupConfigured(plan), false)
+    assert.equal(isSetupConfigured({ ...plan, items: [] }), false)
     assert.equal(f.writes.length, 0)
     const report = await f.service.apply(plan)
     assert.deepEqual(
@@ -173,6 +175,14 @@ describe('Initialize Seam safety and application', () => {
     const again = await f.service.preview()
     const count = f.writes.length
     assert.ok(again.items.every((item) => item.status === 'existing'))
+    assert.equal(isSetupConfigured(again), true)
+    assert.equal(
+      isSetupConfigured({
+        ...again,
+        items: [...again.items, { target: 'Conflict', group: 'resources', status: 'conflict' }],
+      }),
+      false,
+    )
     await f.service.apply(again)
     assert.equal(f.writes.length, count)
   })

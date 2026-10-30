@@ -17,14 +17,22 @@ import { writingActivityExtension } from './statistics/WritingActivityExtension'
 import { currentNoteCompletion } from './statistics/NoteCompletion'
 import { NoteDeletion } from './notes/NoteDeletion'
 import { isFileInFolder } from './utils/isFileInFolder'
-import { CustomSpecialSearch, DEFAULT_SETTINGS, PaletteItem, SeamSettings } from './types'
+import {
+  CustomSpecialSearch,
+  DEFAULT_SETTINGS,
+  PaletteItem,
+  SeamSettings,
+  PALETTE_COMMAND_PIN_LIMIT,
+} from './types'
 import { AutomationQueue } from './automation/AutomationQueue'
 import { AutomationService } from './automation/AutomationService'
 import { SourceAttachmentModal } from './ui/SourceAttachmentModal'
 import { Reconciler } from './automation/Reconciler'
 import { SearchService } from './search/SearchService'
 import { UniversalPalette } from './ui/UniversalPalette'
+import { seamCommandIcon } from './ui/CommandIcons'
 import { SeamSettingsTab } from './settings/SettingsTab'
+import { readResultMetadataSettings } from './settings/ResultMetadataSettings'
 import { SeamInitializer } from './setup/SeamInitializer'
 import { SetupModal } from './setup/SetupModal'
 import { t } from './i18n'
@@ -75,8 +83,9 @@ export default class SeamPlugin extends Plugin {
   private notePinIdsDirty = false
 
   private registerSeamCommand(command: Command): void {
-    this.seamCommands.push({ ...command })
-    this.addCommand(command)
+    const withIcon = { ...command, icon: command.icon ?? seamCommandIcon(command.id) }
+    this.seamCommands.push(withIcon)
+    this.addCommand({ ...withIcon })
   }
 
   getPinnableCommands(): { id: string; name: string; icon?: string }[] {
@@ -131,6 +140,7 @@ export default class SeamPlugin extends Plugin {
   globalStatistics!: GlobalStatistics
   initializer!: SeamInitializer
   private setupModal: SetupModal | null = null
+  private settingsTab: SeamSettingsTab | null = null
   private reconciliationIntervalId: number | null = null
   private paletteRibbonEl: HTMLElement | null = null
   private activePalettes = new Set<UniversalPalette>()
@@ -398,7 +408,8 @@ export default class SeamPlugin extends Plugin {
     }
 
     // 4. Register settings tab
-    this.addSettingTab(new SeamSettingsTab(this.app, this))
+    this.settingsTab = new SeamSettingsTab(this.app, this)
+    this.addSettingTab(this.settingsTab)
 
     // 5. Defer heavy initialization until layout is ready
     this.app.workspace.onLayoutReady(() => {
@@ -856,6 +867,7 @@ export default class SeamPlugin extends Plugin {
       },
       {
         id: 'cmd-process-pending',
+        icon: seamCommandIcon('process-pending'),
         title: t().cmdProcessPending,
         description: t().cmdProcessPending,
         type: 'command',
@@ -863,6 +875,7 @@ export default class SeamPlugin extends Plugin {
       },
       {
         id: 'cmd-show-status',
+        icon: seamCommandIcon('show-status'),
         title: t().cmdShowStatus,
         description: t().cmdShowStatus,
         type: 'command',
@@ -933,6 +946,7 @@ export default class SeamPlugin extends Plugin {
       if (!isFileInFolder(activeFile, this.settings.archiveFolder)) {
         actions.push({
           id: 'cmd-archive-current',
+          icon: seamCommandIcon('archive-current-note'),
           title: t().paletteArchiveCurrentTitle(activeFile.basename),
           description: t().paletteArchiveCurrentDesc(
             this.settings.archiveFolder,
@@ -945,6 +959,7 @@ export default class SeamPlugin extends Plugin {
       if (!isFileInFolder(activeFile, this.settings.permanentFolder)) {
         actions.push({
           id: 'cmd-move-permanent',
+          icon: seamCommandIcon('move-to-permanent'),
           title: t().palettePermanentCurrentTitle(activeFile.basename),
           description: t().palettePermanentCurrentDesc(
             this.settings.permanentFolder,
@@ -957,6 +972,7 @@ export default class SeamPlugin extends Plugin {
       if (!isFileInFolder(activeFile, this.settings.fleetingFolder)) {
         actions.push({
           id: 'cmd-move-fleeting',
+          icon: seamCommandIcon('move-to-fleeting'),
           title: t().paletteFleetingCurrentTitle(activeFile.basename),
           description: t().paletteFleetingCurrentDesc(
             this.settings.fleetingFolder,
@@ -1032,9 +1048,9 @@ export default class SeamPlugin extends Plugin {
           : Boolean(persistedData.showPaletteDescriptions)
       delete (this.settings as SeamSettings & { showSpecialSearchDescriptions?: boolean })
         .showSpecialSearchDescriptions
-      this.settings.showFileExtensionAndMatchCount = Boolean(
-        this.settings.showFileExtensionAndMatchCount,
-      )
+      Object.assign(this.settings, readResultMetadataSettings(persistedData))
+      delete (this.settings as SeamSettings & { showFileExtensionAndMatchCount?: unknown })
+        .showFileExtensionAndMatchCount
       this.settings.showCommandsByDefault = Boolean(this.settings.showCommandsByDefault)
       const defaultPreferences = DEFAULT_SETTINGS.specialSearchPreferences
       const storedPreferences = Array.isArray(this.settings.specialSearchPreferences)
@@ -1126,7 +1142,7 @@ export default class SeamPlugin extends Plugin {
                 ].includes(id),
             ),
           ),
-        ].slice(0, 3)
+        ].slice(0, PALETTE_COMMAND_PIN_LIMIT)
       : []
     this.settings.showPaletteGroups = this.settings.showPaletteGroups !== false
     this.settings.confirmPeriodicNoteCreation = this.settings.confirmPeriodicNoteCreation !== false
@@ -1219,6 +1235,7 @@ export default class SeamPlugin extends Plugin {
    * Called when settings change. Propagates new settings to all services.
    */
   onSettingsChange(): void {
+    this.settingsTab?.refreshSetupStatus()
     if (this.calendarPins?.rolling) void this.calendarPins.refreshWeeklySettings().catch(() => {})
     this.refreshPaletteRibbon()
     this.automationService?.updateSettings(this.settings)

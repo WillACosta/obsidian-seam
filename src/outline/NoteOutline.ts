@@ -18,3 +18,30 @@ export function getNoteOutline(app: App, file: TFile): PaletteItem[] {
     },
   }))
 }
+
+/** Headings own following entries until the next heading at the same or higher level. */
+export function outlineParentIds(items: PaletteItem[]): Set<string> {
+  const parents = new Set<string>()
+  for (let index = 0; index + 1 < items.length; index++)
+    if ((items[index + 1].headingLevel ?? 0) > (items[index].headingLevel ?? 0))
+      parents.add(items[index].id)
+  return parents
+}
+
+/** During filtering, a folded ancestor only hides results when that ancestor also matches. */
+export function visibleOutlineItems(
+  items: PaletteItem[],
+  collapsed: ReadonlySet<string>,
+  query: string,
+): PaletteItem[] {
+  const term = query.trim().toLowerCase()
+  let hiddenBelow: number | null = null
+  return items.filter((item) => {
+    const level = item.headingLevel ?? 0
+    if (hiddenBelow !== null && level <= hiddenBelow) hiddenBelow = null
+    const matches = !term || item.title.toLowerCase().includes(term)
+    const visible = hiddenBelow === null && matches
+    if (visible && collapsed.has(item.id)) hiddenBelow = level
+    return visible
+  })
+}

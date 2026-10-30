@@ -95,15 +95,63 @@ describe('Note outline', () => {
     palette.showNoteOutline(file)
     assert.deepEqual(
       palette.instructions.map((item: { purpose: string }) => item.purpose),
-      ['navigate', 'select', 'back', 'dismiss'],
+      ['navigate', 'select', 'toggle nested headings', 'back', 'dismiss'],
     )
     for (const shortcut of ['Mod+Enter', 'Shift+Enter', 'Mod+Shift+Enter']) {
-      assert.equal(palette.handlers.get(shortcut)({}), false)
+      assert.equal(palette.handlers.get(shortcut)({ preventDefault() {} }), false)
     }
     assert.deepEqual(opened, [])
     assert.equal(palette.closed, false)
     palette.handlers.get('Escape')({})
     assert.equal(palette.closed, true)
+  })
+  it('toggles a selected heading without opening it, preserves nested folds, and keeps searches useful', () => {
+    const { palette, file, opened } = fixture([
+      heading('Parent', 1, 0),
+      heading('Child', 2, 1),
+      heading('Grandchild', 3, 2),
+      heading('Sibling', 2, 3),
+      heading('Next', 1, 4),
+    ])
+    palette.showNoteOutline(file)
+    const all = palette.getSuggestions('')
+    palette.chooser = { values: all, selectedItem: 1 }
+    assert.equal(
+      palette.handlers.get('Mod+Enter')({
+        isComposing: true,
+        preventDefault: () => assert.fail('Do not interrupt composition'),
+      }),
+      true,
+    )
+    let prevented = false
+    palette.handlers.get('Mod+Enter')({
+      preventDefault: () => {
+        prevented = true
+      },
+    })
+    assert.equal(prevented, true)
+    assert.deepEqual(
+      palette.getSuggestions('').map((item: { title: string }) => item.title),
+      ['Parent', 'Child', 'Sibling', 'Next'],
+    )
+    palette.chooser = { values: palette.getSuggestions(''), selectedItem: 0 }
+    palette.handlers.get('Mod+Enter')({ preventDefault() {} })
+    assert.deepEqual(
+      palette.getSuggestions('').map((item: { title: string }) => item.title),
+      ['Parent', 'Next'],
+    )
+    assert.deepEqual(
+      palette.getSuggestions('grandchild').map((item: { title: string }) => item.title),
+      ['Grandchild'],
+    )
+    palette.chooser = { values: palette.getSuggestions(''), selectedItem: 0 }
+    palette.handlers.get('Mod+Enter')({ preventDefault() {} })
+    assert.deepEqual(
+      palette.getSuggestions('').map((item: { title: string }) => item.title),
+      ['Parent', 'Child', 'Sibling', 'Next'],
+    )
+    assert.equal(palette.closed, false)
+    assert.deepEqual(opened, [])
   })
   it('keeps Backspace as text editing until the input is empty, then restores Palette search', () => {
     const { palette, file } = fixture([heading('Nested', 2, 7)])
@@ -112,7 +160,7 @@ describe('Note outline', () => {
     palette.getSuggestions('Nested')
     assert.deepEqual(
       palette.instructions.map((item: { purpose: string }) => item.purpose),
-      ['navigate', 'select', 'dismiss'],
+      ['navigate', 'select', 'toggle nested headings', 'dismiss'],
     )
     assert.equal(
       palette.handlers.get('Backspace')({

@@ -40,6 +40,11 @@ export interface SetupPlan {
   items: SetupItem[]
   seamData?: string | null
 }
+/** The setup is complete only when every recommendation has been verified. */
+export function isSetupConfigured(plan: SetupPlan): boolean {
+  return plan.items.length > 0 && plan.items.every((item) => item.status === 'existing')
+}
+
 export interface SetupResult {
   target: string
   outcome: 'applied' | 'skipped' | 'failed'

@@ -1,6 +1,13 @@
 import { App, Modal, Notice } from 'obsidian'
 import { t } from '../i18n'
-import { SeamInitializer, SetupGroup, SetupItem, SetupPlan, SetupReport } from './SeamInitializer'
+import {
+  isSetupConfigured,
+  SeamInitializer,
+  SetupGroup,
+  SetupItem,
+  SetupPlan,
+  SetupReport,
+} from './SeamInitializer'
 
 export class SetupModal extends Modal {
   private applying = false
@@ -45,7 +52,7 @@ export class SetupModal extends Modal {
     const hasChanges = plan.items.some(
       (item) => item.status === 'create' || item.status === 'update',
     )
-    const configured = this.isConfigured(plan)
+    const configured = isSetupConfigured(plan)
     this.setTitle(configured ? t().setupStatuses.existing : t().setupTitle)
     if (configured) this.contentEl.createEl('p', { text: t().setupConfiguredMessage })
     else if (hasChanges) {
@@ -90,7 +97,7 @@ export class SetupModal extends Modal {
           let configured = false
           if (!report.results.some((result) => result.outcome === 'failed')) {
             try {
-              configured = this.isConfigured(await this.initializer.preview())
+              configured = isSetupConfigured(await this.initializer.preview())
             } catch {
               /* Keep the report when the final state cannot be verified. */
             }
@@ -109,9 +116,6 @@ export class SetupModal extends Modal {
         })
     })
     cancel.focus()
-  }
-  private isConfigured(plan: SetupPlan): boolean {
-    return plan.items.length > 0 && plan.items.every((item) => item.status === 'existing')
   }
   private renderReport(report: SetupReport, configured: boolean): void {
     this.contentEl.empty()

@@ -37,6 +37,8 @@ import { GlobalStatistics } from '../statistics/GlobalStatistics'
 import { GlobalStatisticsView } from './GlobalStatisticsView'
 import { readNoteStatistics } from '../statistics/NoteStatistics'
 import { groupPaletteItems } from './PaletteGroups'
+import { orderPaletteCommands } from './PaletteCommandOrder'
+import { paletteResultMetadata } from './ResultMetadata'
 import { confirmPeriodicNote } from './PeriodicNoteConfirmation'
 import { renderNoteCompletion } from './NoteCompletionView'
 import { readNoteCompletion, summarizeTasks } from '../statistics/NoteCompletion'
@@ -47,7 +49,7 @@ import { readWeeklyNoteSettings } from '../calendar/WeeklyNotes'
 import { DailyNoteCalendar } from '../calendar/DailyNoteCalendar'
 import { readDailyNoteSettings } from '../daily/DailyNotes'
 import { orderSpecialSearches } from '../calendar/SpecialSearchOrder'
-import { getNoteOutline } from '../outline/NoteOutline'
+import { getNoteOutline, outlineParentIds, visibleOutlineItems } from '../outline/NoteOutline'
 import { getCommandHotkeyDisplay, showShortcutHints } from '../utils/hotkey'
 
 /**
@@ -58,6 +60,7 @@ import { getCommandHotkeyDisplay, showShortcutHints } from '../utils/hotkey'
 interface SuggestChooser<T> {
   values: T[] | null
   selectedItem: number
+  setSelectedItem?: (index: number) => void
 }
 
 /**
@@ -121,6 +124,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private queryInputMirrorEl: HTMLElement | null = null
   private mode: 'search' | 'quick-add' | 'statistics' | 'outline' = 'search'
   private outlineItems: PaletteItem[] = []
+  private collapsedOutline = new Set<string>()
+  private outlineParents = new Set<string>()
   private outlinePreviousLimit: number | null = null
   private calendarView: DailyNoteCalendar | null = null
   private calendarHost: HTMLElement | null = null
@@ -183,13 +188,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     // SuggestModal's default Enter handler does not preserve modifier state
     // when calling onChooseSuggestion, so we intercept at the scope level.
     this.scope.register(['Mod'], 'Enter', (evt: KeyboardEvent) => {
-      if (
-        this.mode === 'statistics' ||
-        this.mode === 'outline' ||
-        this.calendarHost ||
-        this.closeButtonScope
-      )
+      if (this.mode === 'outline') {
+        if (evt.isComposing) return true
+        evt.preventDefault()
+        const heading = this.getSelectedItem()
+        if (heading) this.toggleOutlineHeading(heading)
         return false
+      }
+      if (this.mode === 'statistics' || this.calendarHost || this.closeButtonScope) return false
       evt.preventDefault()
       const item = this.getSelectedItem()
       if (item?.type === 'note' && item.file) {
@@ -370,7 +376,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       'seam-palette-directory-search-active',
     )
     this.modalEl.addClass('seam-palette-outline')
+    this.collapsedOutline.clear()
     this.outlineItems = getNoteOutline(this.app, file)
+    this.outlineParents = outlineParentIds(this.outlineItems)
     this.outlinePreviousLimit = this.limit
     this.limit = Math.max(1, this.outlineItems.length)
     this.emptyStateText = t().outlineEmpty
@@ -380,6 +388,19 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.updateInstructions('')
     this.refreshSuggestions()
     this.inputEl.focus()
+  }
+
+  private toggleOutlineHeading(item: PaletteItem): void {
+    if (!this.outlineParents.has(item.id)) return
+    if (this.collapsedOutline.has(item.id)) this.collapsedOutline.delete(item.id)
+    else this.collapsedOutline.add(item.id)
+    this.refreshSuggestions()
+    window.setTimeout(() => {
+      if (this.mode !== 'outline') return
+      const chooser = (this as unknown as { chooser?: SuggestChooser<PaletteItem> }).chooser
+      const index = chooser?.values?.findIndex((value) => value.id === item.id) ?? -1
+      if (index >= 0) chooser?.setSelectedItem?.(index)
+    }, 0)
   }
 
   /** Replace search with a read-only report in the same Palette. */
@@ -920,9 +941,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     if (this.mode === 'statistics') return []
     if (this.mode === 'outline') {
       this.updateInstructions(query)
-      return this.outlineItems.filter((item) =>
-        item.title.toLowerCase().includes(query.trim().toLowerCase()),
-      )
+      return visibleOutlineItems(this.outlineItems, this.collapsedOutline, query)
     }
     query = this.composedQueryPrefix + query
     if (
@@ -1125,12 +1144,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     // Command mode: > prefix
     if (trimmed.startsWith('>')) {
       const cmdQuery = trimmed.substring(1).trim().toLowerCase()
-      if (!cmdQuery) return groupPaletteItems(this.commands, this.settings.showPaletteGroups)
       return groupPaletteItems(
-        this.commands.filter(
-          (c) =>
-            c.title.toLowerCase().includes(cmdQuery) ||
-            c.description.toLowerCase().includes(cmdQuery),
+        orderPaletteCommands(
+          this.commands,
+          this.pinnedCommandItems,
+          this.settings.palettePinnedCommands,
+          cmdQuery,
         ),
         this.settings.showPaletteGroups,
       )
@@ -1181,23 +1200,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             ]
           : []
       })
-      const pinnedCommands = (this.settings.palettePinnedCommands ?? []).flatMap((id) => {
-        const command =
-          this.pinnedCommandItems.find((item) => item.id === id) ??
-          this.commands.find((item) => item.id === id)
-        return command ? [{ ...command, pinnedCommand: true }] : []
-      })
-      const pinnedIds = new Set(pinnedCommands.map((item) => item.id))
-      return groupPaletteItems(
-        [
-          ...notes,
-          ...pinnedCommands,
-          ...(this.settings.showCommandsByDefault
-            ? this.commands.filter((item) => !pinnedIds.has(item.id))
-            : []),
-        ],
-        this.settings.showPaletteGroups,
+      const commands = orderPaletteCommands(
+        this.commands,
+        this.pinnedCommandItems,
+        this.settings.palettePinnedCommands ?? [],
+        '',
+        this.settings.showCommandsByDefault,
       )
+      return groupPaletteItems([...notes, ...commands], this.settings.showPaletteGroups)
     }
 
     // Plain text queries without tags: async (in-note content search)
@@ -1699,6 +1709,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       const instructions = [
         { command: '↑↓', purpose: t().paletteHelpNavigate },
         { command: '↵', purpose: t().paletteHelpSelect },
+        { command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵', purpose: t().outlineToggleChildren },
       ]
       if (!query) instructions.push({ command: '⌫', purpose: t().paletteHelpBack })
       instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
@@ -2073,6 +2084,26 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     if (item.type === 'heading') {
       el.addClass('seam-palette-heading')
       el.setAttribute('data-heading-level', String(item.headingLevel))
+      if (this.outlineParents.has(item.id)) {
+        const collapsed = this.collapsedOutline.has(item.id)
+        const button = el.createEl('button', {
+          cls: 'clickable-icon seam-outline-disclosure',
+          attr: {
+            'aria-label': collapsed
+              ? t().outlineExpand(item.title)
+              : t().outlineCollapse(item.title),
+            'aria-expanded': String(!collapsed),
+          },
+        })
+        setIcon(button, collapsed ? 'chevron-right' : 'chevron-down')
+        button.addEventListener('mousedown', (event) => event.stopPropagation())
+        button.addEventListener('click', (event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          this.toggleOutlineHeading(item)
+        })
+      } else
+        el.createSpan({ cls: 'seam-outline-disclosure-spacer', attr: { 'aria-hidden': 'true' } })
       el.createSpan({ cls: 'seam-palette-heading-level', text: `H${item.headingLevel}` })
       el.createSpan({ cls: 'seam-palette-title', text: item.title })
       return
@@ -2137,14 +2168,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       const titleRow = el.createDiv({ cls: 'seam-palette-note-title-row' })
       const titleEl = titleRow.createDiv({ cls: 'seam-palette-title' })
       renderHighlightedText(titleEl, item.title, highlightQuery)
-      const matchCount =
-        this.settings.showFileExtensionAndMatchCount && item.matchCount !== undefined
-          ? ` • ${item.matchCount} ${item.matchCount === 1 ? 'match' : 'matches'}`
-          : ''
-      if (this.settings.showFileExtensionAndMatchCount) {
+      const metadata = paletteResultMetadata(item, this.settings)
+      if (metadata.beforeCompletion) {
         titleRow.createSpan({
           cls: 'seam-palette-result-metadata',
-          text: `.${item.file?.extension ?? 'md'}${item.taskCompletionPercent === undefined ? matchCount : ''}`,
+          text: metadata.beforeCompletion,
         })
       }
       if (item.taskCompletionPercent !== undefined) {
@@ -2158,8 +2186,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
           cls: 'seam-palette-task-completion-value',
           text: `${item.taskCompletionPercent}%`,
         })
-        if (matchCount)
-          titleRow.createSpan({ cls: 'seam-palette-result-metadata', text: matchCount.trim() })
+        if (metadata.afterCompletion)
+          titleRow.createSpan({
+            cls: 'seam-palette-result-metadata',
+            text: metadata.afterCompletion,
+          })
       }
 
       if (item.file && this.settings.palettePinnedNotes.includes(item.file.path)) {

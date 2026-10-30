@@ -4,6 +4,7 @@ export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000'
 export type UpdateAnnouncementMode = 'major' | 'all' | 'never'
 export type PaletteRibbonMode = 'both' | 'mobile' | 'hidden'
 export const SPECIAL_SEARCH_PIN_LIMIT = 5
+export const PALETTE_COMMAND_PIN_LIMIT = 5
 
 export type CalendarPin =
   { kind: 'file'; path: string } | { kind: 'weekly'; week?: string; path?: string }
@@ -39,7 +40,8 @@ export interface SeamSettings {
   moveCleanupTags: string
   moveCleanupProperties: string
   showIcons: boolean
-  showFileExtensionAndMatchCount: boolean
+  showFileExtension: boolean
+  showMatchCount: boolean
   showCommandsByDefault: boolean
   quickAddChoices: QuickAddChoice[]
   persistQuickAddDrafts: boolean
@@ -122,7 +124,8 @@ export const DEFAULT_SETTINGS: SeamSettings = {
   moveCleanupTags: '#permanent, #todo',
   moveCleanupProperties: 'status',
   showIcons: true,
-  showFileExtensionAndMatchCount: true,
+  showFileExtension: true,
+  showMatchCount: true,
   showCommandsByDefault: true,
   quickAddChoices: [],
   persistQuickAddDrafts: false,

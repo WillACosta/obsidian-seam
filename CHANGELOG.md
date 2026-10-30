@@ -3,10 +3,14 @@
 What's new and changed in each Seam release.
 
 ## [Unreleased] - 2026-10-27
-<!-- iterations: iteration_13..iteration_16 -->
+<!-- iterations: iteration_13..iteration_17 -->
 
 ### Added
-- **Pinned commands**: Select, reorder, or remove up to three Seam commands in the Commands settings group; available pins appear in the Universal Palette even when default commands are hidden.
+- **Outline folding**: Toggle nested headings using Cmd+Enter / Ctrl+Enter or the disclosure control in the Outline preview.
+- **Setup status**: Show a check beside Preview setup when every recommended option is already configured.
+- **Settings filter**: Find Seam settings by section, name, or description with case- and accent-insensitive matching.
+- **Settings group disclosure**: Expand or collapse sections using their headings, with matching sections temporarily expanded while filtering. Initialize Seam is a standalone item.
+- **Pinned commands**: Select, reorder, or remove up to five Seam commands in the Commands settings group; available pins appear in the Universal Palette even when default commands are hidden.
 - **Command mode shortcut**: Open the Universal Palette directly in command mode using an assignable Obsidian command.
 - **Palette note pins**: Pin or unpin the current Markdown note and keep it first in the empty-input Universal Palette, even with default commands hidden. Persist references across reloads, follow file/folder moves, and remove deleted references. Palette note pins are independent of calendar pins and special-query pins.
 - **Note completion**: Offer “Show current note's percentage completion” only for notes containing tasks. Display a theme-colored progress bar and counts of unfinished, partially done (`[/]`), completed, and total items inside the Palette. Include unsaved editor content and respect reduced motion. Press Backspace from completion or Note statistics to return to Palette search, with a matching footer hint.
@@ -21,6 +25,9 @@ What's new and changed in each Seam release.
 - **Bookshelf setup**: Create a native four-view Bookshelf Base and reusable `@bookshelf` / `@reading` queries. Include book properties, priority icons/order, zero-safe ratings, estimated reading hours, bounded progress bars, and unread/missing-value handling. Exclude the templates folder from every view and preserve customized files and alias collisions.
 
 ### Changed
+- **Palette result metadata**: Control file extensions and match counts independently, preserving existing visibility preferences.
+- **Command icons**: Use descriptive icons consistently for commands and pins in the Universal Palette and settings.
+- **Command mode**: Show pinned commands first in the same group and style as the empty Universal Palette.
 - **Pinned shortcuts**: Show pin icons and assigned hotkeys for notes and commands; pinned notes expose stable commands for shortcut assignment and preserve those shortcuts across renames.
 - **Shortcut hints**: Show keyboard hints on desktop and tablets. Initialize Seam remains available in settings, and Palette-opening commands are excluded from the pin picker.
 - **Calendar pin feedback**: Highlight calendar pinned-note buttons with the theme hover background on hover and visible keyboard focus.
