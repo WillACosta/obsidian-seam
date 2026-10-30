@@ -21,9 +21,10 @@ import {
 } from '../types'
 import { t } from '../i18n'
 import { QuickAddChoiceModal } from './QuickAddChoiceModal'
+import { PinnedCommandModal } from './PinnedCommandModal'
 import { CustomSpecialSearchModal } from './CustomSpecialSearchModal'
 import { VaultPathSuggest } from '../ui/VaultPathSuggest'
-import { getCommandHotkeyDisplay, openHotkeyAssignment } from '../utils/hotkey'
+import { getCommandHotkeyDisplay, openHotkeyAssignment, showShortcutHints } from '../utils/hotkey'
 
 export class SeamSettingsTab extends PluginSettingTab {
   plugin: SeamPlugin
@@ -306,6 +307,16 @@ export class SeamSettingsTab extends PluginSettingTab {
       },
       {
         type: 'group',
+        heading: strings.settingsCommandsHeading,
+        items: [
+          {
+            name: strings.settingsPinnedCommands,
+            render: (setting) => this.renderPinnedCommandsSetting(setting),
+          },
+        ],
+      },
+      {
+        type: 'group',
         heading: strings.settingsInterfaceHeading,
         items: [
           {
@@ -422,6 +433,149 @@ export class SeamSettingsTab extends PluginSettingTab {
         )
       },
     }
+  }
+
+  private renderPinnedCommandsSetting(setting: Setting): void {
+    setting.infoEl.remove()
+    setting.settingEl.addClass('seam-quick-add-choices-setting')
+    setting.controlEl.addClass('seam-quick-add-choices-control')
+    const panel = setting.controlEl.createDiv({ cls: 'seam-pinned-commands-panel' })
+    const header = panel.createDiv({ cls: 'seam-pinned-commands-header' })
+    header.createDiv({ cls: 'seam-quick-add-panel-title', text: t().settingsPinnedCommands })
+    const add = this.addChoiceButton(header, 'plus', t().settingsPinnedCommandsAdd, () => {
+      if (this.plugin.settings.palettePinnedCommands.length >= 3) {
+        new Notice(t().paletteCommandPinLimit)
+        return
+      }
+      const pinned = this.plugin.settings.palettePinnedCommands
+      new PinnedCommandModal(
+        this.app,
+        this.plugin.getPinnableCommands().filter((command) => !pinned.includes(command.id)),
+        (command) => {
+          if (this.plugin.settings.palettePinnedCommands.includes(command.id)) return
+          if (this.plugin.settings.palettePinnedCommands.length >= 3) {
+            new Notice(t().paletteCommandPinLimit)
+            return
+          }
+          void save([...this.plugin.settings.palettePinnedCommands, command.id])
+        },
+      ).open()
+    })
+    add.addClass('seam-pinned-commands-add')
+    const list = panel.createDiv({ cls: 'seam-quick-add-choices seam-pinned-commands-list' })
+    let dragged: string | null = null
+    let armed: string | null = null
+    const save = async (next: string[]): Promise<void> => {
+      const previous = this.plugin.settings.palettePinnedCommands
+      this.plugin.settings.palettePinnedCommands = next
+      try {
+        await this.plugin.saveSettings()
+      } catch {
+        this.plugin.settings.palettePinnedCommands = previous
+        new Notice(t().palettePinFailed)
+      }
+      render()
+    }
+    const move = (id: string, offset: number): void => {
+      const next = [...this.plugin.settings.palettePinnedCommands]
+      const index = next.indexOf(id)
+      const target = index + offset
+      if (index < 0 || target < 0 || target >= next.length) return
+      ;[next[index], next[target]] = [next[target], next[index]]
+      void save(next)
+    }
+    const render = (): void => {
+      list.empty()
+      const commands = this.plugin.getPinnableCommands()
+      const pins = this.plugin.settings.palettePinnedCommands
+      if (!pins.length)
+        list.createDiv({ cls: 'seam-quick-add-empty', text: t().settingsPinnedCommandsEmpty })
+      for (const [index, id] of pins.entries()) {
+        const command = commands.find((item) => item.id === id)
+        const name = command?.name ?? id
+        const row = list.createDiv({ cls: 'seam-quick-add-choice' })
+        row.dataset.commandId = id
+        row.draggable = true
+        const label = row.createSpan({ cls: 'seam-quick-add-choice-label' })
+        const icon = label.createSpan({ cls: 'seam-quick-add-choice-icon' })
+        setIcon(icon, command?.icon ?? 'terminal')
+        label.createSpan({ text: name })
+        const actions = row.createSpan({ cls: 'seam-quick-add-choice-actions' })
+        const up = this.addChoiceButton(
+          actions,
+          'chevron-up',
+          `${t().settingsPinnedCommandsMoveUp} ${name}`,
+          () => move(id, -1),
+        )
+        up.disabled = index === 0
+        const down = this.addChoiceButton(
+          actions,
+          'chevron-down',
+          `${t().settingsPinnedCommandsMoveDown} ${name}`,
+          () => move(id, 1),
+        )
+        down.disabled = index === pins.length - 1
+        this.addChoiceButton(actions, 'x', `${t().settingsPinnedCommandsRemove} ${name}`, () => {
+          void save(pins.filter((item) => item !== id))
+        })
+        const handle = this.addChoiceButton(
+          actions,
+          'grip-vertical',
+          `${t().settingsPinnedCommandsReorder} ${name}`,
+          () => {},
+          'seam-quick-add-drag-handle',
+        )
+        handle.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown')
+        handle.addEventListener('pointerdown', () => {
+          armed = id
+        })
+        handle.addEventListener('keydown', (event) => {
+          if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+          event.preventDefault()
+          move(id, event.key === 'ArrowUp' ? -1 : 1)
+        })
+        row.addEventListener('dragstart', (event) => {
+          if (armed !== id) {
+            event.preventDefault()
+            return
+          }
+          dragged = id
+          row.addClass('is-dragging')
+          event.dataTransfer?.setData('text/plain', id)
+        })
+        row.addEventListener('dragover', (event) => {
+          if (!dragged || dragged === id) return
+          event.preventDefault()
+          const rect = row.getBoundingClientRect()
+          row.toggleClass('is-drop-after', event.clientY >= rect.top + rect.height / 2)
+          row.toggleClass('is-drop-before', event.clientY < rect.top + rect.height / 2)
+        })
+        row.addEventListener('dragleave', () => row.removeClass('is-drop-before', 'is-drop-after'))
+        row.addEventListener('drop', (event) => {
+          event.preventDefault()
+          if (!dragged || dragged === id) return
+          const next = [...this.plugin.settings.palettePinnedCommands]
+          const source = next.indexOf(dragged)
+          let target = next.indexOf(id)
+          if (source < 0 || target < 0) return
+          const [item] = next.splice(source, 1)
+          if (source < target) target--
+          const rect = row.getBoundingClientRect()
+          next.splice(target + (event.clientY >= rect.top + rect.height / 2 ? 1 : 0), 0, item)
+          void save(next)
+        })
+        row.addEventListener('dragend', () => {
+          dragged = null
+          armed = null
+          list
+            .querySelectorAll('.is-dragging, .is-drop-before, .is-drop-after')
+            .forEach((element) =>
+              element.removeClass('is-dragging', 'is-drop-before', 'is-drop-after'),
+            )
+        })
+      }
+    }
+    render()
   }
 
   private renderQuickAddSetting(setting: Setting): void {
@@ -1406,6 +1560,10 @@ export class SeamSettingsTab extends PluginSettingTab {
    * with a keyboard button to jump directly to Obsidian's built-in Hotkeys configuration.
    */
   private renderHotkeySetting(setting: Setting, paletteCommandId: string): void {
+    if (!showShortcutHints()) {
+      setting.settingEl.hide()
+      return
+    }
     const strings = t()
     setting.setName(strings.settingsPaletteHotkey).setDesc(strings.settingsPaletteHotkeyDesc)
 

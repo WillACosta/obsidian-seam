@@ -162,13 +162,17 @@ describe('Palette note pins', () => {
   it('tracks folder moves and note deletion without changing note contents', async () => {
     const f = pinFixture()
     await f.pins.toggle(f.add('Folder/A.md'))
+    const commandId = f.settings.paletteNoteCommandIds['Folder/A.md']
+    assert.ok(commandId)
     await f.pins.toggle(f.add('B.md'))
     f.listeners.get('rename')!(new MockTFolder('Moved'), 'Folder')
     await new Promise((resolve) => setImmediate(resolve))
     assert.deepEqual(f.settings.palettePinnedNotes, ['Moved/A.md', 'B.md'])
+    assert.equal(f.settings.paletteNoteCommandIds['Moved/A.md'], commandId)
     f.listeners.get('delete')!(new MockTFile('Moved/A.md'))
     await new Promise((resolve) => setImmediate(resolve))
     assert.deepEqual(f.settings.palettePinnedNotes, ['B.md'])
+    assert.equal(f.settings.paletteNoteCommandIds['Moved/A.md'], undefined)
   })
 })
 

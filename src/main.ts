@@ -1,4 +1,13 @@
-import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from 'obsidian'
+import {
+  Command,
+  Notice,
+  Platform,
+  Plugin,
+  TAbstractFile,
+  TFile,
+  TFolder,
+  normalizePath,
+} from 'obsidian'
 import { DailyTaskTransfer } from './daily/DailyTaskTransfer'
 import { CalendarPins, normalizeCalendarPins } from './calendar/CalendarPins'
 import { PalettePins, normalizePalettePins } from './notes/PalettePins'
@@ -42,7 +51,73 @@ const SEAM_MANAGED_PROPERTIES = ['status']
  * - Universal Palette for search and commands
  * - Event-driven + reconciliation automation
  */
+const PALETTE_COMMAND_IDS: Record<string, string> = {
+  'show-global-statistics': 'cmd-global-statistics',
+  'create-quick-note': 'cmd-quick-note',
+  'create-new-note': 'cmd-quick-add',
+  'create-note-from-attachment': 'cmd-source-note',
+  'process-pending': 'cmd-process-pending',
+  'show-status': 'cmd-show-status',
+  'show-note-outline': 'cmd-note-outline',
+  'show-note-statistics': 'cmd-note-statistics',
+  'show-note-completion': 'cmd-note-completion',
+  'delete-current-note': 'cmd-delete-current-note',
+  'archive-current-note': 'cmd-archive-current',
+  'move-to-permanent': 'cmd-move-permanent',
+  'move-to-fleeting': 'cmd-move-fleeting',
+  'move-daily-todos': 'cmd-daily-todos-tomorrow',
+  'pull-daily-todos': 'cmd-daily-todos-yesterday',
+}
+
 export default class SeamPlugin extends Plugin {
+  private seamCommands: Command[] = []
+  private pinnedNoteCommandIds = new Set<string>()
+  private notePinIdsDirty = false
+
+  private registerSeamCommand(command: Command): void {
+    this.seamCommands.push({ ...command })
+    this.addCommand(command)
+  }
+
+  getPinnableCommands(): { id: string; name: string; icon?: string }[] {
+    const commands = this.seamCommands
+      .filter((command) => !['open-palette', 'open-palette-command-mode'].includes(command.id))
+      .map((command) => ({
+        id: PALETTE_COMMAND_IDS[command.id] ?? `registered:${command.id}`,
+        name: command.name,
+        icon: command.icon,
+      }))
+    // Pins created before the command catalog used a shared toggle identity.
+    for (const legacy of [
+      { id: 'cmd-palette-pin', name: t().cmdPinNote, icon: 'pin' },
+      { id: 'cmd-calendar-pin', name: t().cmdPinCalendarNote, icon: 'pin' },
+    ])
+      if (this.settings.palettePinnedCommands.includes(legacy.id)) commands.push(legacy)
+    return commands
+  }
+
+  private getPinnedCommandItems(): PaletteItem[] {
+    return this.seamCommands.flatMap((command) => {
+      const id = PALETTE_COMMAND_IDS[command.id] ?? `registered:${command.id}`
+      if (!this.settings.palettePinnedCommands.includes(id)) return []
+      if (command.checkCallback && !command.checkCallback(true)) return []
+      return [
+        {
+          id,
+          title: command.name,
+          description: '',
+          type: 'command' as const,
+          icon: command.icon,
+          shortcutCommandId: `${this.manifest.id}:${command.id}`,
+          action: () => {
+            if (command.checkCallback) command.checkCallback(false)
+            else command.callback?.()
+          },
+        },
+      ]
+    })
+  }
+
   settings: SeamSettings = DEFAULT_SETTINGS
 
   private automationService!: AutomationService
@@ -63,6 +138,7 @@ export default class SeamPlugin extends Plugin {
   async onload(): Promise<void> {
     // 1. Load persisted settings
     await this.loadSettings()
+    if (this.notePinIdsDirty) await this.saveData(this.settings)
     this.initializer = new SeamInitializer(
       this.app,
       this.manifest.dir ?? normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`),
@@ -116,8 +192,10 @@ export default class SeamPlugin extends Plugin {
         this.app,
         () => this.settings,
         () => this.saveData(this.settings),
+        () => this.syncPinnedNoteCommands(),
       ),
     )
+    this.syncPinnedNoteCommands()
 
     this.globalStatistics = this.addChild(
       new GlobalStatistics(
@@ -129,19 +207,14 @@ export default class SeamPlugin extends Plugin {
     this.registerEditorExtension(writingActivityExtension(this.globalStatistics))
 
     // 3. Register commands
-    this.addCommand({
-      id: 'initialize-seam',
-      name: t().setupTitle,
-      callback: () => this.openSetup(),
-    })
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'show-global-statistics',
       name: t().cmdShowGlobalStatistics,
       callback: () => {
         void this.openGlobalStatistics()
       },
     })
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'create-quick-note',
       name: t().cmdCreateQuickNote,
       callback: () => {
@@ -149,38 +222,46 @@ export default class SeamPlugin extends Plugin {
       },
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'create-new-note',
       name: t().cmdCreateNewNote,
       callback: () => this.openQuickAdd(),
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'create-note-from-attachment',
       name: t().cmdCreateNoteFromAttachment,
       callback: () => new SourceAttachmentModal(this.app, this.automationService).open(),
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'open-palette',
       name: t().cmdOpenPalette,
       callback: () => this.openPalette(),
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
+      id: 'open-palette-command-mode',
+      name: t().cmdOpenPaletteCommands,
+      callback: () => {
+        void this.openPalette(true)
+      },
+    })
+
+    this.registerSeamCommand({
       id: 'process-pending',
       name: t().cmdProcessPending,
       callback: () => this.processPending(),
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'show-status',
       name: t().cmdShowStatus,
       callback: () => this.showStatus(),
     })
 
     for (const pinned of [false, true]) {
-      this.addCommand({
+      this.registerSeamCommand({
         id: pinned ? 'unpin-current-note-from-calendar' : 'pin-current-note-to-calendar',
         name: pinned ? t().cmdUnpinCalendarNote : t().cmdPinCalendarNote,
         checkCallback: (checking: boolean) => {
@@ -198,7 +279,7 @@ export default class SeamPlugin extends Plugin {
     }
 
     // Commands that operate on the current open note
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'delete-current-note',
       name: t().cmdDeleteCurrentNote,
       checkCallback: (checking: boolean) => {
@@ -209,7 +290,7 @@ export default class SeamPlugin extends Plugin {
       },
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'show-note-outline',
       name: t().cmdShowNoteOutline,
       checkCallback: (checking: boolean) => {
@@ -221,7 +302,7 @@ export default class SeamPlugin extends Plugin {
     })
 
     for (const pinned of [false, true]) {
-      this.addCommand({
+      this.registerSeamCommand({
         id: pinned ? 'unpin-note' : 'pin-note',
         name: pinned ? t().cmdUnpinNote : t().cmdPinNote,
         checkCallback: (checking) => {
@@ -233,7 +314,7 @@ export default class SeamPlugin extends Plugin {
         },
       })
     }
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'show-note-completion',
       name: t().cmdShowNoteCompletion,
       checkCallback: (checking) => {
@@ -245,7 +326,7 @@ export default class SeamPlugin extends Plugin {
       },
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'show-note-statistics',
       name: t().cmdShowNoteStatistics,
       checkCallback: (checking: boolean) => {
@@ -256,7 +337,7 @@ export default class SeamPlugin extends Plugin {
       },
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'archive-current-note',
       name: t().cmdArchiveCurrentNote,
       checkCallback: (checking: boolean) => {
@@ -269,7 +350,7 @@ export default class SeamPlugin extends Plugin {
       },
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'move-to-permanent',
       name: t().cmdMoveToPermanent,
       checkCallback: (checking: boolean) => {
@@ -282,7 +363,7 @@ export default class SeamPlugin extends Plugin {
       },
     })
 
-    this.addCommand({
+    this.registerSeamCommand({
       id: 'move-to-fleeting',
       name: t().cmdMoveToFleeting,
       checkCallback: (checking: boolean) => {
@@ -296,7 +377,7 @@ export default class SeamPlugin extends Plugin {
     })
 
     for (const direction of ['tomorrow', 'yesterday'] as const) {
-      this.addCommand({
+      this.registerSeamCommand({
         id: direction === 'tomorrow' ? 'move-daily-todos' : 'pull-daily-todos',
         name: direction === 'tomorrow' ? t().cmdMoveDailyTodos : t().cmdPullDailyTodos,
         checkCallback: (checking) => {
@@ -482,6 +563,29 @@ export default class SeamPlugin extends Plugin {
     )
   }
 
+  private syncPinnedNoteCommands(): void {
+    const entries = Object.entries(this.settings.paletteNoteCommandIds)
+    const next = new Set(entries.map(([, id]) => `open-pinned-note-${id}`))
+    for (const id of this.pinnedNoteCommandIds) this.removeCommand(id)
+    this.pinnedNoteCommandIds = next
+    for (const [path, id] of entries) {
+      const file = this.app.vault.getAbstractFileByPath(path)
+      if (!(file instanceof TFile)) continue
+      this.addCommand({
+        id: `open-pinned-note-${id}`,
+        name: t().cmdOpenPinnedNote(file.basename),
+        callback: () => {
+          const currentPath = Object.keys(this.settings.paletteNoteCommandIds).find(
+            (key) => this.settings.paletteNoteCommandIds[key] === id,
+          )
+          const currentFile = currentPath ? this.app.vault.getAbstractFileByPath(currentPath) : null
+          if (currentFile instanceof TFile)
+            void this.app.workspace.getLeaf(false).openFile(currentFile)
+        },
+      })
+    }
+  }
+
   // ---- Commands ----
 
   private openTrackedPalette(palette: UniversalPalette): void {
@@ -490,7 +594,7 @@ export default class SeamPlugin extends Plugin {
     palette.open()
   }
 
-  private async openPalette(): Promise<void> {
+  private async openPalette(commandMode = false): Promise<void> {
     await this.searchService.refreshDailyNoteSettings()
     const commands = await this.getPaletteCommands()
     const palette = new UniversalPalette(
@@ -500,8 +604,10 @@ export default class SeamPlugin extends Plugin {
       commands,
       this.calendarPins,
       this.globalStatistics,
+      this.getPinnedCommandItems(),
     )
     this.openTrackedPalette(palette)
+    if (commandMode) palette.showCommands()
   }
 
   private async openQuickAdd(): Promise<void> {
@@ -512,6 +618,7 @@ export default class SeamPlugin extends Plugin {
       await this.getPaletteCommands(),
       this.calendarPins,
       this.globalStatistics,
+      this.getPinnedCommandItems(),
     )
     this.openTrackedPalette(palette)
     window.setTimeout(() => palette.showQuickAdd(), 0)
@@ -526,6 +633,7 @@ export default class SeamPlugin extends Plugin {
       await this.getPaletteCommands(),
       this.calendarPins,
       this.globalStatistics,
+      this.getPinnedCommandItems(),
     )
     this.openTrackedPalette(palette)
     palette.showNoteOutline(file)
@@ -539,6 +647,7 @@ export default class SeamPlugin extends Plugin {
       await this.getPaletteCommands(),
       this.calendarPins,
       this.globalStatistics,
+      this.getPinnedCommandItems(),
     )
     this.openTrackedPalette(palette)
     palette.showGlobalStatistics()
@@ -553,6 +662,7 @@ export default class SeamPlugin extends Plugin {
       commands,
       this.calendarPins,
       this.globalStatistics,
+      this.getPinnedCommandItems(),
     )
     this.openTrackedPalette(palette)
     void palette.showNoteStatistics(file, completion)
@@ -757,14 +867,6 @@ export default class SeamPlugin extends Plugin {
         description: t().cmdShowStatus,
         type: 'command',
         action: () => this.showStatus(),
-      },
-      {
-        id: 'cmd-initialize-seam',
-        title: t().setupTitle,
-        description: t().setupDescription,
-        type: 'command',
-        icon: 'list-start',
-        action: () => this.openSetup(),
       },
     ]
 
@@ -995,6 +1097,37 @@ export default class SeamPlugin extends Plugin {
       this.settings = Object.assign({}, DEFAULT_SETTINGS)
     }
     this.settings.palettePinnedNotes = normalizePalettePins(this.settings.palettePinnedNotes)
+    const storedNoteIds = this.settings.paletteNoteCommandIds
+    const ids: Record<string, string> = {}
+    const used = new Set<string>()
+    for (const path of this.settings.palettePinnedNotes) {
+      const candidate =
+        storedNoteIds && typeof storedNoteIds === 'object' ? storedNoteIds[path] : undefined
+      const id =
+        typeof candidate === 'string' && /^[a-zA-Z0-9-]+$/.test(candidate) && !used.has(candidate)
+          ? candidate
+          : crypto.randomUUID()
+      if (id !== candidate) this.notePinIdsDirty = true
+      ids[path] = id
+      used.add(id)
+    }
+    this.settings.paletteNoteCommandIds = ids
+    this.settings.palettePinnedCommands = Array.isArray(this.settings.palettePinnedCommands)
+      ? [
+          ...new Set(
+            this.settings.palettePinnedCommands.filter(
+              (id): id is string =>
+                typeof id === 'string' &&
+                ![
+                  'registered:open-palette',
+                  'registered:open-palette-command-mode',
+                  'cmd-initialize-seam',
+                  'registered:initialize-seam',
+                ].includes(id),
+            ),
+          ),
+        ].slice(0, 3)
+      : []
     this.settings.showPaletteGroups = this.settings.showPaletteGroups !== false
     this.settings.confirmPeriodicNoteCreation = this.settings.confirmPeriodicNoteCreation !== false
     this.settings.calendarPins = normalizeCalendarPins(this.settings.calendarPins)

@@ -6,8 +6,7 @@ function commandGroup(item: PaletteItem): string {
     return t().paletteGroupStatistics
   if (/^cmd-(archive|move-|daily-todos)/.test(item.id)) return t().paletteGroupMove
   if (/^cmd-(quick-|source-note)/.test(item.id)) return t().paletteGroupCreate
-  if (['cmd-initialize-seam', 'cmd-show-status', 'cmd-process-pending'].includes(item.id))
-    return t().paletteGroupSeam
+  if (['cmd-show-status', 'cmd-process-pending'].includes(item.id)) return t().paletteGroupSeam
   return t().paletteGroupNote
 }
 
@@ -31,7 +30,12 @@ export function groupPaletteItems(
   }
   const groups = new Map<string, PaletteItem[]>()
   for (const item of items) {
-    const label = item.type === 'note' ? t().paletteGroupPinnedNotes : commandGroup(item)
+    const label =
+      item.type === 'note'
+        ? t().paletteGroupPinnedNotes
+        : item.pinnedCommand
+          ? t().paletteGroupPinnedCommands
+          : commandGroup(item)
     const group = groups.get(label) ?? []
     group.push(item)
     groups.set(label, group)

@@ -3,9 +3,11 @@
 What's new and changed in each Seam release.
 
 ## [Unreleased] - 2026-10-27
-<!-- iterations: iteration_13..iteration_15 -->
+<!-- iterations: iteration_13..iteration_16 -->
 
 ### Added
+- **Pinned commands**: Select, reorder, or remove up to three Seam commands in the Commands settings group; available pins appear in the Universal Palette even when default commands are hidden.
+- **Command mode shortcut**: Open the Universal Palette directly in command mode using an assignable Obsidian command.
 - **Palette note pins**: Pin or unpin the current Markdown note and keep it first in the empty-input Universal Palette, even with default commands hidden. Persist references across reloads, follow file/folder moves, and remove deleted references. Palette note pins are independent of calendar pins and special-query pins.
 - **Note completion**: Offer “Show current note's percentage completion” only for notes containing tasks. Display a theme-colored progress bar and counts of unfinished, partially done (`[/]`), completed, and total items inside the Palette. Include unsaved editor content and respect reduced motion. Press Backspace from completion or Note statistics to return to Palette search, with a matching footer hint.
 - **Periodic-note confirmation**: Ask before Seam creates a daily, weekly, or yearly note, including calendar actions, rolling weekly pins, date queries, and daily-task transfer. Show the target path and allow cancellation without creation. Add a default-on Calendar and periodic notes setting; existing notes open directly.
@@ -19,6 +21,8 @@ What's new and changed in each Seam release.
 - **Bookshelf setup**: Create a native four-view Bookshelf Base and reusable `@bookshelf` / `@reading` queries. Include book properties, priority icons/order, zero-safe ratings, estimated reading hours, bounded progress bars, and unread/missing-value handling. Exclude the templates folder from every view and preserve customized files and alias collisions.
 
 ### Changed
+- **Pinned shortcuts**: Show pin icons and assigned hotkeys for notes and commands; pinned notes expose stable commands for shortcut assignment and preserve those shortcuts across renames.
+- **Shortcut hints**: Show keyboard hints on desktop and tablets. Initialize Seam remains available in settings, and Palette-opening commands are excluded from the pin picker.
 - **Calendar pin feedback**: Highlight calendar pinned-note buttons with the theme hover background on hover and visible keyboard focus.
 - **Query-pin count**: Show `Pinned • N/5` aligned to the right of the Search Queries title, with the subtitle beneath, counting all built-in/custom pins independently of the settings filter.
 - **Completion consistency**: Partially done tasks no longer count as fully completed in the existing `@todo` result percentage. Keep special-query pin priority and configured ordering when showing group labels.
@@ -36,6 +40,7 @@ What's new and changed in each Seam release.
 - **Query-history cycling**: Remove session query storage and Up/Down query recall from the Universal Palette. Arrow keys use normal suggestion/calendar/Base navigation.
 
 ### Fixed
+- **Device statistics files**: Keep a stable device identity across plugin reloads and reuse the latest matching legacy identity. Existing snapshots remain available for aggregation.
 - **Partial-task completion percentages**:
   - **Root Cause**: The existing result percentage counted every nonempty checkbox status, including `[/]`, as completed.
   - **Fix**: Share the same task summary for the completion report and result percentages, with partial tasks counted separately.

@@ -16,6 +16,7 @@ import {
   ensureStatisticsFolder,
   statisticsDeviceId,
   combineActivity,
+  stableResourcePath,
 } from './StatisticsStorage'
 
 // Share only in-flight writes across module reloads, then release each queue entry.
@@ -73,7 +74,7 @@ export class GlobalStatistics extends Component {
   ) {
     super()
     this.path = normalizePath(`${STATISTICS_FOLDER}/${deviceId}.json`)
-    this.journalKey = `seam-writing:${app.vault.adapter.getResourcePath(this.path)}`
+    this.journalKey = `seam-writing:${stableResourcePath(app.vault.adapter.getResourcePath(this.path))}`
   }
   onload(): void {
     this.app.workspace.onLayoutReady(() => {
@@ -184,8 +185,19 @@ export class GlobalStatistics extends Component {
           ? parseActivity(JSON.parse(await this.app.vault.adapter.read(this.path)))
           : emptyActivity(localDay())
         this.savedSequence = exists ? this.state.sequence : -1
+        // Recover a pending journal written with the former cache-busted resource URL.
+        const legacyJournal = Object.keys(localStorage)
+          .filter(
+            (key) =>
+              key.startsWith('seam-writing:') &&
+              stableResourcePath(key.slice('seam-writing:'.length)) ===
+                this.journalKey.slice('seam-writing:'.length),
+          )
+          .sort((a, b) => Number(b.split('?')[1] ?? 0) - Number(a.split('?')[1] ?? 0))
+          .map((key) => localStorage.getItem(key))
+          .find((value) => value !== null)
         const journal = parseActivityJournal(
-          JSON.parse(localStorage.getItem(this.journalKey) ?? '[]'),
+          JSON.parse(localStorage.getItem(this.journalKey) ?? legacyJournal ?? '[]'),
         )
         // Validate replay by checking the resulting schema before accepting recovery.
         const recovered = JSON.parse(JSON.stringify(this.state)) as ActivityState

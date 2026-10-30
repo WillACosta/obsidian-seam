@@ -21,6 +21,7 @@ export class PalettePins extends Component {
     private app: App,
     private settings: () => SeamSettings,
     private save: () => Promise<void>,
+    private onChanged: () => void = () => {},
   ) {
     super()
   }
@@ -33,26 +34,47 @@ export class PalettePins extends Component {
   }
   private changed(file: TAbstractFile | null, oldPath: string): void {
     const newPath = file?.path
-    void this.update((paths) =>
-      paths.flatMap((path) =>
-        path === oldPath || path.startsWith(oldPath + '/')
-          ? newPath
-            ? [newPath + path.slice(oldPath.length)]
-            : []
-          : [path],
-      ),
+    void this.update(
+      (paths) =>
+        paths.flatMap((path) =>
+          path === oldPath || path.startsWith(oldPath + '/')
+            ? newPath
+              ? [newPath + path.slice(oldPath.length)]
+              : []
+            : [path],
+        ),
+      (ids) =>
+        Object.fromEntries(
+          Object.entries(ids).flatMap(([path, id]) =>
+            path === oldPath || path.startsWith(oldPath + '/')
+              ? newPath
+                ? [[newPath + path.slice(oldPath.length), id]]
+                : []
+              : [[path, id]],
+          ),
+        ),
     ).catch(() => new Notice(t().palettePinFailed))
   }
-  private update(change: (paths: string[]) => string[]): Promise<void> {
+  private update(
+    change: (paths: string[]) => string[],
+    changeIds: (ids: Record<string, string>) => Record<string, string> = (ids) => ids,
+  ): Promise<void> {
     const operation = this.queue.then(async () => {
       const settings = this.settings()
       const previous = settings.palettePinnedNotes
       const next = normalizePalettePins(change(previous))
       if (JSON.stringify(next) === JSON.stringify(previous)) return
+      const previousIds = settings.paletteNoteCommandIds ?? {}
+      const ids = changeIds(previousIds)
+      const nextIds: Record<string, string> = {}
+      for (const path of next) nextIds[path] = ids[path] ?? crypto.randomUUID()
       settings.palettePinnedNotes = next
+      settings.paletteNoteCommandIds = nextIds
       try {
         await this.save()
+        this.onChanged()
       } catch (error) {
+        settings.paletteNoteCommandIds = previousIds
         settings.palettePinnedNotes = previous
         throw error
       }

@@ -16,6 +16,11 @@ interface AppWithHotkeyManager extends App {
   hotkeyManager?: HotkeyManager
 }
 
+/** Show shortcut hints on desktop and tablet, including compact tablet windows. */
+export function showShortcutHints(): boolean {
+  return Platform.isDesktop || Platform.isTablet
+}
+
 /**
  * Determines if the current environment is running on a Mac platform.
  */

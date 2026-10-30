@@ -1,6 +1,7 @@
 import { App, Modal } from 'obsidian'
 import { QuickAddConflictBehavior } from '../types'
 import { registerModalShortcut } from '../utils/modalShortcuts'
+import { showShortcutHints } from '../utils/hotkey'
 
 /** Asks how Quick Add should handle a title collision. */
 export class NoteConflictModal extends Modal {
@@ -42,10 +43,13 @@ export class NoteConflictModal extends Modal {
   ): void {
     const button = parent.createEl('button', {
       cls: cancel ? 'seam-note-conflict-cancel' : '',
-      attr: { 'aria-label': `${label} (${shortcut})`, 'aria-keyshortcuts': shortcut },
+      attr: {
+        'aria-label': showShortcutHints() ? `${label} (${shortcut})` : label,
+        'aria-keyshortcuts': shortcut,
+      },
     })
     button.createSpan({ text: label })
-    button.createEl('kbd', { text: shortcut })
+    if (showShortcutHints()) button.createEl('kbd', { text: shortcut })
     button.addEventListener('click', onClick)
   }
 

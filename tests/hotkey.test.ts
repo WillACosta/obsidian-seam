@@ -1,11 +1,13 @@
 import './mocks/obsidian'
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { Platform } from 'obsidian'
 import {
   parseHotkeyString,
   formatHotkey,
   getCommandHotkeyDisplay,
   openHotkeyAssignment,
+  showShortcutHints,
 } from '../src/utils/hotkey'
 
 describe('Hotkey Parsing & Formatting', () => {
@@ -129,5 +131,25 @@ describe('openHotkeyAssignment', () => {
     openHotkeyAssignment(mockApp, 'Seam: Open Universal Palette')
     assert.equal(openedTab, 'hotkeys')
     assert.equal(searchSet, 'Seam: Open Universal Palette')
+  })
+})
+
+describe('Shortcut hint device policy', () => {
+  it('shows hints on desktop and tablets but not phones', () => {
+    const originalDesktop = Platform.isDesktop
+    const originalTablet = Platform.isTablet
+    try {
+      Platform.isDesktop = true
+      Platform.isTablet = false
+      assert.equal(showShortcutHints(), true)
+      Platform.isDesktop = false
+      Platform.isTablet = true
+      assert.equal(showShortcutHints(), true)
+      Platform.isTablet = false
+      assert.equal(showShortcutHints(), false)
+    } finally {
+      Platform.isDesktop = originalDesktop
+      Platform.isTablet = originalTablet
+    }
   })
 })

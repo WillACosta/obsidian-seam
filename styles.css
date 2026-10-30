@@ -1797,3 +1797,42 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
   font-size: var(--font-ui-small);
   font-weight: var(--font-normal);
 }
+
+.seam-pinned-commands-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--size-4-3);
+}
+
+.seam-pinned-commands-list {
+  max-height: none;
+}
+
+.seam-palette-pin-trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-inline-start: auto;
+  flex: none;
+  color: var(--text-muted);
+}
+
+.seam-palette-pin-shortcut {
+  white-space: nowrap;
+  color: var(--text-muted);
+  background: var(--background-modifier-hover);
+  border-radius: var(--radius-s);
+  padding: 2px 6px;
+  font-size: var(--font-ui-smaller);
+}
+
+.seam-palette-pin-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.seam-palette-pin-icon svg {
+  width: 16px;
+  height: 16px;
+}

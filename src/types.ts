@@ -10,6 +10,8 @@ export type CalendarPin =
 
 export interface SeamSettings {
   palettePinnedNotes: string[]
+  paletteNoteCommandIds: Record<string, string>
+  palettePinnedCommands: string[]
   showPaletteGroups: boolean
   confirmPeriodicNoteCreation: boolean
   calendarPins: CalendarPin[]
@@ -91,6 +93,8 @@ export interface CustomSpecialSearch {
 
 export const DEFAULT_SETTINGS: SeamSettings = {
   palettePinnedNotes: [],
+  paletteNoteCommandIds: {},
+  palettePinnedCommands: [],
   showPaletteGroups: true,
   confirmPeriodicNoteCreation: true,
   calendarPins: [],
@@ -298,6 +302,8 @@ export interface PaletteItem {
   description: string
   type:
     'note' | 'command' | 'action' | 'create' | 'tag' | 'special' | 'base' | 'directory' | 'heading'
+  shortcutCommandId?: string
+  pinnedCommand?: boolean
   groupLabel?: string
   headingLevel?: number
   icon?: string

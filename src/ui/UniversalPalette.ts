@@ -1,6 +1,7 @@
 import {
   App,
   Component,
+  Instruction,
   MarkdownRenderer,
   Scope,
   SuggestModal,
@@ -47,6 +48,7 @@ import { DailyNoteCalendar } from '../calendar/DailyNoteCalendar'
 import { readDailyNoteSettings } from '../daily/DailyNotes'
 import { orderSpecialSearches } from '../calendar/SpecialSearchOrder'
 import { getNoteOutline } from '../outline/NoteOutline'
+import { getCommandHotkeyDisplay, showShortcutHints } from '../utils/hotkey'
 
 /**
  * Internal interface for the SuggestModal's chooser.
@@ -170,6 +172,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private commands: PaletteItem[],
     private calendarPins?: CalendarPins,
     private globalStatistics?: GlobalStatistics,
+    private pinnedCommandItems: PaletteItem[] = [],
   ) {
     super(app)
     this.setPlaceholder(t().palettePlaceholder)
@@ -1092,7 +1095,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
               throw error
             if (this.lastQuery !== trimmed) return []
             this.createSuggestionActive = false
-            this.setInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }])
+            this.setKeyboardInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }])
             return [
               {
                 id: 'period-query-error',
@@ -1178,8 +1181,21 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             ]
           : []
       })
+      const pinnedCommands = (this.settings.palettePinnedCommands ?? []).flatMap((id) => {
+        const command =
+          this.pinnedCommandItems.find((item) => item.id === id) ??
+          this.commands.find((item) => item.id === id)
+        return command ? [{ ...command, pinnedCommand: true }] : []
+      })
+      const pinnedIds = new Set(pinnedCommands.map((item) => item.id))
       return groupPaletteItems(
-        [...notes, ...(this.settings.showCommandsByDefault ? this.commands : [])],
+        [
+          ...notes,
+          ...pinnedCommands,
+          ...(this.settings.showCommandsByDefault
+            ? this.commands.filter((item) => !pinnedIds.has(item.id))
+            : []),
+        ],
         this.settings.showPaletteGroups,
       )
     }
@@ -1576,6 +1592,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
   }
 
+  showCommands(): void {
+    this.inputEl.value = '>'
+    this.refreshSuggestions()
+    this.inputEl.focus()
+  }
+
   showQuickAdd(): void {
     this.mode = 'quick-add'
     this.inputEl.value = ''
@@ -1610,9 +1632,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.inputEl.focus()
   }
 
+  private setKeyboardInstructions(instructions: Instruction[]): void {
+    this.setInstructions(showShortcutHints() ? instructions : [])
+  }
+
   private updateInstructions(query: string): void {
     if (this.closeButtonScope) {
-      this.setInstructions([
+      this.setKeyboardInstructions([
         { command: '↵', purpose: t().paletteHelpDismiss },
         { command: 'esc', purpose: t().paletteHelpDismiss },
       ])
@@ -1624,7 +1650,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.baseNavigationMode &&
       this.baseResultNavigation?.isSupported
     ) {
-      this.setInstructions([
+      this.setKeyboardInstructions([
         {
           command: this.baseNavigationMode.active ? '↑↓←→' : '↑↓',
           purpose: t().paletteHelpNavigate,
@@ -1666,7 +1692,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
           ? t().paletteHelpReturnToSearch
           : t().paletteHelpDismiss,
       })
-      this.setInstructions(instructions)
+      this.setKeyboardInstructions(instructions)
       return
     }
     if (this.mode === 'outline') {
@@ -1676,18 +1702,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       ]
       if (!query) instructions.push({ command: '⌫', purpose: t().paletteHelpBack })
       instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
-      this.setInstructions(instructions)
+      this.setKeyboardInstructions(instructions)
       return
     }
     if (this.mode === 'statistics') {
-      this.setInstructions([
+      this.setKeyboardInstructions([
         { command: '⌫', purpose: t().paletteHelpBack },
         { command: 'esc', purpose: t().paletteHelpDismiss },
       ])
       return
     }
     if (this.mode === 'search' && this.createSuggestionActive) {
-      this.setInstructions([
+      this.setKeyboardInstructions([
         { command: '↵', purpose: t().paletteHelpCreate },
         { command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵', purpose: t().paletteHelpCreateNewTab },
         { command: '⇧↵', purpose: t().paletteHelpCreateSplit },
@@ -1702,7 +1728,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       !this.excludedTags.length &&
       !this.composedQueryPrefix
     ) {
-      this.setInstructions([
+      this.setKeyboardInstructions([
         { command: '#', purpose: t().paletteHelpTag },
         { command: '@', purpose: t().paletteHelpSpecialSearch },
         { command: '/', purpose: t().paletteHelpDirectory },
@@ -1720,7 +1746,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.excludedTags.length > 0)
     ) {
       const openNewTab = Platform.isMacOS ? '⌘↵' : 'Ctrl+↵'
-      this.setInstructions([
+      this.setKeyboardInstructions([
         { command: '↑↓', purpose: t().paletteHelpNavigate },
         { command: openNewTab, purpose: t().paletteHelpOpenNewTab },
         { command: '⇧↵', purpose: t().paletteHelpOpenSplit },
@@ -1730,7 +1756,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     }
 
     if (this.mode === 'search' && query.startsWith('>')) {
-      this.setInstructions([
+      this.setKeyboardInstructions([
         { command: '↑↓', purpose: t().paletteHelpNavigate },
         { command: '↵', purpose: t().paletteHelpSelect },
         { command: 'esc', purpose: t().paletteHelpDismiss },
@@ -1740,7 +1766,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
     if (this.mode === 'search' && query.trim()) {
       const openNewTab = Platform.isMacOS ? '⌘↵' : 'Ctrl+↵'
-      this.setInstructions([
+      this.setKeyboardInstructions([
         { command: '↑↓', purpose: t().paletteHelpNavigate },
         { command: '↵', purpose: t().paletteHelpOpen },
         { command: openNewTab, purpose: t().paletteHelpOpenNewTab },
@@ -1758,7 +1784,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       instructions.push({ command: '⌫', purpose: t().paletteHelpBack })
     }
     instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
-    this.setInstructions(instructions)
+    this.setKeyboardInstructions(instructions)
   }
 
   onNoSuggestion(): void {
@@ -2075,6 +2101,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       const titleEl = rowEl.createSpan({ cls: 'seam-palette-title' })
       titleEl.setText(item.title)
 
+      if (item.pinnedCommand || this.settings.palettePinnedCommands.includes(item.id)) {
+        const commandId =
+          item.shortcutCommandId ??
+          this.pinnedCommandItems.find((entry) => entry.id === item.id)?.shortcutCommandId
+        this.renderPinnedIndicator(rowEl, commandId)
+      }
       const isSpecialSearch = Boolean(item.specialSearch || item.customSearchId)
       if (isSpecialSearch && this.isSpecialSearchPinned(item)) {
         const pinEl = rowEl.createSpan({
@@ -2128,6 +2160,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         })
         if (matchCount)
           titleRow.createSpan({ cls: 'seam-palette-result-metadata', text: matchCount.trim() })
+      }
+
+      if (item.file && this.settings.palettePinnedNotes.includes(item.file.path)) {
+        const id = this.settings.paletteNoteCommandIds?.[item.file.path]
+        this.renderPinnedIndicator(titleRow, id ? `seam:open-pinned-note-${id}` : undefined)
       }
 
       if (item.description) {
@@ -2190,6 +2227,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         })
       }
     }
+  }
+
+  private renderPinnedIndicator(row: HTMLElement, commandId?: string): void {
+    const trailing = row.createSpan({ cls: 'seam-palette-pin-trailing' })
+    const shortcut =
+      commandId && showShortcutHints() ? getCommandHotkeyDisplay(this.app, commandId) : null
+    if (shortcut) trailing.createEl('kbd', { cls: 'seam-palette-pin-shortcut', text: shortcut })
+    const pin = trailing.createSpan({
+      cls: 'seam-palette-pin-icon',
+      attr: { 'aria-label': t().palettePinned },
+    })
+    setIcon(pin, 'pin')
   }
 
   private isSpecialSearchPinned(item: PaletteItem): boolean {
