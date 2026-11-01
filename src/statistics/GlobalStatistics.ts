@@ -11,6 +11,7 @@ import {
   wordCount,
 } from './WritingActivity'
 import { t } from '../i18n'
+import { decodeStatistics, encodeStatistics } from './SegmentedStatistics'
 import {
   STATISTICS_FOLDER,
   ensureStatisticsFolder,
@@ -65,16 +66,24 @@ export class GlobalStatistics extends Component {
   private remote = new Map<string, ActivityState>()
   private remoteError = false
   private remoteRefresh: Promise<void> | null = null
+  private remoteTimer: number | null = null
   private readonly path: string
+  private readonly deviceId: string
+  private persisted = new Map<string, string>()
+  private dirtyMonths = new Map<string, number>()
+  private dirtyReferences = 0
   private readonly journalKey: string
+  private readonly checkpointPath: string
   constructor(
     private app: App,
     pluginDirectory: string,
     deviceId = statisticsDeviceId(app, pluginDirectory),
   ) {
     super()
+    this.deviceId = deviceId
     this.path = normalizePath(`${STATISTICS_FOLDER}/${deviceId}.json`)
     this.journalKey = `seam-writing:${stableResourcePath(app.vault.adapter.getResourcePath(this.path))}`
+    this.checkpointPath = normalizePath(`${STATISTICS_FOLDER}/.${deviceId}.checkpoint`)
   }
   onload(): void {
     this.app.workspace.onLayoutReady(() => {
@@ -103,6 +112,7 @@ export class GlobalStatistics extends Component {
         this.app.vault.on('rename', (file, from) => {
           this.refreshMetadata(file.path)
           this.refreshMetadata(from)
+          if (this.isStatisticsPath(from) || this.isStatisticsPath(file.path)) return
           this.record({ kind: 'rename', from, to: file.path })
           if (file instanceof TFile) {
             if (file.extension === 'md') void this.refresh(file)
@@ -117,6 +127,7 @@ export class GlobalStatistics extends Component {
       this.registerEvent(
         this.app.vault.on('delete', (file) => {
           this.refreshMetadata(file.path)
+          if (this.isStatisticsPath(file.path)) return
           this.record({ kind: 'delete', path: file.path })
           for (const note of this.files.keys())
             if (note.path === file.path || note.path.startsWith(file.path + '/')) {
@@ -139,6 +150,7 @@ export class GlobalStatistics extends Component {
   onunload(): void {
     this.stopped = true
     if (this.notifyTimer !== null) window.clearTimeout(this.notifyTimer)
+    if (this.remoteTimer !== null) window.clearTimeout(this.remoteTimer)
     this.listeners.clear()
     void this.flush()
   }
@@ -180,11 +192,19 @@ export class GlobalStatistics extends Component {
       try {
         await pendingWrites.get(this.journalKey)
         await ensureStatisticsFolder(this.app)
+        await this.recoverCheckpoint()
         const exists = await this.app.vault.adapter.exists(this.path)
-        this.state = exists
-          ? parseActivity(JSON.parse(await this.app.vault.adapter.read(this.path)))
-          : emptyActivity(localDay())
-        this.savedSequence = exists ? this.state.sequence : -1
+        if (exists) {
+          const snapshot = await decodeStatistics(this.deviceId, (path) =>
+            this.app.vault.adapter.read(path),
+          )
+          this.state = snapshot.state
+          this.persisted = snapshot.files
+          this.savedSequence = snapshot.state.sequence
+        } else {
+          this.state = emptyActivity(localDay())
+          this.savedSequence = -1
+        }
         // Recover a pending journal written with the former cache-busted resource URL.
         const legacyJournal = Object.keys(localStorage)
           .filter(
@@ -201,7 +221,10 @@ export class GlobalStatistics extends Component {
         )
         // Validate replay by checking the resulting schema before accepting recovery.
         const recovered = JSON.parse(JSON.stringify(this.state)) as ActivityState
-        for (const event of journal) applyActivity(recovered, event)
+        for (const event of journal) {
+          if (event.sequence > recovered.sequence) this.markDirty(event, recovered)
+          applyActivity(recovered, event)
+        }
         this.state = parseActivity(recovered)
         this.journal = journal.filter((event) => event.sequence > this.savedSequence)
         this.historyReady = true
@@ -305,6 +328,7 @@ export class GlobalStatistics extends Component {
     } catch {
       this.saveError = true
     }
+    this.markDirty(event, this.state)
     applyActivity(this.state, event)
     if (!this.stopped && this.saveTimer === null)
       this.saveTimer = window.setTimeout(() => {
@@ -313,6 +337,73 @@ export class GlobalStatistics extends Component {
       }, 750)
     this.notify()
   }
+  private markDirty(event: ActivityEvent, state: ActivityState): void {
+    if (event.kind === 'edit' || event.kind === 'create') {
+      this.dirtyMonths.set(event.day.slice(0, 7), event.sequence)
+      const note = state.notes[event.id]
+      if (!note || note.deleted || note.path !== event.path) this.dirtyReferences = event.sequence
+    } else this.dirtyReferences = event.sequence
+  }
+
+  /** Finish a verified transaction before starting another, including after a reload. */
+  private async recoverCheckpoint(): Promise<void> {
+    const adapter = this.app.vault.adapter
+    if (!(await adapter.exists(this.checkpointPath))) return
+    let transaction: { files: [string, string][]; remove: string[] }
+    try {
+      transaction = JSON.parse(await adapter.read(this.checkpointPath))
+      if (!Array.isArray(transaction.files) || !Array.isArray(transaction.remove))
+        throw new Error('Invalid checkpoint')
+      const prefix = `${STATISTICS_FOLDER}/${this.deviceId}.`
+      if (
+        transaction.files.some(
+          (item) =>
+            !Array.isArray(item) ||
+            item.length !== 2 ||
+            typeof item[0] !== 'string' ||
+            !item[0].startsWith(prefix) ||
+            !item[0].endsWith('.json') ||
+            typeof item[1] !== 'string',
+        ) ||
+        transaction.remove.some(
+          (path) => typeof path !== 'string' || !path.startsWith(prefix) || !path.endsWith('.json'),
+        )
+      )
+        throw new Error('Invalid checkpoint paths')
+      const changed = new Map(transaction.files)
+      if (!changed.has(this.path)) throw new Error('Missing checkpoint manifest')
+      await decodeStatistics(this.deviceId, async (path) => changed.get(path) ?? adapter.read(path))
+    } catch {
+      // An interrupted checkpoint is safe to discard only if the existing history validates.
+      if (!(await adapter.exists(this.path))) throw new Error('Invalid statistics checkpoint')
+      await decodeStatistics(this.deviceId, (path) => adapter.read(path))
+      await adapter.remove(this.checkpointPath)
+      return
+    }
+    await this.applyCheckpoint(transaction)
+    await adapter.remove(this.checkpointPath)
+  }
+
+  private async applyCheckpoint(transaction: {
+    files: [string, string][]
+    remove: string[]
+  }): Promise<void> {
+    const adapter = this.app.vault.adapter
+    // The manifest is published last, after all referenced segments have been verified.
+    for (const [path, content] of transaction.files.filter(([path]) => path !== this.path)) {
+      await adapter.write(path, content)
+      if ((await adapter.read(path)) !== content)
+        throw new Error('Statistics segment write could not be verified')
+    }
+    const manifest = transaction.files.find(([path]) => path === this.path)
+    if (!manifest) throw new Error('Missing checkpoint manifest')
+    await adapter.write(manifest[0], manifest[1])
+    if ((await adapter.read(manifest[0])) !== manifest[1])
+      throw new Error('Statistics manifest write could not be verified')
+    for (const path of transaction.remove)
+      if (await adapter.exists(path)) await adapter.remove(path)
+  }
+
   /** Serialized/coalesced writes; the small write-ahead journal survives immediate plugin reloads. */
   flush(): Promise<void> {
     if (this.saveTimer !== null) {
@@ -325,13 +416,34 @@ export class GlobalStatistics extends Component {
       try {
         while (this.savedSequence < this.state.sequence) {
           const sequence = this.state.sequence
+          // Encode only affected months and references before yielding to incoming edits.
+          const next = encodeStatistics(this.deviceId, this.state, undefined, {
+            previous: this.persisted,
+            months: new Set(this.dirtyMonths.keys()),
+            references: this.dirtyReferences > 0,
+          })
           await ensureStatisticsFolder(this.app)
-          await this.app.vault.adapter.write(this.path, JSON.stringify(this.state))
-          this.savedSequence = sequence
-          this.journal = this.journal.filter((event) => event.sequence > sequence)
-          if (this.journal.length)
-            localStorage.setItem(this.journalKey, JSON.stringify(this.journal))
+          await this.recoverCheckpoint()
+          const changed = [...next].filter(
+            ([path, content]) => path === this.path || this.persisted.get(path) !== content,
+          )
+          const remove = [...this.persisted.keys()].filter((path) => !next.has(path))
+          const transaction = { files: changed, remove }
+          const serialized = JSON.stringify(transaction)
+          await this.app.vault.adapter.write(this.checkpointPath, serialized)
+          if ((await this.app.vault.adapter.read(this.checkpointPath)) !== serialized)
+            throw new Error('Statistics checkpoint could not be verified')
+          await this.applyCheckpoint(transaction)
+          this.persisted = next
+          for (const [month, revision] of this.dirtyMonths)
+            if (revision <= sequence) this.dirtyMonths.delete(month)
+          if (this.dirtyReferences <= sequence) this.dirtyReferences = 0
+          const remaining = this.journal.filter((event) => event.sequence > sequence)
+          if (remaining.length) localStorage.setItem(this.journalKey, JSON.stringify(remaining))
           else localStorage.removeItem(this.journalKey)
+          await this.app.vault.adapter.remove(this.checkpointPath)
+          this.journal = remaining
+          this.savedSequence = sequence
         }
         this.saveError = false
       } catch {
@@ -349,9 +461,22 @@ export class GlobalStatistics extends Component {
     })
     return operation
   }
+  private isStatisticsPath(path: string): boolean {
+    return path === STATISTICS_FOLDER || path.startsWith(STATISTICS_FOLDER + '/')
+  }
   private refreshMetadata(path: string): void {
-    if (path === STATISTICS_FOLDER || path.startsWith(STATISTICS_FOLDER + '/'))
+    if (!this.isStatisticsPath(path)) return
+    if (
+      path === this.path ||
+      path.startsWith(`${STATISTICS_FOLDER}/${this.deviceId}.`) ||
+      path === this.checkpointPath
+    )
+      return
+    if (this.remoteTimer !== null) window.clearTimeout(this.remoteTimer)
+    this.remoteTimer = window.setTimeout(() => {
+      this.remoteTimer = null
       void this.refreshRemote()
+    }, 150)
   }
   /** Replace remote snapshots on arrival; repeated sync notifications never add activity twice. */
   refreshRemote(): Promise<void> {
@@ -365,7 +490,11 @@ export class GlobalStatistics extends Component {
         for (const path of listing.files) {
           if (path === this.path || !/\/[a-zA-Z0-9-]+\.json$/.test(path)) continue
           try {
-            next.set(path, parseActivity(JSON.parse(await this.app.vault.adapter.read(path))))
+            const device = path.slice(STATISTICS_FOLDER.length + 1, -5)
+            next.set(
+              path,
+              (await decodeStatistics(device, (part) => this.app.vault.adapter.read(part))).state,
+            )
           } catch {
             error = true
             const previous = this.remote.get(path)

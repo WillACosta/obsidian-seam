@@ -24,6 +24,11 @@ import {
 } from '../src/statistics/GlobalStatisticsModel'
 import { observeWritingTransactions } from '../src/statistics/WritingActivityExtension'
 import { GlobalStatistics } from '../src/statistics/GlobalStatistics'
+import {
+  encodeStatistics,
+  decodeStatistics,
+  STATISTICS_SEGMENT_BYTES,
+} from '../src/statistics/SegmentedStatistics'
 
 class MarkdownViewHost {}
 Object.assign(require.cache['obsidian']!.exports, {
@@ -409,7 +414,9 @@ function fixture(
   const texts = new Map<string, string>(seed)
   for (const [path] of seed) files.set(path, new MockTFile(path))
   const disk = new Map<string, string>()
-  if (existing) disk.set(path, JSON.stringify(existing))
+  const device = path.split('/').pop()!.replace('.json', '')
+  if (existing)
+    for (const [name, content] of encodeStatistics(device, existing)) disk.set(name, content)
   const events = new Map<string, Function>()
   let reads = 0
   let fail = false
@@ -429,6 +436,9 @@ function fixture(
         write: async (path: string, text: string) => {
           if (fail) throw Error('Storage unavailable')
           disk.set(path, text)
+        },
+        remove: async (path: string) => {
+          disk.delete(path)
         },
       },
       on: (name: string, handler: Function) => {
@@ -456,6 +466,15 @@ function fixture(
     texts,
     disk,
     path,
+    device,
+    readState: async () =>
+      (
+        await decodeStatistics(device, async (name) => {
+          const content = disk.get(name)
+          if (content === undefined) throw new Error('Missing segment')
+          return content
+        })
+      ).state,
     events,
     reads: () => reads,
     fail: (value: boolean) => {
@@ -475,21 +494,16 @@ describe('Background global statistics and persistence', () => {
     record(remote, 'remote-note', localDay(), 5, Date.now())
     remote.notes['remote-note'].path = 'A.md'
     const remotePath = 'Resources/Seam/Statistics/ipad.json'
-    f.disk.set(remotePath, JSON.stringify(remote))
+    for (const [path, content] of encodeStatistics('ipad', remote)) f.disk.set(path, content)
     await f.service.refreshRemote()
     await f.service.refreshRemote()
     assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 7)
     assert.equal(contribution(f.service.snapshot().activity, localDay(), 'notes'), 1)
     remote.days[localDay()]['remote-note'].words = 8
-    f.disk.set(remotePath, JSON.stringify(remote))
+    for (const [path, content] of encodeStatistics('ipad', remote)) f.disk.set(path, content)
     await f.service.refreshRemote()
     assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 10)
-    assert.equal(
-      JSON.parse(f.disk.get(f.path)!).days[localDay()][
-        Object.keys(JSON.parse(f.disk.get(f.path)!).notes)[0]
-      ].words,
-      2,
-    )
+    assert.equal(contribution(await f.readState(), localDay(), 'words'), 2)
     f.disk.set(remotePath, '{broken')
     await f.service.refreshRemote()
     assert.equal(f.service.snapshot().error, true)
@@ -618,10 +632,7 @@ describe('Background global statistics and persistence', () => {
     await initialization
     restored.recordEdit(file, 2, {})
     await restored.flush()
-    assert.equal(
-      contribution(parseActivity(JSON.parse(f.disk.get(f.path)!)), localDay(), 'words'),
-      3,
-    )
+    assert.equal(contribution(await f.readState(), localDay(), 'words'), 3)
     restored.onunload()
   })
   it('stores user activity once and recovers a journal after an immediate failed-save reload', async () => {
@@ -649,6 +660,106 @@ describe('Background global statistics and persistence', () => {
     assert.equal(contribution(restored.snapshot().activity, localDay(), 'words'), 3)
     assert.equal(contribution(restored.snapshot().activity, localDay(), 'sessions'), 1)
     restored.onunload()
+  })
+  for (const silent of [false, true])
+    it(`recovers a ${silent ? 'silently truncated' : 'failed'} local write from the complete checkpoint`, async () => {
+      const state = emptyActivity(localDay())
+      record(state, 'A', localDay(), 3, Date.now() - 1000)
+      const f = fixture(state)
+      await f.service.initialize()
+      const write = f.app.vault.adapter.write
+      f.app.vault.adapter.write = async (path, data) => {
+        if (path !== f.path) return write(path, data)
+        f.disk.set(path, '')
+        if (!silent) throw new Error('Interrupted write')
+      }
+      f.service.recordEdit(f.files.get('A.md')! as TFile, 2, {})
+      await f.service.flush()
+      assert.equal(f.service.snapshot().saveError, true)
+      assert.equal(f.disk.get(f.path), '')
+      const checkpoint = f.path.replace(/\/([^/]+)\.json$/, '/.$1.checkpoint')
+      assert.ok(f.disk.get(checkpoint))
+      f.service.onunload()
+      f.app.vault.adapter.write = write
+      const restored = new GlobalStatistics(
+        f.app,
+        'test-plugin',
+        f.path.split('/').pop()!.replace('.json', ''),
+      )
+      await restored.initialize()
+      await restored.flush()
+      assert.equal(restored.snapshot().error, false)
+      assert.equal(contribution(await f.readState(), localDay(), 'words'), 5)
+      assert.equal(f.disk.has(checkpoint), false)
+      restored.onunload()
+    })
+  it('preserves the last checkpoint if another write fails while replacing it', async () => {
+    const state = emptyActivity(localDay())
+    record(state, 'A', localDay(), 3, Date.now() - 1000)
+    const f = fixture(state)
+    await f.service.initialize()
+    const write = f.app.vault.adapter.write
+    f.app.vault.adapter.write = async (path, data) => {
+      if (path !== f.path) return write(path, data)
+      f.disk.set(path, '')
+      throw new Error('Interrupted primary write')
+    }
+    f.service.recordEdit(f.files.get('A.md')! as TFile, 2, {})
+    await f.service.flush()
+    await new Promise((resolve) => setImmediate(resolve))
+    f.app.vault.adapter.write = async (path, data) => {
+      if (path.endsWith('.checkpoint')) {
+        f.disk.set(path, '')
+        throw new Error('Interrupted checkpoint write')
+      }
+      await write(path, data)
+    }
+    await f.service.flush()
+    assert.equal(contribution(await f.readState(), localDay(), 'words'), 5)
+    f.service.onunload()
+    f.app.vault.adapter.write = write
+    const restored = new GlobalStatistics(
+      f.app,
+      'test-plugin',
+      f.path.split('/').pop()!.replace('.json', ''),
+    )
+    await restored.initialize()
+    assert.equal(restored.snapshot().error, false)
+    assert.equal(contribution(restored.snapshot().activity, localDay(), 'words'), 5)
+    restored.onunload()
+  })
+  it('keeps valid history when an interrupted checkpoint is incomplete', async () => {
+    const state = emptyActivity(localDay())
+    record(state, 'A', localDay(), 3, Date.now())
+    const f = fixture(state)
+    const checkpoint = f.path.replace(/\/([^/]+)\.json$/, '/.$1.checkpoint')
+    f.disk.set(checkpoint, '')
+    await f.service.initialize()
+    assert.equal(f.service.snapshot().error, false)
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 3)
+    assert.equal(f.disk.has(checkpoint), false)
+    f.service.onunload()
+  })
+  it('does not overwrite history if a recovery checkpoint cannot be saved', async () => {
+    const f = fixture(emptyActivity(localDay()))
+    await f.service.initialize()
+    const before = f.disk.get(f.path)
+    const write = f.app.vault.adapter.write
+    f.app.vault.adapter.write = async (path, data) => {
+      if (path.endsWith('.checkpoint')) throw new Error('Storage full')
+      await write(path, data)
+    }
+    try {
+      f.service.recordEdit(f.files.get('A.md')! as TFile, 2, {})
+      await f.service.flush()
+      assert.equal(f.service.snapshot().saveError, true)
+      assert.equal(f.disk.get(f.path), before)
+    } finally {
+      f.app.vault.adapter.write = write
+      await new Promise((resolve) => setImmediate(resolve))
+      await f.service.flush()
+      f.service.onunload()
+    }
   })
   it('updates totals for imports/programmatic changes and counts growth without creating writing activity', async () => {
     const f = fixture()
@@ -721,5 +832,168 @@ describe('Linear monthly chart', () => {
         scale.heights.every((height) => Number.isFinite(height) && height >= 0 && height <= 100),
       )
     }
+  })
+})
+
+describe('Segmented statistics storage', () => {
+  it('round trips multiple months and bounded reference and activity shards', async () => {
+    const state = emptyActivity('2026-01-01')
+    for (let i = 0; i < 120; i++) {
+      const id = `note-${String(i).padStart(4, '0')}`
+      applyActivity(state, {
+        kind: 'create',
+        sequence: state.sequence + 1,
+        id,
+        path: `Folder/${id}.md`,
+        day: '2026-01-01',
+      })
+      applyActivity(state, {
+        kind: 'edit',
+        sequence: state.sequence + 1,
+        id,
+        path: `Folder/${id}.md`,
+        day: i % 2 ? '2026-01-12' : '2026-02-12',
+        timestamp: 1000 + i,
+        words: i,
+      })
+    }
+    const files = encodeStatistics('device', state, 2000)
+    assert.ok([...files.keys()].filter((name) => name.includes('.refs.')).length > 1)
+    assert.ok([...files.keys()].filter((name) => name.includes('.2026-01.')).length > 1)
+    assert.ok([...files.keys()].some((name) => name.includes('.2026-02.')))
+    for (const contents of files.values())
+      assert.ok(new TextEncoder().encode(contents).length <= 2000)
+    const decoded = await decodeStatistics('device', async (path) => {
+      const value = files.get(path)
+      if (value === undefined) throw new Error('Missing segment')
+      return value
+    })
+    assert.deepEqual(decoded.state, state)
+    assert.ok(STATISTICS_SEGMENT_BYTES < 5 * 1024 * 1024)
+  })
+
+  it('updates references on rename without rewriting historical month shards', async () => {
+    const state = emptyActivity('2026-01-01')
+    record(state, 'A', '2026-01-01', 3, 1000)
+    const before = encodeStatistics('device', state)
+    applyActivity(state, { kind: 'rename', sequence: 2, from: 'A.md', to: 'Folder/Renamed.md' })
+    const after = encodeStatistics('device', state)
+    const month = [...before.keys()].find((name) => name.includes('.2026-01.'))!
+    const refs = [...before.keys()].find((name) => name.includes('.refs.'))!
+    assert.equal(after.get(month), before.get(month))
+    assert.notEqual(after.get(refs), before.get(refs))
+    const result = await decodeStatistics('device', async (path) => after.get(path)!)
+    assert.equal(result.state.notes.A.path, 'Folder/Renamed.md')
+    assert.equal(contribution(result.state, '2026-01-01', 'words'), 3)
+  })
+
+  it('writes only the affected month and keeps past files unchanged during edits and moves', async () => {
+    const state = emptyActivity('2025-01-01')
+    record(state, 'A', '2025-01-10', 3, 1000)
+    const f = fixture(state)
+    f.service.onload()
+    await f.service.initialize()
+    const writes: string[] = []
+    const write = f.app.vault.adapter.write
+    f.app.vault.adapter.write = async (path, contents) => {
+      writes.push(path)
+      await write(path, contents)
+    }
+    const file = f.files.get('A.md')!
+    f.service.recordEdit(file as TFile, 2, {})
+    await f.service.flush()
+    assert.ok(writes.some((path) => path.includes(`.${localDay().slice(0, 7)}.`)))
+    assert.ok(!writes.some((path) => path.includes('.2025-01.')))
+    assert.ok(!writes.some((path) => path.includes('.refs.')))
+    writes.length = 0
+    f.files.delete('A.md')
+    file.path = 'Folder/A.md'
+    f.files.set(file.path, file)
+    f.events.get('rename')!(file, 'A.md')
+    await f.service.flush()
+    assert.ok(writes.some((path) => path.includes('.refs.')))
+    assert.ok(!writes.some((path) => path.includes('.2025-01.')))
+    f.service.onunload()
+  })
+
+  it('does not record its own statistics file renames or deletions as note changes', async () => {
+    const f = fixture()
+    f.service.onload()
+    await f.service.initialize()
+    const before = f.service.snapshot().activity.sequence
+    const part = new MockTFile(`${f.path}.2026-10.0001.json`)
+    f.events.get('rename')!(part, `${f.path}.old.json`)
+    f.events.get('delete')!(part)
+    assert.equal(f.service.snapshot().activity.sequence, before)
+    f.service.onunload()
+  })
+
+  it('restores a partially written month segment from its checkpoint', async () => {
+    const state = emptyActivity(localDay())
+    record(state, 'A', localDay(), 3, Date.now() - 1000)
+    const f = fixture(state)
+    await f.service.initialize()
+    const write = f.app.vault.adapter.write
+    let failed = false
+    f.app.vault.adapter.write = async (path, content) => {
+      if (!failed && path.includes(`.${localDay().slice(0, 7)}.`)) {
+        failed = true
+        f.disk.set(path, '')
+        throw new Error('Interrupted segment')
+      }
+      await write(path, content)
+    }
+    f.service.recordEdit(f.files.get('A.md')! as TFile, 2, {})
+    await f.service.flush()
+    assert.equal(f.service.snapshot().saveError, true)
+    f.service.onunload()
+    f.app.vault.adapter.write = write
+    const restored = new GlobalStatistics(f.app, 'test-plugin', f.device)
+    await restored.initialize()
+    assert.equal(restored.snapshot().error, false)
+    assert.equal(contribution(restored.snapshot().activity, localDay(), 'words'), 5)
+    restored.onunload()
+  })
+
+  it('does not accept a stale segment when a newer manifest arrives first', async () => {
+    const f = fixture()
+    await f.service.initialize()
+    const state = emptyActivity(localDay())
+    record(state, 'remote', localDay(), 5, Date.now())
+    const first = encodeStatistics('ipad', state)
+    for (const [path, content] of first) f.disk.set(path, content)
+    await f.service.refreshRemote()
+    record(state, 'remote', localDay(), 2, Date.now())
+    const second = encodeStatistics('ipad', state)
+    const manifest = 'Resources/Seam/Statistics/ipad.json'
+    f.disk.set(manifest, second.get(manifest)!)
+    await f.service.refreshRemote()
+    assert.equal(f.service.snapshot().error, true)
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 5)
+    for (const [path, content] of second) f.disk.set(path, content)
+    await f.service.refreshRemote()
+    assert.equal(f.service.snapshot().error, false)
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 7)
+    f.service.onunload()
+  })
+
+  it('retains the last complete remote snapshot while a referenced shard is missing', async () => {
+    const f = fixture()
+    await f.service.initialize()
+    const state = emptyActivity(localDay())
+    record(state, 'remote', localDay(), 5, Date.now())
+    const remote = encodeStatistics('ipad', state)
+    for (const [path, content] of remote) f.disk.set(path, content)
+    await f.service.refreshRemote()
+    const month = [...remote.keys()].find((path) => path.includes(`.${localDay().slice(0, 7)}.`))!
+    f.disk.delete(month)
+    await f.service.refreshRemote()
+    assert.equal(f.service.snapshot().error, true)
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 5)
+    f.disk.set(month, remote.get(month)!)
+    await f.service.refreshRemote()
+    assert.equal(f.service.snapshot().error, false)
+    assert.equal(contribution(f.service.snapshot().activity, localDay(), 'words'), 5)
+    f.service.onunload()
   })
 })
