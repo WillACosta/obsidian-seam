@@ -57,7 +57,11 @@ class ModalHost {
     this.contentEl.isConnected = false
   }
 }
-Object.assign(require.cache['obsidian']!.exports, { Modal: ModalHost, Notice: class {} })
+Object.assign(require.cache['obsidian']!.exports, {
+  Modal: ModalHost,
+  Notice: class {},
+  setIcon: () => {},
+})
 const { SetupModal } =
   require('../src/setup/SetupModal') as typeof import('../src/setup/SetupModal')
 const tick = () => new Promise((resolve) => setImmediate(resolve))

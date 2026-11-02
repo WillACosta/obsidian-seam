@@ -42,7 +42,7 @@ export const ptBr: Translations = {
     pathConflict: 'Um arquivo ou pasta ocupa um caminho necessário.',
     invalidJson: 'Não foi possível ler a configuração com segurança. O arquivo será preservado.',
     unsupported: 'Não foi possível verificar o suporte nesta versão do Obsidian.',
-    hotkeyConflict: 'Mod+K está atribuído a outro comando. O atalho será preservado.',
+    hotkeyConflict: 'Um atalho recomendado está atribuído a outro comando. Ele será preservado.',
     aliasConflict: 'Este identificador já pertence a uma consulta existente. Ela será preservada.',
     baseUnavailable: 'Não é possível configurar o Bases. As buscas dependentes serão ignoradas.',
     missingView:
@@ -515,6 +515,7 @@ export const ptBr: Translations = {
   settingsPaletteHotkeyAssigned: (hotkey: string) => `Atalho atribuído: ${hotkey}`,
 
   settingsAdvancedHeading: 'Avançado',
+  settingsRestoreDefault: 'Restaurar padrão',
   settingsReconInterval: 'Intervalo de reconciliação (minutos)',
   settingsReconIntervalDesc:
     'Frequência com que o plugin verifica tags de ação perdidas e anexos de fontes enquanto o Obsidian está em execução.',

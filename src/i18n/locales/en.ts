@@ -38,7 +38,8 @@ export const en = {
     pathConflict: 'A file or folder occupies a required path.',
     invalidJson: 'Configuration could not be read safely. The file will be preserved.',
     unsupported: 'Support could not be verified in this Obsidian version.',
-    hotkeyConflict: 'Mod+K is assigned to another command. Its binding will be preserved.',
+    hotkeyConflict:
+      'A recommended shortcut is assigned to another command. Its binding will be preserved.',
     aliasConflict: 'This alias already belongs to an existing query. It will be preserved.',
     baseUnavailable: 'Bases cannot be configured. Dependent searches will be skipped.',
     missingView:
@@ -498,6 +499,7 @@ export const en = {
   settingsPaletteHotkeyAssigned: (hotkey: string) => `Assigned hotkey: ${hotkey}`,
 
   settingsAdvancedHeading: 'Advanced',
+  settingsRestoreDefault: 'Restore default',
   settingsReconInterval: 'Reconciliation interval (minutes)',
   settingsReconIntervalDesc:
     'How often the plugin scans for missed action tags and source attachments while Obsidian is running.',

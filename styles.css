@@ -1409,6 +1409,8 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
 /* Global writing statistics share the Palette's report navigation and theme. */
 .prompt.seam-palette-global-statistics {
   width: min(860px, 92vw);
+  max-height: var(--prompt-max-height);
+  top: calc((100vh - var(--prompt-max-height)) / 2);
 }
 .seam-global-statistics {
   container-type: inline-size;
@@ -1723,6 +1725,27 @@ body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .sea
 /* Optional vault setup preview and report. */
 .modal.seam-setup-modal {
   width: min(720px, 94vw);
+}
+.seam-setup-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-3);
+  padding: var(--size-4-3) var(--size-4-4);
+  border: 1px solid color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+  border-inline-start: 3px solid var(--interactive-accent);
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
+  color: var(--text-normal);
+}
+.seam-setup-notice-icon {
+  display: flex;
+  flex: 0 0 auto;
+  padding-top: 2px;
+  color: var(--text-accent);
+}
+.seam-setup-notice p {
+  margin: 0;
+  line-height: var(--line-height-normal);
 }
 .seam-setup-warning {
   padding: var(--size-4-3);

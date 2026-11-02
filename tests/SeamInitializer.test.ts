@@ -38,6 +38,7 @@ function fixture() {
   }
   const commands: Record<string, { hotkeys?: unknown[] }> = {
     'seam:open-palette': {},
+    'seam:open-palette-command-mode': {},
     'editor:insert-link': {},
   }
   const hotkeys: Record<string, unknown[]> = {}
@@ -144,6 +145,11 @@ describe('Initialize Seam safety and application', () => {
     assert.equal(isSetupConfigured(plan), false)
     assert.equal(isSetupConfigured({ ...plan, items: [] }), false)
     assert.equal(f.writes.length, 0)
+    assert.ok(
+      plan.items
+        .find((item) => item.target.endsWith('/hotkeys.json'))
+        ?.details?.some((detail) => detail.includes('seam:open-palette-command-mode')),
+    )
     const report = await f.service.apply(plan)
     assert.deepEqual(
       report.results.filter((item) => item.outcome === 'failed'),
@@ -172,6 +178,11 @@ describe('Initialize Seam safety and application', () => {
       true,
     )
     assert.equal(report.results.filter((item) => item.restart).length, 6)
+    const savedHotkeys = JSON.parse(f.storage.get(`${f.configDir}/hotkeys.json`) as string)
+    assert.deepEqual(savedHotkeys['seam:open-palette'], [{ modifiers: ['Mod'], key: 'K' }])
+    assert.deepEqual(savedHotkeys['seam:open-palette-command-mode'], [
+      { modifiers: ['Mod', 'Shift'], key: 'K' },
+    ])
     const again = await f.service.preview()
     const count = f.writes.length
     assert.ok(again.items.every((item) => item.status === 'existing'))
@@ -258,11 +269,15 @@ describe('Initialize Seam safety and application', () => {
       }
     })
   it('detects default and persisted hotkey conflicts without changing either binding', async () => {
-    for (const source of ['default', 'custom']) {
+    for (const [source, modifiers] of [
+      ['default', ['Mod']],
+      ['custom', ['Mod']],
+      ['default', ['Shift', process.platform === 'darwin' ? 'Meta' : 'Ctrl']],
+      ['custom', ['Shift', 'Mod']],
+    ] as const) {
       const f = fixture()
-      if (source === 'default')
-        f.commands['editor:insert-link'].hotkeys = [{ modifiers: ['Mod'], key: 'k' }]
-      else f.config('hotkeys.json', { 'editor:insert-link': [{ modifiers: ['Mod'], key: 'K' }] })
+      if (source === 'default') f.commands['editor:insert-link'].hotkeys = [{ modifiers, key: 'k' }]
+      else f.config('hotkeys.json', { 'editor:insert-link': [{ modifiers, key: 'K' }] })
       const plan = await f.service.preview()
       assert.equal(
         plan.items.find((item) => item.target.endsWith('/hotkeys.json'))?.reason,
@@ -271,6 +286,33 @@ describe('Initialize Seam safety and application', () => {
       await f.service.apply(plan)
       assert.ok(!f.writes.includes(`${f.configDir}/hotkeys.json`))
     }
+  })
+  it('requires both palette commands and permits unrelated modified shortcuts', async () => {
+    const missing = fixture()
+    delete missing.commands['seam:open-palette-command-mode']
+    const unsupported = await missing.service.preview()
+    assert.equal(
+      unsupported.items.find((item) => item.target.includes('hotkeys.json'))?.status,
+      'unsupported',
+    )
+    await missing.service.apply(unsupported)
+    assert.ok(!missing.writes.includes(`${missing.configDir}/hotkeys.json`))
+
+    const f = fixture()
+    f.config('hotkeys.json', {
+      'editor:insert-link': [{ modifiers: ['Mod', 'Shift', 'Alt'], key: 'K' }],
+      'seam:open-palette': [{ modifiers: ['Mod', 'Shift'], key: 'K' }],
+    })
+    const plan = await f.service.preview()
+    assert.equal(plan.items.find((item) => item.target.endsWith('/hotkeys.json'))?.status, 'update')
+    await f.service.apply(plan)
+    const hotkeys = JSON.parse(f.storage.get(`${f.configDir}/hotkeys.json`) as string)
+    assert.deepEqual(hotkeys['editor:insert-link'], [
+      { modifiers: ['Mod', 'Shift', 'Alt'], key: 'K' },
+    ])
+    assert.deepEqual(hotkeys['seam:open-palette-command-mode'], [
+      { modifiers: ['Mod', 'Shift'], key: 'K' },
+    ])
   })
   it('preserves alias collisions case-insensitively and never restores customized generated searches', async () => {
     const f = fixture()

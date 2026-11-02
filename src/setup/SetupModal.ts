@@ -1,4 +1,4 @@
-import { App, Modal, Notice } from 'obsidian'
+import { App, Modal, Notice, setIcon } from 'obsidian'
 import { t } from '../i18n'
 import {
   isSetupConfigured,
@@ -56,7 +56,13 @@ export class SetupModal extends Modal {
     this.setTitle(configured ? t().setupStatuses.existing : t().setupTitle)
     if (configured) this.contentEl.createEl('p', { text: t().setupConfiguredMessage })
     else if (hasChanges) {
-      this.contentEl.createEl('p', { cls: 'seam-setup-warning', text: t().setupWarning })
+      const callout = this.contentEl.createDiv({ cls: 'seam-setup-notice' })
+      const icon = callout.createSpan({
+        cls: 'seam-setup-notice-icon',
+        attr: { 'aria-hidden': 'true' },
+      })
+      setIcon(icon, 'info')
+      callout.createEl('p', { text: t().setupWarning })
       this.contentEl.createEl('p', { text: t().setupRestartWarning })
     } else this.contentEl.createEl('p', { text: t().setupNothingToApply })
     for (const group of ['resources', 'obsidian', 'searches'] as SetupGroup[]) {

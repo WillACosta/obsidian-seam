@@ -9,10 +9,12 @@ import {
   SettingDefinitionItem,
   SettingDefinitionGroup,
   SettingDefinitionRender,
+  SliderComponent,
 } from 'obsidian'
 import type SeamPlugin from '../main'
 import {
   AutomationDelayMode,
+  DEFAULT_SETTINGS,
   CustomSpecialSearch,
   QuickAddChoice,
   UpdateAnnouncementMode,
@@ -483,39 +485,38 @@ export class SeamSettingsTab extends PluginSettingTab {
         .setButtonText(t().setupPreview)
         .onClick(() => this.plugin.openSetup(() => this.update()))
       button.buttonEl.addClass('seam-setup-preview-button')
+      const setConfigured = (configured: boolean): void => {
+        const existing = button.buttonEl.querySelector('.seam-setup-configured-icon')
+        if (configured && !existing) {
+          const icon = button.buttonEl.createSpan({
+            cls: 'seam-setup-configured-icon',
+            attr: { 'aria-hidden': 'true' },
+          })
+          setIcon(icon, 'check')
+        } else if (!configured) {
+          existing?.remove()
+        }
+        button.buttonEl.setAttribute(
+          'aria-label',
+          configured ? `${t().setupPreview} — ${t().setupStatuses.existing}` : t().setupPreview,
+        )
+      }
       const update = (): void => {
         if (disposed || !button.buttonEl.isConnected) return
         const current = ++generation
-        button.buttonEl.querySelector('.seam-setup-configured-icon')?.remove()
-        button.buttonEl.setAttribute('aria-label', t().setupPreview)
         void this.plugin.initializer
           .preview()
           .then((plan) => {
-            if (
-              disposed ||
-              current !== generation ||
-              !button.buttonEl.isConnected ||
-              !isSetupConfigured(plan)
-            )
-              return
-            const icon = button.buttonEl.createSpan({
-              cls: 'seam-setup-configured-icon',
-              attr: { 'aria-hidden': 'true' },
-            })
-            setIcon(icon, 'check')
-            button.buttonEl.setAttribute(
-              'aria-label',
-              `${t().setupPreview} — ${t().setupStatuses.existing}`,
-            )
+            if (disposed || current !== generation || !button.buttonEl.isConnected) return
+            setConfigured(isSetupConfigured(plan))
           })
           .catch(() => {
-            /* Do not claim setup is complete if it cannot be checked. */
+            if (disposed || current !== generation || !button.buttonEl.isConnected) return
+            setConfigured(false)
           })
       }
       refresh = (): void => {
         generation++
-        button.buttonEl.querySelector('.seam-setup-configured-icon')?.remove()
-        button.buttonEl.setAttribute('aria-label', t().setupPreview)
         if (timer !== undefined) window.clearTimeout(timer)
         timer = window.setTimeout(update, 150)
       }
@@ -1550,15 +1551,28 @@ export class SeamSettingsTab extends PluginSettingTab {
   }
 
   private renderReconciliationSetting(setting: Setting): void {
-    setting.addSlider((slider) =>
+    let intervalSlider: SliderComponent
+    setting.addExtraButton((button) =>
+      button
+        .setIcon('rotate-ccw')
+        .setTooltip(t().settingsRestoreDefault)
+        .onClick(async () => {
+          const value = DEFAULT_SETTINGS.reconciliationIntervalMinutes
+          intervalSlider.setValue(value)
+          this.plugin.settings.reconciliationIntervalMinutes = value
+          await this.plugin.saveSettings()
+        }),
+    )
+    setting.addSlider((slider) => {
+      intervalSlider = slider
       slider
         .setLimits(5, 60, 5)
         .setValue(this.plugin.settings.reconciliationIntervalMinutes)
         .onChange(async (value) => {
           this.plugin.settings.reconciliationIntervalMinutes = value
           await this.plugin.saveSettings()
-        }),
-    )
+        })
+    })
   }
 
   private renderAnnounceUpdatesSetting(setting: Setting): void {
