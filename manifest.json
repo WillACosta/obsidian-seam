@@ -1,7 +1,7 @@
 {
   "id": "seam",
   "name": "Seam",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "minAppVersion": "1.13.0",
   "isDesktopOnly": false,
   "author": "William A. Costa",

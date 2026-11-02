@@ -78,6 +78,8 @@ export const en = {
 
   cmdShowGlobalStatistics: 'Show global statistics',
   globalTitle: 'Global statistics',
+  globalMaximize: 'Maximize',
+  globalRestoreSize: 'Restore size',
   globalDescription: 'Writing activity, consistency, and vault growth.',
   globalOverview: 'Overview',
   globalWordsMonthChange: (value: string) => `${value} vs last month`,

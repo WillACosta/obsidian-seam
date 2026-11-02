@@ -315,6 +315,7 @@ describe('Note report Backspace', () => {
       const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, [])
       let removedReport = false
       let removedDismiss = false
+      const removedClasses: string[] = []
       let refreshed = false
       let focused = false
       palette.mode = 'statistics'
@@ -324,12 +325,15 @@ describe('Note report Backspace', () => {
         },
       }
       palette.modalEl = {
-        removeClass: (cls: string) => assert.equal(cls, 'seam-palette-statistics'),
-        querySelector: () => ({
-          remove: () => {
-            removedDismiss = true
-          },
-        }),
+        removeClass: (...classes: string[]) => removedClasses.push(...classes),
+        querySelector: (selector: string) =>
+          selector === '.seam-global-maximize'
+            ? null
+            : {
+                remove: () => {
+                  removedDismiss = true
+                },
+              },
       }
       Object.assign(palette.inputEl, {
         value: query,
@@ -356,6 +360,8 @@ describe('Note report Backspace', () => {
         false,
       )
       assert.equal(prevented && removedReport && removedDismiss && refreshed && focused, true)
+      assert.ok(removedClasses.includes('seam-global-maximized'))
+      assert.ok(removedClasses.includes('seam-palette-statistics'))
       assert.equal(palette.mode, 'search')
       assert.equal(palette.statisticsHost, null)
       assert.equal(palette.inputEl.disabled, false)

@@ -279,6 +279,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.globalStatisticsView = null
     this.statisticsHost?.remove()
     this.statisticsHost = null
+    this.clearGlobalStatisticsSize()
     this.outlineItems = []
     this.inputEl
       .closest<HTMLElement>('.prompt')
@@ -426,6 +427,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.globalStatisticsView = null
     this.statisticsHost?.remove()
     this.modalEl.querySelector('.seam-note-statistics-dismiss')?.remove()
+    this.clearGlobalStatisticsSize()
     this.modalEl.removeClass('seam-palette-global-statistics')
     const host = this.modalEl.createDiv({
       cls: 'seam-note-statistics',
@@ -456,6 +458,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     host.setAttribute('aria-live', 'off')
     host.removeAttribute('aria-busy')
     this.modalEl.addClass('seam-palette-global-statistics')
+    const maximize = this.modalEl.createEl('button', {
+      cls: 'clickable-icon seam-global-maximize',
+      attr: { type: 'button', 'aria-label': t().globalMaximize, 'aria-pressed': 'false' },
+    })
+    setIcon(maximize, 'maximize')
+    maximize.addEventListener('click', () => {
+      const expanded = !this.modalEl.hasClass('seam-global-maximized')
+      this.modalEl.toggleClass('seam-global-maximized', expanded)
+      maximize.setAttribute('aria-pressed', String(expanded))
+      maximize.setAttribute('aria-label', expanded ? t().globalRestoreSize : t().globalMaximize)
+      setIcon(maximize, expanded ? 'minimize' : 'maximize')
+    })
     this.globalStatisticsView = new GlobalStatisticsView(
       this.app,
       host,
@@ -466,6 +480,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       },
       this.scope,
     )
+  }
+
+  private clearGlobalStatisticsSize(): void {
+    this.modalEl.removeClass('seam-global-maximized')
+    this.modalEl.querySelector('.seam-global-maximize')?.remove()
   }
 
   async showNoteStatistics(file: TFile, completion = false): Promise<void> {
@@ -1660,6 +1679,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.globalStatisticsView = null
       this.statisticsHost?.remove()
       this.statisticsHost = null
+      this.clearGlobalStatisticsSize()
       this.modalEl.removeClass('seam-palette-statistics', 'seam-palette-global-statistics')
       this.modalEl.querySelector('.seam-note-statistics-dismiss')?.remove()
       this.inputEl.disabled = false

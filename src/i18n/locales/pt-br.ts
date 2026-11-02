@@ -82,6 +82,8 @@ export const ptBr: Translations = {
 
   cmdShowGlobalStatistics: 'Mostrar estatísticas globais',
   globalTitle: 'Estatísticas globais',
+  globalMaximize: 'Maximizar',
+  globalRestoreSize: 'Restaurar tamanho',
   globalDescription: 'Atividade de escrita, consistência e crescimento do cofre.',
   globalOverview: 'Visão geral',
   globalWordsMonthChange: (value: string) => `${value} em relação ao mês passado`,

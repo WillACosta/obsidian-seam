@@ -9,6 +9,8 @@
 
 ### Added
 
+- **Global Statistics maximize**: Expand the dashboard to fill the visible window and restore its previous size with the same control.
+
 - **Outline folding**: Toggle a heading's nested entries with Cmd+Enter / Ctrl+Enter or its disclosure control, with a footer hint and search-aware folding.
 
 - **Setup status**: Show a check beside Preview setup when the same read-only verification used by the setup preview confirms all recommendations are already present.
@@ -38,3 +40,4 @@
 ### Tests
 
 - Type checking, lint, unit tests, changelog validation, and shared test-vault Obsidian CLI validation.
+- Global Statistics maximize and restore verified against desktop and mobile-emulated viewport dimensions; Backspace restores Palette search and clears the expanded state.
