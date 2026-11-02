@@ -461,9 +461,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     const host = this.createReportHost(completion ? t().completionTitle : t().statisticsTitle)
     try {
       if (completion) {
-        const report = await readNoteCompletion(this.app, file)
+        const [report] = await Promise.all([
+          readNoteCompletion(this.app, file),
+          this.searchService.refreshDailyNoteSettings(),
+        ])
         if (this.statisticsHost !== host) return
-        renderNoteCompletion(host, file, report)
+        renderNoteCompletion(
+          host,
+          file,
+          report,
+          this.searchService.getDailyNoteDisplayTitle(file) ?? file.basename,
+        )
       } else {
         const report = await readNoteStatistics(this.app, file)
         if (this.statisticsHost !== host) return

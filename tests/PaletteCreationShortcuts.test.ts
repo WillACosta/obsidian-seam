@@ -340,3 +340,71 @@ describe('Note report Backspace', () => {
     )
   })
 })
+
+describe('Note completion title', () => {
+  it('uses the current Daily Notes format only for the displayed daily note name', async () => {
+    class Element {
+      children: Element[] = []
+      constructor(
+        public tag = '',
+        public text = '',
+      ) {}
+      empty() {
+        this.children = []
+      }
+      addClass() {}
+      removeAttribute() {}
+      createEl(tag: string, options: { text?: string } = {}) {
+        const child = new Element(tag, options.text ?? '')
+        this.children.push(child)
+        return child
+      }
+      createDiv() {
+        return this.createEl('div')
+      }
+      createSpan(options: { text?: string } = {}) {
+        return this.createEl('span', options)
+      }
+    }
+    let dailySettings = { folder: 'Journal', format: 'YYYY-MM-DD' }
+    const app = {
+      vault: {
+        configDir: '.obsidian',
+        adapter: { exists: async () => true, read: async () => JSON.stringify(dailySettings) },
+        cachedRead: async () => '- [ ] Todo\n- [x] Done',
+      },
+      workspace: { getActiveViewOfType: () => null },
+    }
+    const { SearchService } = require('../src/search/SearchService')
+    const service = new SearchService(app, DEFAULT_SETTINGS)
+    await service.refreshDailyNoteSettings()
+    const palette = new UniversalPalette(app, DEFAULT_SETTINGS, service, [])
+    const render = async (path: string) => {
+      const file = new MockTFile(path)
+      const host = new Element()
+      palette.createReportHost = () => {
+        palette.statisticsHost = host
+        return host
+      }
+      await palette.showNoteStatistics(file, true)
+      const header = host.children.find((child) => child.tag === 'header')!
+      return {
+        heading: header.children.find((child) => child.tag === 'h2')?.text,
+        title: header.children.find((child) => child.tag === 'h3')?.text,
+        path: header.children.find((child) => child.tag === 'p')?.text,
+        original: file.path,
+      }
+    }
+    assert.deepEqual(await render('Journal/2026-11-01.md'), {
+      heading: 'Note completion',
+      title: '1 Nov. 2026',
+      path: 'Journal/2026-11-01.md',
+      original: 'Journal/2026-11-01.md',
+    })
+    // The format is re-read when opening the report, even after Obsidian settings change.
+    dailySettings = { folder: 'Journal', format: 'DD-MM-YYYY' }
+    assert.equal((await render('Journal/01-11-2026.md')).title, '1 Nov. 2026')
+    assert.equal((await render('Other/01-11-2026.md')).title, '01-11-2026')
+    assert.equal((await render('Journal/31-02-2026.md')).title, '31-02-2026')
+  })
+})

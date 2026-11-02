@@ -2,12 +2,17 @@ import { TFile } from 'obsidian'
 import { detectLocale, t } from '../i18n'
 import { NoteCompletion } from '../statistics/NoteCompletion'
 
-export function renderNoteCompletion(host: HTMLElement, file: TFile, report: NoteCompletion): void {
+export function renderNoteCompletion(
+  host: HTMLElement,
+  file: TFile,
+  report: NoteCompletion,
+  title = file.basename,
+): void {
   host.empty()
   host.addClass('seam-note-completion')
   const header = host.createEl('header', { cls: 'seam-note-statistics-header' })
   header.createEl('h2', { text: t().completionTitle })
-  header.createEl('h3', { cls: 'seam-note-statistics-title', text: file.basename })
+  header.createEl('h3', { cls: 'seam-note-statistics-title', text: title })
   header.createEl('p', { cls: 'seam-note-statistics-path', text: file.path })
   if (!report.total) {
     host.createEl('p', { text: t().completionEmpty })
