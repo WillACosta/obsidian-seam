@@ -1,4 +1,4 @@
-import { App, Notice, setTooltip, TFile } from 'obsidian'
+import { App, Notice, Scope, setIcon, setTooltip, TFile } from 'obsidian'
 import { detectLocale, t } from '../i18n'
 import { GlobalStatistics } from '../statistics/GlobalStatistics'
 import { activityTotals, localDay } from '../statistics/WritingActivity'
@@ -25,13 +25,30 @@ export class GlobalStatisticsView {
   private dayTimer: number
   private lastDay = localDay()
   private days: string[] = []
+  private openMetricHelp: string | null = null
+  private metricHelpPinned = false
+  private metricHelpScope: Scope | null = null
+  private readonly metricHelpId = `seam-global-help-${crypto.randomUUID()}`
+  private readonly closeMetricHelpOnOutsidePointer = (event: PointerEvent): void => {
+    const target = event.target as Node | null
+    if (
+      target &&
+      Array.from(this.host.querySelectorAll('.seam-global-overview-help')).some((help) =>
+        help.contains(target),
+      )
+    )
+      return
+    this.setMetricHelp(null)
+  }
   constructor(
     private app: App,
     private host: HTMLElement,
     private statistics: GlobalStatistics,
     private open: (file: TFile) => Promise<void>,
+    private parentScope: Scope,
   ) {
     this.unsubscribe = statistics.subscribe(() => this.render())
+    this.host.ownerDocument.addEventListener('pointerdown', this.closeMetricHelpOnOutsidePointer)
     this.dayTimer = window.setInterval(() => {
       const day = localDay()
       if (day !== this.lastDay) {
@@ -44,6 +61,34 @@ export class GlobalStatisticsView {
   destroy(): void {
     this.unsubscribe()
     window.clearInterval(this.dayTimer)
+    this.releaseMetricHelpScope()
+    this.host.ownerDocument.removeEventListener('pointerdown', this.closeMetricHelpOnOutsidePointer)
+  }
+  private setMetricHelp(key: string | null, pinned = false): void {
+    this.openMetricHelp = key
+    this.metricHelpPinned = pinned
+    if (key && !this.metricHelpScope) {
+      const scope = new Scope(this.parentScope)
+      scope.register([], 'Escape', (event: KeyboardEvent) => {
+        event.preventDefault()
+        this.setMetricHelp(null)
+        return false
+      })
+      this.metricHelpScope = scope
+      this.app.keymap.pushScope(scope)
+    } else if (!key) this.releaseMetricHelpScope()
+    this.host.querySelectorAll<HTMLElement>('.seam-global-overview-help').forEach((help) => {
+      const open = help.dataset.metricHelp === key
+      help.closest('.seam-global-overview-card')?.classList.toggle('is-help-open', open)
+      help.querySelector('button')?.setAttribute('aria-expanded', String(open))
+      const tooltip = help.querySelector<HTMLElement>('[role="tooltip"]')
+      if (tooltip) tooltip.hidden = !open
+    })
+  }
+  private releaseMetricHelpScope(): void {
+    const scope = this.metricHelpScope
+    this.metricHelpScope = null
+    if (scope) this.app.keymap.popScope(scope)
   }
   /** Capture report controls before SuggestModal can route keys to its hidden chooser. */
   handleKey(event: KeyboardEvent): boolean {
@@ -56,6 +101,12 @@ export class GlobalStatisticsView {
       event.metaKey
     )
       return false
+    if (event.key === 'Escape' && this.openMetricHelp) {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      this.setMetricHelp(null)
+      return true
+    }
     if (target.matches('[role="radio"]')) {
       const buttons = Array.from(
         target.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [],
@@ -198,7 +249,7 @@ export class GlobalStatisticsView {
       maximumFractionDigits: 0,
     })
     const ready = !snapshot.loading && !snapshot.error
-    for (const [key, label, value, insight] of [
+    for (const [key, label, value, insight, explanation] of [
       [
         'words',
         t().globalTotalWords,
@@ -206,24 +257,28 @@ export class GlobalStatisticsView {
         insights.monthlyWordChange === null
           ? t().globalNoMonthBaseline
           : t().globalWordsMonthChange(percent.format(insights.monthlyWordChange)),
+        t().globalWordsInfo,
       ],
       [
         'notes',
         t().globalTotalNotes,
         snapshot.loading ? '—' : number.format(snapshot.totalNotes),
         t().globalNotesThisMonth(number.format(insights.monthlyNotes)),
+        t().globalNotesInfo,
       ],
       [
         'days',
         t().globalActiveDays,
         ready ? number.format(totals.activeDays) : '—',
         t().globalActiveYear(yearPercent.format(insights.activeYearPercent)),
+        t().globalActiveDaysInfo,
       ],
       [
         'streak',
         t().globalStreak,
         ready ? number.format(totals.streak) : '—',
         t().globalLongestStreak(number.format(insights.longestStreak)),
+        t().globalStreakInfo,
       ],
     ]) {
       const card = overview.createDiv({
@@ -231,9 +286,55 @@ export class GlobalStatisticsView {
         attr: { 'data-global-metric': key },
       })
       card.createEl('dt', { text: label })
+      const help = card.createDiv({
+        cls: 'seam-global-overview-help',
+        attr: { 'data-metric-help': key },
+      })
+      const tooltipId = `${this.metricHelpId}-${key}`
+      const labelId = `${tooltipId}-label`
+      const button = help.createEl('button', {
+        cls: 'clickable-icon seam-global-overview-help-button',
+        attr: {
+          type: 'button',
+          'aria-labelledby': labelId,
+          'aria-describedby': tooltipId,
+          'aria-expanded': 'false',
+          'data-focus-key': `help-${key}`,
+        },
+      })
+      setIcon(button, 'info')
+      button.createSpan({
+        cls: 'seam-global-visually-hidden',
+        text: t().globalMetricInfoLabel(label),
+        attr: { id: labelId },
+      })
+      const tooltip = help.createDiv({
+        cls: 'seam-global-overview-tooltip',
+        text: explanation,
+        attr: { id: tooltipId, role: 'tooltip' },
+      })
+      tooltip.hidden = true
+      help.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'mouse' && this.openMetricHelp !== key) this.setMetricHelp(key)
+      })
+      help.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse' && this.openMetricHelp === key && !this.metricHelpPinned)
+          this.setMetricHelp(null)
+      })
+      button.addEventListener('focus', () => {
+        if (button.matches(':focus-visible') && this.openMetricHelp !== key) this.setMetricHelp(key)
+      })
+      button.addEventListener('blur', () => {
+        if (this.openMetricHelp === key && !this.metricHelpPinned) this.setMetricHelp(null)
+      })
+      button.addEventListener('click', () => {
+        const close = this.openMetricHelp === key && this.metricHelpPinned
+        this.setMetricHelp(close ? null : key, !close)
+      })
       card.createEl('dd', { text: value })
       if (ready) card.createEl('dd', { cls: 'seam-global-overview-insight', text: insight })
     }
+    this.setMetricHelp(this.openMetricHelp, this.metricHelpPinned)
     const contributions = this.host.createEl('section', {
       cls: 'seam-global-section',
       attr: { 'aria-label': t().globalContributions },

@@ -113,6 +113,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   onClosed?: () => void
   private createSuggestionActive = false
   private closeButtonScope: Scope | null = null
+  private mobileInputScope: Scope | null = null
   private lastQuery = ''
   private selectedTags: string[] = []
   private excludedTags: string[] = []
@@ -258,11 +259,20 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   onOpen(): void {
     window.addEventListener('keydown', this.baseNavigationKeyListener, true)
     void super.onOpen()
+    if (Platform.isMobile) {
+      this.inputEl.setAttribute('enterkeyhint', 'done')
+      this.inputEl.addEventListener('focus', this.activateMobileInputScope)
+      this.inputEl.addEventListener('blur', this.releaseMobileInputScope)
+      if (document.activeElement === this.inputEl) this.activateMobileInputScope()
+    }
     this.setupChipsContainer()
   }
 
   onClose(): void {
     window.removeEventListener('keydown', this.baseNavigationKeyListener, true)
+    this.inputEl.removeEventListener('focus', this.activateMobileInputScope)
+    this.inputEl.removeEventListener('blur', this.releaseMobileInputScope)
+    this.releaseMobileInputScope()
     this.releaseCloseButtonScope()
     this.disposeCalendar()
     this.globalStatisticsView?.destroy()
@@ -454,6 +464,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         this.close()
         await this.app.workspace.getLeaf(false).openFile(file)
       },
+      this.scope,
     )
   }
 
@@ -489,6 +500,25 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private releaseCloseButtonScope(): void {
     const scope = this.closeButtonScope
     this.closeButtonScope = null
+    if (scope) this.app.keymap.popScope(scope)
+  }
+
+  private readonly activateMobileInputScope = (): void => {
+    if (this.mobileInputScope || this.mode !== 'search') return
+    const scope = new Scope(this.scope)
+    scope.register([], 'Enter', (event: KeyboardEvent) => {
+      if (event.isComposing) return true
+      event.preventDefault()
+      this.inputEl.blur()
+      return false
+    })
+    this.mobileInputScope = scope
+    this.app.keymap.pushScope(scope)
+  }
+
+  private readonly releaseMobileInputScope = (): void => {
+    const scope = this.mobileInputScope
+    this.mobileInputScope = null
     if (scope) this.app.keymap.popScope(scope)
   }
 

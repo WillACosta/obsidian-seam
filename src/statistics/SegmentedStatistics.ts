@@ -34,6 +34,9 @@ export function encodeStatistics(
   limit = STATISTICS_SEGMENT_BYTES,
   incremental?: { previous: Map<string, string>; months: Set<string>; references: boolean },
 ): Map<string, string> {
+  const previousManifest = incremental?.previous.get(`${base(device)}.json`)
+  // Legacy snapshots have no reusable shards; the first subsequent save must encode all history.
+  if (previousManifest && JSON.parse(previousManifest).version === 1) incremental = undefined
   if (!incremental) parseActivity(state)
   const files = new Map<string, string>()
   if (incremental) {
@@ -125,6 +128,8 @@ export async function decodeStatistics(
   const manifestPath = `${base(device)}.json`
   const manifestRaw = await read(manifestPath)
   const manifest = JSON.parse(manifestRaw) as Manifest
+  if ((manifest as { version?: number })?.version === 1)
+    return { state: parseActivity(manifest), files: new Map([[manifestPath, manifestRaw]]) }
   if (manifest?.version !== 2 || manifest.type !== 'manifest' || !Array.isArray(manifest.files))
     throw new Error('Invalid statistics manifest')
   const files = new Map<string, string>([[manifestPath, manifestRaw]])

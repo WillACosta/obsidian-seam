@@ -42,6 +42,7 @@ export interface SeamSettings {
   showIcons: boolean
   showFileExtension: boolean
   showMatchCount: boolean
+  searchMarkdownOnly: boolean
   showCommandsByDefault: boolean
   quickAddChoices: QuickAddChoice[]
   persistQuickAddDrafts: boolean
@@ -126,6 +127,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
   showIcons: true,
   showFileExtension: true,
   showMatchCount: true,
+  searchMarkdownOnly: false,
   showCommandsByDefault: true,
   quickAddChoices: [],
   persistQuickAddDrafts: false,

@@ -340,6 +340,11 @@ export class SeamSettingsTab extends PluginSettingTab {
             render: (setting) => this.renderShowIconsSetting(setting),
           },
           {
+            name: strings.settingsSearchMarkdownOnly,
+            desc: strings.settingsSearchMarkdownOnlyDesc,
+            render: (setting) => this.renderResultMetadataSetting(setting, 'searchMarkdownOnly'),
+          },
+          {
             name: strings.settingsShowFileExtension,
             desc: strings.settingsShowFileExtensionDesc,
             render: (setting) => this.renderResultMetadataSetting(setting, 'showFileExtension'),
@@ -1531,7 +1536,7 @@ export class SeamSettingsTab extends PluginSettingTab {
 
   private renderResultMetadataSetting(
     setting: Setting,
-    key: 'showFileExtension' | 'showMatchCount',
+    key: 'showFileExtension' | 'showMatchCount' | 'searchMarkdownOnly',
   ): void {
     setting.addToggle((toggle) =>
       toggle.setValue(this.plugin.settings[key]).onChange(async (value) => {

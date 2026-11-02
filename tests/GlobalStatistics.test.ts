@@ -483,6 +483,39 @@ function fixture(
   }
 }
 describe('Background global statistics and persistence', () => {
+  it('reads a legacy remote snapshot without changing it or counting it twice', async () => {
+    const f = fixture()
+    const legacy = emptyActivity('2026-10-01')
+    record(legacy, 'legacy', '2026-10-30', 7, 1000)
+    const path = 'Resources/Seam/Statistics/legacy-device.json'
+    const original = JSON.stringify(legacy)
+    f.disk.set(path, original)
+    await f.service.initialize()
+    await f.service.refreshRemote()
+    assert.equal(f.service.snapshot().error, false)
+    assert.equal(contribution(f.service.snapshot().activity, '2026-10-30', 'words'), 7)
+    assert.equal(f.disk.get(path), original)
+    f.service.onunload()
+  })
+  it('preserves all legacy local history when the next edit migrates it to segments', async () => {
+    const f = fixture()
+    const legacy = emptyActivity('2026-09-01')
+    record(legacy, 'old', '2026-09-03', 7, 1000)
+    record(legacy, 'later', '2026-10-03', 3, 2000)
+    const original = JSON.stringify(legacy)
+    f.disk.set(f.path, original)
+    await f.service.initialize()
+    assert.equal(f.service.snapshot().error, false)
+    assert.equal(f.disk.get(f.path), original)
+    f.service.recordEdit(f.files.get('A.md')! as TFile, 2, {})
+    await f.service.flush()
+    const migrated = await f.readState()
+    assert.equal(contribution(migrated, '2026-09-03', 'words'), 7)
+    assert.equal(contribution(migrated, '2026-10-03', 'words'), 3)
+    assert.equal(contribution(migrated, localDay(), 'words'), 2)
+    assert.equal(JSON.parse(f.disk.get(f.path)!).version, 2)
+    f.service.onunload()
+  })
   it('creates metadata folders without setup and combines arriving device snapshots once', async () => {
     const f = fixture()
     await f.service.initialize()

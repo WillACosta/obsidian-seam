@@ -36,7 +36,7 @@ describe('Directory filtering and match counts', () => {
     )
     const results = await service.searchFilteredWithContent('/Fleeting #ai !#archived', 'AI')
     assert.equal(results.length, 2)
-    assert.equal(results[0].matchCount, 4)
+    assert.equal(results[0].matchCount, 5)
     assert.deepEqual(results[0].searchTerms, ['AI'])
   })
   it('supports directory-only and OR queries', () => {
@@ -52,12 +52,26 @@ describe('Directory filtering and match counts', () => {
   it('counts literal case-insensitive matches even when the filename matches', async () => {
     const service = new SearchService(app, DEFAULT_SETTINGS)
     const results = await service.searchWithContent('AI')
-    assert.equal(results[0].matchCount, 4)
+    assert.equal(results[0].matchCount, 5)
     assert.deepEqual(findSearchMatches('a+b A+B', ['a+b']), [
       { start: 0, end: 3 },
       { start: 4, end: 7 },
     ])
     assert.deepEqual(findSearchMatches('anything', ['']), [])
+  })
+  it('counts title-only occurrences and combines title and body matches', async () => {
+    const file = new MockTFile('Folder/Title title.md')
+    let content = 'Unrelated text'
+    const service = new SearchService(
+      {
+        vault: { getFiles: () => [file], cachedRead: async () => content },
+        metadataCache: { getFileCache: () => ({}) },
+      } as never,
+      DEFAULT_SETTINGS,
+    )
+    assert.equal((await service.searchWithContent('title'))[0].matchCount, 2)
+    content = 'Title in the body'
+    assert.equal((await service.searchWithContent('title'))[0].matchCount, 3)
   })
   it('finds attachments by name, extension and directory without reading them as text', async () => {
     const note = new MockTFile('Fleeting/Report.md')
@@ -90,6 +104,33 @@ describe('Directory filtering and match counts', () => {
       [image.path, note.path, pdf.path],
     )
     assert.deepEqual(readPaths, [note.path, note.path, note.path])
+  })
+
+  it('limits ordinary and filtered file searches to Markdown when enabled', async () => {
+    const note = new MockTFile('Fleeting/Report.md')
+    const pdf = new MockTFile('Fleeting/Report.pdf')
+    const app = {
+      vault: {
+        getFiles: () => [note, pdf],
+        getMarkdownFiles: () => [note],
+        cachedRead: async () => 'Report',
+      },
+      metadataCache: { getFileCache: () => ({}) },
+    } as never
+    const service = new SearchService(app, { ...DEFAULT_SETTINGS, searchMarkdownOnly: true })
+    assert.deepEqual(
+      (await service.searchWithContent('Report')).map((r) => r.path),
+      [note.path],
+    )
+    assert.deepEqual(
+      (await service.searchFilteredWithContent('/Fleeting', 'Report')).map((r) => r.path),
+      [note.path],
+    )
+    service.updateSettings({ ...DEFAULT_SETTINGS, searchMarkdownOnly: false })
+    assert.deepEqual(
+      (await service.searchWithContent('Report')).map((r) => r.path),
+      [note.path, pdf.path],
+    )
   })
 
   it('intersects multiple built-in and Seam special filters with tag additions', async () => {

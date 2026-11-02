@@ -80,7 +80,7 @@ export const en = {
   globalTitle: 'Global statistics',
   globalDescription: 'Writing activity, consistency, and vault growth.',
   globalOverview: 'Overview',
-  globalWordsMonthChange: (value: string) => `${value} this month`,
+  globalWordsMonthChange: (value: string) => `${value} vs last month`,
   globalNoMonthBaseline: 'No previous-month baseline',
   globalNotesThisMonth: (value: string) => `${value} created this month`,
   globalActiveYear: (value: string) => `${value} of the year`,
@@ -89,6 +89,15 @@ export const en = {
   globalTotalWords: 'Total words',
   globalActiveDays: 'Active days',
   globalStreak: 'Writing streak',
+  globalMetricInfoLabel: (metric: string) => `About ${metric}`,
+  globalWordsInfo:
+    'Words currently in Markdown notes. The percentage compares words added so far this month with all of last month.',
+  globalNotesInfo:
+    'Markdown notes currently in the vault. The smaller number counts notes recorded as created this month.',
+  globalActiveDaysInfo:
+    'Days with recorded editing activity. The percentage is the share of the current calendar year.',
+  globalStreakInfo:
+    'Consecutive active days through today or yesterday. The smaller number is the longest recorded streak.',
   globalContributions: 'Writing activity',
   globalMetric: 'Metric',
   globalPeriod: 'Period',
@@ -476,6 +485,8 @@ export const en = {
   settingsInterfaceHeading: 'Universal Palette',
   settingsShowIcons: 'Show icons in Universal Palette',
   settingsShowIconsDesc: 'Display icons in search and command listings.',
+  settingsSearchMarkdownOnly: 'Search Markdown files only',
+  settingsSearchMarkdownOnlyDesc: 'Limit Universal Palette file search results to Markdown notes.',
   settingsShowFileExtension: 'Show file extension',
   settingsShowFileExtensionDesc: 'Display file extensions in Universal Palette results.',
   settingsShowMatchCount: 'Show match count',

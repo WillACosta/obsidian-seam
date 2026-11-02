@@ -257,6 +257,7 @@ export class SearchService {
   }
 
   private getSearchableFiles(): TFile[] {
+    if (this.settings.searchMarkdownOnly) return this.app.vault.getMarkdownFiles()
     return this.app.vault.getFiles?.() ?? this.app.vault.getMarkdownFiles()
   }
 
@@ -637,8 +638,9 @@ export class SearchService {
         if (!searchTerms.length || result.file.extension !== 'md') return result
         try {
           const content = await this.app.vault.cachedRead(result.file)
-          const matches = findSearchMatches(content, searchTerms)
-          return { ...result, searchTerms, matchCount: matches.length }
+          const titleMatches = findSearchMatches(result.file.basename, searchTerms)
+          const contentMatches = findSearchMatches(content, searchTerms)
+          return { ...result, searchTerms, matchCount: titleMatches.length + contentMatches.length }
         } catch {
           return result
         }

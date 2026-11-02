@@ -84,7 +84,7 @@ export const ptBr: Translations = {
   globalTitle: 'Estatísticas globais',
   globalDescription: 'Atividade de escrita, consistência e crescimento do cofre.',
   globalOverview: 'Visão geral',
-  globalWordsMonthChange: (value: string) => `${value} neste mês`,
+  globalWordsMonthChange: (value: string) => `${value} em relação ao mês passado`,
   globalNoMonthBaseline: 'Sem referência no mês anterior',
   globalNotesThisMonth: (value: string) => `${value} criadas neste mês`,
   globalActiveYear: (value: string) => `${value} do ano`,
@@ -93,6 +93,15 @@ export const ptBr: Translations = {
   globalTotalWords: 'Total de palavras',
   globalActiveDays: 'Dias ativos',
   globalStreak: 'Sequência de escrita',
+  globalMetricInfoLabel: (metric: string) => `Sobre ${metric}`,
+  globalWordsInfo:
+    'Palavras atuais nas notas Markdown. A porcentagem compara as palavras adicionadas neste mês com todo o mês passado.',
+  globalNotesInfo:
+    'Notas Markdown atuais no cofre. O número menor conta as notas registradas como criadas neste mês.',
+  globalActiveDaysInfo:
+    'Dias com atividade de edição registrada. A porcentagem representa a parcela do ano calendário atual.',
+  globalStreakInfo:
+    'Dias ativos consecutivos até hoje ou ontem. O número menor é a maior sequência registrada.',
   globalContributions: 'Atividade de escrita',
   globalMetric: 'Métrica',
   globalPeriod: 'Período',
@@ -491,6 +500,9 @@ export const ptBr: Translations = {
   settingsInterfaceHeading: 'Paleta Universal',
   settingsShowIcons: 'Mostrar ícones na Paleta Universal',
   settingsShowIconsDesc: 'Exibir ícones nas listagens de busca e comandos.',
+  settingsSearchMarkdownOnly: 'Buscar apenas arquivos Markdown',
+  settingsSearchMarkdownOnlyDesc:
+    'Limita os resultados de arquivos da Paleta Universal a notas Markdown.',
   settingsShowFileExtension: 'Mostrar extensão do arquivo',
   settingsShowFileExtensionDesc: 'Exibir extensões de arquivo nos resultados da Paleta Universal.',
   settingsShowMatchCount: 'Mostrar número de ocorrências',

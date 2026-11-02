@@ -22,12 +22,46 @@ class ModalHost {
   }
   close() {}
 }
+class ScopeHost {
+  handlers = new Map<string, Function>()
+  register(mods: string[], key: string, callback: Function) {
+    this.handlers.set([...mods, key].join('+'), callback)
+  }
+}
 Object.assign(require.cache['obsidian']!.exports, {
   SuggestModal: ModalHost,
   Modal: ModalHost,
+  Scope: ScopeHost,
   AbstractInputSuggest: class {},
 })
 const { UniversalPalette } = require('../src/ui/UniversalPalette')
+
+describe('Palette mobile keyboard dismissal', () => {
+  it('dismisses on unmodified Enter, preserves composition, and releases its scope', () => {
+    const pushed: ScopeHost[] = []
+    const popped: ScopeHost[] = []
+    const app = {
+      keymap: {
+        pushScope: (s: ScopeHost) => pushed.push(s),
+        popScope: (s: ScopeHost) => popped.push(s),
+      },
+    }
+    const palette = new UniversalPalette(app, DEFAULT_SETTINGS, {}, [])
+    let blurred = 0
+    let prevented = 0
+    palette.inputEl.blur = () => blurred++
+    palette.activateMobileInputScope()
+    assert.equal(pushed.length, 1)
+    const enter = pushed[0].handlers.get('Enter')!
+    const event = { isComposing: false, preventDefault: () => prevented++ }
+    assert.equal(enter({ ...event, isComposing: true }), true)
+    assert.equal(enter(event), false)
+    assert.deepEqual([blurred, prevented], [1, 1])
+    assert.equal(pushed[0].handlers.has('Shift+Enter'), false)
+    palette.releaseMobileInputScope()
+    assert.deepEqual(popped, pushed)
+  })
+})
 
 describe('Palette date-query creation shortcuts', () => {
   it('shows a recoverable settings error for an invalid yearly format without creating a note', async () => {
