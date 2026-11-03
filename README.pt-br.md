@@ -1,32 +1,34 @@
-# Seam — Organização de Notas sem Fricção para o Obsidian
+# Seam — organize suas notas no Obsidian sem esforço
 
 > [English](README.md) · **Português**
 
-> Capture ideias, use tags naturalmente e deixe o Seam organizar suas notas em segundo plano.
+> Capture ideias, use tags como preferir e deixe o Seam cuidar da organização para você.
 
-O Seam é um plugin leve para Obsidian que ajuda você a capturar, encontrar e organizar notas. Inspirado no [Zettelkasten](https://zettelkasten.de/introduction/), no Apple Notes e no Bear, ele traz um fluxo simples entre `Fleeting`, `Permanent` e `Archive` para o seu cofre — para você passar menos tempo gerenciando arquivos e mais tempo escrevendo.
+O Seam é um plugin leve para Obsidian que facilita a criação, busca e a organização das suas notas. Inspirado no método [Zettelkasten](https://zettelkasten.de/introduction/), Apple Notes e Bear.
+
+Suas ideias a passam por um fluxo simples entre `Fleeting`, `Permanent` e `Archive`. Assim, você passa menos tempo cuidando de arquivos e mais tempo escrevendo.
 
 > [!NOTE]
-> **100% privado.** O Seam não coleta nem nos envia suas informações pessoais, o conteúdo das suas notas ou dados de uso. Suas estatísticas de escrita ficam nos seus dispositivos e podem ser sincronizadas pelo serviço que você escolher.
+> O Seam é 100% privado, ele não coleta nem nos envia dados pessoais, conteúdo das suas notas ou informações de uso. Suas estatísticas de escrita ficam nos seus dispositivos e podem ser sincronizadas pelo serviço de sua preferência.
 
 ![Apresentação do Seam](docs/images/seam_showcase.gif)
 
 ## Por que o Seam?
 
-| Fluxo tradicional | Com o Seam |
+| Sem o Seam | Com o Seam |
 | :--- | :--- |
-| ❌ Interromper o que está fazendo para criar uma nota | ✅ Capture uma ideia pela Paleta Universal, com o modelo que preferir. |
-| ❌ Mover notas manualmente entre pastas | ✅ Adicione `#permanent` e deixe o Seam organizar a nota para você. |
-| ❌ Misturar trabalhos concluídos com notas em andamento | ✅ Adicione `#archive` para arquivá-los. |
-| ❌ Alternar entre ferramentas de busca | ✅ Busque notas, arquivos, tags, consultas salvas e comandos em um só lugar. |
-| ❌ Usar visualizações separadas para rever notas e acompanhar o progresso | ✅ Navegue pelas notas em um calendário e explore suas estatísticas de escrita. |
-| ❌ Depender de fluxos exclusivos para desktop | ✅ Use o mesmo fluxo no computador e em dispositivos móveis. |
+| ❌ Parar o que está fazendo para criar uma nota | ✅ Registre uma ideia rápida pela Paleta Universal. |
+| ❌ Mover notas entre pastas manualmente | ✅ Adicione `#permanent` e deixe o Seam cuidar da organização. |
+| ❌ Deixar notas concluídas junto das que ainda estão em andamento | ✅ Adicione `#archive` para arquivá-las. |
+| ❌ Usar ferramentas diferentes para encontrar o que precisa | ✅ Busque notas, arquivos, tags, consultas salvas e comandos em um só lugar. |
+| ❌ Procurar suas notas e seu progresso em lugares diferentes | ✅ Navegue pelas notas no calendário e acompanhe suas estatísticas de escrita. |
+| ❌ Depender do computador para manter a rotina | ✅ Use o Seam tanto no computador quanto em dispositivos móveis. |
 
 ## Encontre e crie com a Paleta Universal
 
-A Paleta Universal reúne busca e ações em um só lugar. Encontre notas por título, conteúdo, tag ou pasta; veja os trechos encontrados; e crie uma nota quando precisar. Digite `>` para executar comandos do Seam ou abra a Paleta diretamente no modo de comandos.
+A Paleta Universal reúne buscas e ações em um só lugar. Encontre notas pelo título, conteúdo, tag ou pasta, veja os trechos correspondentes e crie novas notas quando precisar. Para executar comandos do Seam, digite `>` ou abra a Paleta diretamente no modo de comandos.
 
-Combine filtros como `/Fleeting #projeto !#archived`, salve suas buscas favoritas e fixe notas, comandos ou consultas para acessá-los rapidamente. Você também pode explorar uma Base do Obsidian em tabela ou cartões sem sair da Paleta.
+Combine filtros, como em `/Fleeting #projeto !#archived`, e salve as buscas que usa com frequência. Você também pode fixar notas, comandos e consultas para acessá-los rapidamente ou explorar uma Base do Obsidian em tabela ou cartões sem sair da Paleta.
 
 ![Busca combinada](docs/images/combined_search.png)
 
@@ -36,27 +38,27 @@ Combine filtros como `/Fleeting #projeto !#archived`, salve suas buscas favorita
 
 ### Capture e organize
 
-Crie notas efêmeras pela Paleta ou use opções da Captura Rápida com suas próprias pastas e modelos. Adicione `#permanent` para marcar uma nota como "finalizada" ou adicione `#archive` para que ela seja movida para a sua pasta de arquivadas. O Seam move seus arquivos automaticamente, além de remover tags e propriedades que você não precisa mais.
+Crie notas efêmeras pela Paleta ou configure opções de Captura Rápida com suas pastas e modelos. Quando uma nota estiver pronta, adicione `#permanent`; para arquivá-la, use `#archive`. O Seam move os arquivos automaticamente e também pode remover tags e propriedades que você não usa mais.
 
 ![Criando uma nota](docs/images/creating_new_note.png)
 
 ### Conecte seus dias
 
-Use `@calendar` para navegar pelas Notas Diárias e criar as novas a partir de um modelo. Abra ou crie notas semanais e anuais, fixe notas importantes no painel do calendário e mova tarefas pendentes entre as Notas Diárias.
+Com `@calendar`, você navega pelas notas diárias e cria novas notas a partir de um modelo. Também pode abrir ou criar notas semanais e anuais, fixar notas importantes no calendário e transferir tarefas pendentes entre dias.
 
 ![Calendário](docs/images/calendar.png)
 
 ### Acompanhe seu progresso
 
-Explore as **Estatísticas globais** para ver o total atual de notas e palavras, sua atividade de escrita, sequências e tendências mensais. Selecione um dia para rever suas notas. Para olhar mais de perto, abra as estatísticas, a conclusão de tarefas ou a estrutura de uma nota na Paleta.
+Nas **Estatísticas globais**, acompanhe o total de notas e palavras, sua atividade de escrita, sequências e tendências ao longo dos meses. Selecione um dia para revisitar suas notas. Quando quiser ver os detalhes de uma nota, consulte suas estatísticas, tarefas concluídas ou estrutura diretamente na Paleta.
 
-O histórico de escrita começa quando o Seam passa a registrá-lo; suas notas existentes continuam incluídas nos totais do cofre. Para compartilhar a atividade pelo Obsidian Sync, ative **Sincronizar todos os outros tipos** em cada dispositivo.
+O histórico de escrita mostra a atividade registrada a partir do momento em que o Seam começa a acompanhá-la. Suas notas anteriores também entram nos totais do cofre. Para sincronizar o histórico pelo Obsidian Sync, ative **Sincronizar todos os outros tipos** em cada dispositivo.
 
 ![Painel Estatísticas](docs/images/dashboard_stats.png)
 
 ### Mantenha suas fontes por perto
 
-Transforme documentos e imagens em Notas de Fontes vinculadas ao original e encontre-as com `@sources`. O Seam pode criá-las automaticamente para arquivos na pasta de fontes escolhida, e você pode ler PDFs em páginas contínuas.
+Crie notas vinculadas aos documentos e imagens que usa como referência e encontre tudo com `@sources`. O Seam também pode criar essas notas automaticamente para os arquivos da pasta de fontes que você escolher. Para ler PDFs, há ainda a opção de exibir as páginas em sequência.
 
 ![Nota de fonte com PDF](docs/images/sources.png)
 
@@ -64,24 +66,24 @@ Transforme documentos e imagens em Notas de Fontes vinculadas ao original e enco
 
 O Seam requer o Obsidian **1.13.0** ou posterior.
 
-1. No Obsidian, abra **Configurações → Plugins da comunidade**, desative o Modo restrito se necessário e procure por **Seam**.
+1. No Obsidian, abra **Configurações → Plugins da comunidade**. Se necessário, desative o Modo restrito e procure por **Seam**.
 2. Instale e ative o plugin.
-3. Nas configurações do Seam, escolha suas pastas e modelos — ou abra **Inicializar o Seam** para visualizar uma configuração recomendada. A configuração é opcional e não move nem edita notas existentes.
-4. Abra a **Paleta Universal** pela paleta de comandos do Obsidian ou atribua um atalho a ela.
+3. Nas configurações do Seam, escolha suas pastas e modelos. Se preferir, abra **Inicializar o Seam** para conhecer a configuração recomendada. Ela é opcional e não move nem edita suas notas existentes.
+4. Abra a **Paleta Universal** pela paleta de comandos do Obsidian ou configure um atalho para acessá-la.
 
-A inicialização também pode configurar uma Base Bookshelf e as buscas `@bookshelf` e `@reading`. Revise as alterações propostas antes de aplicá-las.
+A inicialização também oferece uma Base Bookshelf e as buscas `@bookshelf` e `@reading`. Você pode revisar todas as alterações propostas antes de aplicá-las.
 
 <!-- Captura de tela ou GIF: Inicializar Seam e Bookshelf -->
 
-Para instalar manualmente, baixe `main.js`, `manifest.json` e `styles.css` na página de [Releases](https://github.com/WillACosta/obsidian-seam/releases), coloque-os em `<cofre>/.obsidian/plugins/obsidian-seam/`, recarregue o Obsidian e ative o Seam.
+Se preferir instalar manualmente, baixe `main.js`, `manifest.json` e `styles.css` na página de [Releases](https://github.com/WillACosta/obsidian-seam/releases). Coloque os arquivos em `<cofre>/.obsidian/plugins/obsidian-seam/`, recarregue o Obsidian e ative o Seam.
 
 ## Idiomas
 
-O Seam segue o idioma configurado no Obsidian e oferece suporte a inglês e português brasileiro. Outros idiomas usam inglês por padrão. Contribuições de tradução são bem-vindas.
+O Seam acompanha o idioma do Obsidian e está disponível em português brasileiro e inglês. Se o Obsidian estiver em outro idioma, o Seam será exibido em inglês. Contribuições com traduções são bem-vindas!
 
 ## Apoie o projeto
 
-O Seam é gratuito e de código aberto. Se ele economiza seu tempo, considere apoiar seu desenvolvimento:
+O Seam é gratuito e de código aberto. Se ele ajuda no seu dia a dia, considere apoiar o desenvolvimento:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/willac)
 
@@ -90,8 +92,6 @@ O Seam é gratuito e de código aberto. Se ele economiza seu tempo, considere ap
 
 ## Desenvolvimento e licença
 
-Consulte o [README.dev.md](README.dev.md) para instruções de desenvolvimento e release. O Seam está sob a licença [GNU General Public License v3.0](LICENSE).
+Para instruções de desenvolvimento e lançamento, consulte o [README.dev.md](README.dev.md). O Seam é distribuído sob a licença [GNU General Public License v3.0](LICENSE).
 
-O Seam foi desenvolvido com o auxílio de agentes de IA, guiados por especificações em texto escritas por mim.
-
-Desenvolvido com cuidado por **William A. Costa** ([@WillACosta](https://github.com/WillACosta)).
+Desenvolvido por **William A. Costa** ([@WillACosta](https://github.com/WillACosta)).
