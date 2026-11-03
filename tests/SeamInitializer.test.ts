@@ -4,7 +4,12 @@ import assert from 'node:assert/strict'
 import type { App } from 'obsidian'
 import { MockTFile, MockTFolder } from './mocks/obsidian'
 import { DEFAULT_SETTINGS, SeamSettings } from '../src/types'
-import { BOOKSHELF_PATH, SETUP_FILES, SETUP_FOLDERS } from '../src/setup/SetupAssets'
+import {
+  BOOKSHELF_PATH,
+  BOOK_TEMPLATE_PATH,
+  SETUP_FILES,
+  SETUP_FOLDERS,
+} from '../src/setup/SetupAssets'
 
 // Native YAML/formula evaluation is covered in the real test-vault Base views.
 Object.assign(require.cache['obsidian']!.exports, {
@@ -166,6 +171,20 @@ describe('Initialize Seam safety and application', () => {
         ['@reading', 'Reading'],
       ],
     )
+    assert.deepEqual(f.settings.quickAddChoices, [
+      {
+        id: 'seam-setup-add-book',
+        name: 'Add Book',
+        templatePath: BOOK_TEMPLATE_PATH,
+        location: 'default',
+        folderPath: '',
+        open: true,
+        openBehavior: 'tab',
+        focus: true,
+        icon: 'book',
+        conflictBehavior: 'ask',
+      },
+    ])
     assert.equal(f.settings.fleetingNoteTemplate, 'Resources/Templates/Fleeting Note Template.md')
     assert.equal(f.settings.archiveFolder, 'Resources/Archive')
     assert.equal(f.storage.has('Archive'), false)
@@ -196,6 +215,52 @@ describe('Initialize Seam safety and application', () => {
     )
     await f.service.apply(again)
     assert.equal(f.writes.length, count)
+  })
+  it('preserves a customized choice with the same name and reports the conflict', async () => {
+    const f = fixture()
+    const existing = {
+      id: 'user-choice',
+      name: 'Add Book',
+      templatePath: 'My Template.md',
+      location: 'specific' as const,
+      folderPath: 'Books',
+      open: true,
+      openBehavior: 'current' as const,
+      focus: true,
+      icon: 'star',
+      conflictBehavior: 'ask' as const,
+    }
+    f.settings.quickAddChoices.push(existing)
+    const plan = await f.service.preview()
+    assert.equal(plan.items.find((item) => item.target === 'Add Book')?.reason, 'choiceConflict')
+    await f.service.apply(plan)
+    assert.deepEqual(f.settings.quickAddChoices, [existing])
+  })
+  it('skips the choice if the template cannot be created', async () => {
+    const f = fixture()
+    f.fail.add(BOOK_TEMPLATE_PATH)
+    const report = await f.service.apply(await f.service.preview())
+    assert.deepEqual(
+      report.results.find((item) => item.target === 'Add Book'),
+      {
+        target: 'Add Book',
+        outcome: 'skipped',
+        reason: 'dependency',
+      },
+    )
+    assert.deepEqual(f.settings.quickAddChoices, [])
+  })
+  it('preserves a choice added after the preview', async () => {
+    const f = fixture()
+    const plan = await f.service.preview()
+    const choice = plan.items.find((item) => item.target === 'Add Book')!.operation!
+    assert.equal(choice.kind, 'quickAdd')
+    if (choice.kind !== 'quickAdd') throw new Error('Unexpected operation')
+    const existing = { ...choice.choice, id: 'new-user-choice', icon: 'star' }
+    f.settings.quickAddChoices.push(existing)
+    const report = await f.service.apply(plan)
+    assert.equal(report.results.find((item) => item.target === 'Add Book')?.reason, 'changed')
+    assert.deepEqual(f.settings.quickAddChoices, [existing])
   })
   it('preserves customized templates/Base content, unrelated config values, types, hotkeys, and unknown Seam settings', async () => {
     const f = fixture()

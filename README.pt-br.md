@@ -30,21 +30,21 @@ Combine filtros como `/Fleeting #projeto !#archived`, salve suas buscas favorita
 
 ![Busca combinada](docs/images/combined_search.png)
 
-![Buscas personalizadas e Bases](docs/images/custom_queries.png)
+![Buscas personalizadas e Bases](docs/images/special_queries_bookshelf.png)
 
 ## Mais espaço para escrever
 
 ### Capture e organize
 
-Crie notas efêmeras pela Paleta ou use opções do Quick Capture com suas próprias pastas e modelos. Quando quiser guardar uma nota, adicione `#permanent`; quando terminar, adicione `#archive`. O Seam move a nota e pode limpar tags e propriedades que você não precisa mais.
+Crie notas efêmeras pela Paleta ou use opções da Captura Rápida com suas próprias pastas e modelos. Adicione `#permanent` para marcar uma nota como "finalizada" ou adicione `#archive` para que ela seja movida para a sua pasta de arquivadas. O Seam move seus arquivos automaticamente, além de remover tags e propriedades que você não precisa mais.
 
 ![Criando uma nota](docs/images/creating_new_note.png)
 
 ### Conecte seus dias
 
-Abra `@calendar` para navegar pelas Notas Diárias e criar as que faltam com seu modelo. Abra ou crie notas semanais e anuais, fixe notas importantes acima do calendário e mova tarefas pendentes entre Notas Diárias.
+Use `@calendar` para navegar pelas Notas Diárias e criar as novas a partir de um modelo. Abra ou crie notas semanais e anuais, fixe notas importantes no painel do calendário e mova tarefas pendentes entre as Notas Diárias.
 
-<!-- Captura de tela ou GIF: Calendário e notas periódicas -->
+![Calendário](docs/images/calendar.png)
 
 ### Acompanhe seu progresso
 
@@ -52,7 +52,7 @@ Explore as **Estatísticas globais** para ver o total atual de notas e palavras,
 
 O histórico de escrita começa quando o Seam passa a registrá-lo; suas notas existentes continuam incluídas nos totais do cofre. Para compartilhar a atividade pelo Obsidian Sync, ative **Sincronizar todos os outros tipos** em cada dispositivo.
 
-<!-- Captura de tela ou GIF: Estatísticas globais -->
+![Painel Estatísticas](docs/images/dashboard_stats.png)
 
 ### Mantenha suas fontes por perto
 

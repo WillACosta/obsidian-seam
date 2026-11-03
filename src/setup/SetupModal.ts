@@ -65,7 +65,7 @@ export class SetupModal extends Modal {
       callout.createEl('p', { text: t().setupWarning })
       this.contentEl.createEl('p', { text: t().setupRestartWarning })
     } else this.contentEl.createEl('p', { text: t().setupNothingToApply })
-    for (const group of ['resources', 'obsidian', 'searches'] as SetupGroup[]) {
+    for (const group of ['resources', 'obsidian', 'searches', 'quickAdd'] as SetupGroup[]) {
       const items = plan.items.filter((item) => item.group === group)
       const section = this.contentEl.createEl('section')
       section.createEl('h3', { text: t().setupGroups[group] })

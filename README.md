@@ -30,7 +30,7 @@ Combine filters like `/Fleeting #project !#archived`, save your favorite searche
 
 ![Combined search](docs/images/combined_search.png)
 
-![Custom searches and Bases](docs/images/custom_queries.png)
+![Custom searches and Bases](docs/images/special_queries_bookshelf.png)
 
 ## Make space for writing
 
@@ -44,7 +44,7 @@ Create Fleeting notes from the Palette or use Quick Capture choices with your ow
 
 Open `@calendar` to browse Daily Notes and create missing ones from your template. Open or create weekly and yearly notes, pin important notes above the calendar, and move unfinished tasks between Daily Notes.
 
-<!-- Screenshot or GIF: Calendar and periodic notes -->
+![Calendar](docs/images/calendar.png)
 
 ### See your progress
 
@@ -52,7 +52,7 @@ Explore **Global Statistics** for your current note and word totals, writing act
 
 Writing history starts when Seam begins recording it; your existing notes are still included in vault totals. To share activity with Obsidian Sync, enable **Sync all other types** on each device.
 
-<!-- Screenshot or GIF: Global Statistics dashboard -->
+![Dashboard Stats](docs/images/dashboard_stats.png)
 
 ### Bring your sources along
 

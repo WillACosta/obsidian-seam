@@ -24,9 +24,12 @@ export const ptBr: Translations = {
   setupBackups: 'Cópias recuperáveis da configuração',
   setupCounts: (applied: number, skipped: number, failed: number) =>
     `${applied} aplicados · ${skipped} ignorados · ${failed} falhas`,
+  setupBookChoiceDetails: (path: string) =>
+    `Modelo: ${path} · Local padrão do Obsidian · Nova aba · Perguntar em caso de conflito · Ícone: book`,
   setupGroups: {
     resources: 'Pastas e arquivos',
     obsidian: 'Configurações do Obsidian',
+    quickAdd: 'Captura rápida',
     searches: 'Buscas do Seam',
   },
   setupStatuses: {
@@ -43,6 +46,7 @@ export const ptBr: Translations = {
     invalidJson: 'Não foi possível ler a configuração com segurança. O arquivo será preservado.',
     unsupported: 'Não foi possível verificar o suporte nesta versão do Obsidian.',
     hotkeyConflict: 'Um atalho recomendado está atribuído a outro comando. Ele será preservado.',
+    choiceConflict: 'Uma escolha existente usa este nome ou ID. Ela será preservada.',
     aliasConflict: 'Este identificador já pertence a uma consulta existente. Ela será preservada.',
     baseUnavailable: 'Não é possível configurar o Bases. As buscas dependentes serão ignoradas.',
     missingView:

@@ -9,6 +9,8 @@
 
 ### Added
 
+- **Initialize Seam Add Book**: Recommend a Quick Capture choice using the Book Template, Obsidian default location, a new tab, an ask-on-conflict policy, and the book icon. Existing choices are preserved.
+
 - **Global Statistics maximize**: Expand the dashboard to fill the visible window and restore its previous size with the same control.
 
 - **Outline folding**: Toggle a heading's nested entries with Cmd+Enter / Ctrl+Enter or its disclosure control, with a footer hint and search-aware folding.

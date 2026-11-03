@@ -9,19 +9,19 @@ What's new and changed in each Seam release.
 
 - **Initialize Seam**: Preview and set up recommended folders, templates, settings, and searches for your vault. Existing notes stay untouched, and configuration backups are kept for recovery.
 
-<!-- Screenshot or GIF: Initialize Seam preview -->
+!["Setup SEAM"](./docs/images/v4.0.0/setup_seam.png)
 
 - **Bookshelf**: Set up a four-view reading dashboard in Obsidian Bases, with `@bookshelf` and `@reading` searches.
 
-<!-- Screenshot or GIF: Bookshelf views -->
+!["Bookshelf view"](./docs/images/v4.0.0/boohshelf.gif)
 
 - **Global Statistics**: Explore your note and word totals, writing streaks, activity calendar, and monthly trends. Select a day to see its notes, and sync activity across devices by enabling “Sync all other types” in Obsidian Sync.
 
-<!-- Screenshot or GIF: Global Statistics dashboard -->
+!["Global Statistics"](./docs/images/v4.0.0/global_stats.png)
 
 - **Calendar and periodic notes**: Browse Daily Notes with `@calendar`, open or create notes with `@today`, `@yesterday`, `@thisWeek`, and `@thisYear`, and pin up to three notes above the calendar.
 
-<!-- Screenshot or GIF: Calendar and pinned notes -->
+!["Calendar view"](./docs/images/v4.0.0/calendar.gif)
 
 - **Daily task transfer**: Move unfinished tasks to tomorrow's Daily Note or bring yesterday's tasks into today, keeping their nested context.
 - **Note reports**: View a note's word count, reading time, task completion, and outline in the Universal Palette. Fold outline headings to focus on a section.
@@ -31,7 +31,7 @@ What's new and changed in each Seam release.
 - **Create from saved searches**: Create a note directly from an empty saved search, using its folder and positive tag filters.
 - **Settings search**: Find settings by name or description and expand or collapse sections.
 
-<!-- Screenshot or GIF: Pinned Palette items and settings search -->
+!["Global Statistics"](./docs/images/v4.0.0/pinned_items.png)
 
 ### Changed
 

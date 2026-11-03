@@ -20,9 +20,12 @@ export const en = {
   setupBackups: 'Recoverable configuration snapshots',
   setupCounts: (applied: number, skipped: number, failed: number) =>
     `${applied} applied · ${skipped} skipped · ${failed} failed`,
+  setupBookChoiceDetails: (path: string) =>
+    `Template: ${path} · Obsidian default location · New tab · Ask on conflict · Icon: book`,
   setupGroups: {
     resources: 'Folders and files',
     obsidian: 'Obsidian settings',
+    quickAdd: 'Quick Capture',
     searches: 'Seam searches',
   },
   setupStatuses: {
@@ -40,6 +43,7 @@ export const en = {
     unsupported: 'Support could not be verified in this Obsidian version.',
     hotkeyConflict:
       'A recommended shortcut is assigned to another command. Its binding will be preserved.',
+    choiceConflict: 'An existing choice uses this name or ID. It will be preserved.',
     aliasConflict: 'This alias already belongs to an existing query. It will be preserved.',
     baseUnavailable: 'Bases cannot be configured. Dependent searches will be skipped.',
     missingView:

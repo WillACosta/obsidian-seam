@@ -1,11 +1,17 @@
 import { App, parseYaml, Platform, TFile, TFolder, normalizePath } from 'obsidian'
-import { CustomSpecialSearch, SeamSettings } from '../types'
+import { CustomSpecialSearch, QuickAddChoice, SeamSettings } from '../types'
 import { t } from '../i18n'
-import { BOOKSHELF_PATH, SETUP_FILES, SETUP_FOLDERS, SETUP_PROPERTY_TYPES } from './SetupAssets'
+import {
+  BOOKSHELF_PATH,
+  BOOK_TEMPLATE_PATH,
+  SETUP_FILES,
+  SETUP_FOLDERS,
+  SETUP_PROPERTY_TYPES,
+} from './SetupAssets'
 import { SetupCompatibility } from './SetupCompatibility'
 
 export type SetupStatus = 'create' | 'update' | 'existing' | 'conflict' | 'unsupported'
-export type SetupGroup = 'resources' | 'obsidian' | 'searches'
+export type SetupGroup = 'resources' | 'obsidian' | 'searches' | 'quickAdd'
 export type SetupReason =
   | 'preserved'
   | 'pathConflict'
@@ -13,6 +19,7 @@ export type SetupReason =
   | 'unsupported'
   | 'hotkeyConflict'
   | 'aliasConflict'
+  | 'choiceConflict'
   | 'baseUnavailable'
   | 'missingView'
   | 'changed'
@@ -26,6 +33,7 @@ type Operation =
   | { kind: 'config'; before: string | null; after: string; hotkeys?: string }
   | { kind: 'setting'; key: keyof SeamSettings; before: unknown; after: string }
   | { kind: 'search'; search: CustomSpecialSearch }
+  | { kind: 'quickAdd'; choice: QuickAddChoice }
 export interface SetupItem {
   target: string
   group: SetupGroup
@@ -296,13 +304,59 @@ export class SeamInitializer {
         operation: { kind: 'search', search },
       })
     }
+    const choice: QuickAddChoice = {
+      id: 'seam-setup-add-book',
+      name: 'Add Book',
+      templatePath: BOOK_TEMPLATE_PATH,
+      location: 'default',
+      folderPath: '',
+      open: true,
+      openBehavior: 'tab',
+      focus: true,
+      icon: 'book',
+      conflictBehavior: 'ask',
+    }
+    const matchingChoices = settings.quickAddChoices.filter(
+      (item) =>
+        item.name.trim().toLowerCase() === choice.name.toLowerCase() || item.id === choice.id,
+    )
+    const matchesRecommendation = (item: QuickAddChoice): boolean =>
+      item.name === choice.name &&
+      item.templatePath === choice.templatePath &&
+      item.location === choice.location &&
+      item.open === choice.open &&
+      item.openBehavior === choice.openBehavior &&
+      item.focus === choice.focus &&
+      item.icon === choice.icon &&
+      item.conflictBehavior === choice.conflictBehavior
+    const choiceStatus: SetupStatus = matchingChoices.length
+      ? matchingChoices.every(matchesRecommendation)
+        ? 'existing'
+        : 'conflict'
+      : 'create'
+    add({
+      target: choice.name,
+      group: 'quickAdd',
+      status: choiceStatus,
+      reason:
+        choiceStatus === 'conflict'
+          ? 'choiceConflict'
+          : choiceStatus === 'existing'
+            ? 'preserved'
+            : undefined,
+      details: [t().setupBookChoiceDetails(BOOK_TEMPLATE_PATH)],
+      operation: { kind: 'quickAdd', choice },
+    })
     try {
       plan.seamData = await this.raw(normalizePath(`${this.pluginDir}/data.json`))
       if (plan.seamData !== null && !object(JSON.parse(plan.seamData)))
         throw new Error('Invalid Seam settings')
     } catch (error) {
       for (const item of plan.items)
-        if (item.group === 'searches' && (item.status === 'create' || item.status === 'update')) {
+        if (
+          (item.group === 'searches' || item.group === 'quickAdd') &&
+          (item.status === 'create' || item.status === 'update')
+        ) {
           item.status = 'conflict'
           item.reason = 'invalidJson'
           item.details = [message(error)]
@@ -312,11 +366,13 @@ export class SeamInitializer {
       if ((item.status !== 'create' && item.status !== 'update') || !item.operation) continue
       const op = item.operation
       const dependencies =
-        op.kind === 'setting'
-          ? this.dependencyPaths(op.after)
-          : op.kind === 'config'
-            ? this.dependencyPaths(item.target)
-            : []
+        op.kind === 'quickAdd'
+          ? [op.choice.templatePath]
+          : op.kind === 'setting'
+            ? this.dependencyPaths(op.after)
+            : op.kind === 'config'
+              ? this.dependencyPaths(item.target)
+              : []
       if (
         dependencies.some((path) =>
           plan.items.some(
@@ -525,7 +581,11 @@ export class SeamInitializer {
               throw new Error('Configuration changed during setup.')
           } else {
             const current = this.getSettings()
-            const next = { ...current, customSpecialSearches: [...current.customSpecialSearches] }
+            const next = {
+              ...current,
+              customSpecialSearches: [...current.customSpecialSearches],
+              quickAddChoices: [...current.quickAddChoices],
+            }
             if (op.kind === 'setting') {
               if (!equal(current[op.key], op.before)) {
                 report.results.push({ target: item.target, outcome: 'skipped', reason: 'changed' })
@@ -540,6 +600,26 @@ export class SeamInitializer {
                 continue
               }
               Object.assign(next, { [op.key]: op.after })
+            } else if (op.kind === 'quickAdd') {
+              if (
+                current.quickAddChoices.some(
+                  (choice) =>
+                    choice.id === op.choice.id ||
+                    choice.name.trim().toLowerCase() === op.choice.name.toLowerCase(),
+                )
+              ) {
+                report.results.push({ target: item.target, outcome: 'skipped', reason: 'changed' })
+                continue
+              }
+              if (!(await this.dependenciesReady(op.choice.templatePath))) {
+                report.results.push({
+                  target: item.target,
+                  outcome: 'skipped',
+                  reason: 'dependency',
+                })
+                continue
+              }
+              next.quickAddChoices.push(op.choice)
             } else {
               if (
                 current.customSpecialSearches.some(
