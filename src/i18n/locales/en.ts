@@ -155,6 +155,9 @@ export const en = {
   paletteGroupPinnedNotes: 'Pinned Notes',
   paletteGroupBuiltinQueries: 'Special Queries',
   paletteGroupCustomQueries: 'Custom Queries',
+  settingsMobileKeyboardDismiss: 'Show keyboard dismiss button',
+  settingsMobileKeyboardDismissDesc:
+    'Show a button beside the Universal Palette search field to hide the keyboard on mobile.',
   settingsPaletteGroups: 'Show group names in the Universal Palette',
   settingsPaletteGroupsDesc: 'Separate commands and special queries with dimmed group names.',
   settingsConfirmPeriodic: 'Ask before creating periodic notes',
@@ -313,6 +316,7 @@ export const en = {
   paletteHelpReturnToSearch: 'return to search',
   paletteBaseResultsLabel: 'Base results',
   paletteHelpSelect: 'select',
+  paletteDismissKeyboard: 'Dismiss keyboard',
   paletteHelpDismiss: 'dismiss',
   paletteHelpCommands: 'commands',
   paletteHelpBack: 'back',

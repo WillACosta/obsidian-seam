@@ -22,44 +22,92 @@ class ModalHost {
   }
   close() {}
 }
-class ScopeHost {
-  handlers = new Map<string, Function>()
-  register(mods: string[], key: string, callback: Function) {
-    this.handlers.set([...mods, key].join('+'), callback)
-  }
-}
 Object.assign(require.cache['obsidian']!.exports, {
   SuggestModal: ModalHost,
   Modal: ModalHost,
-  Scope: ScopeHost,
   AbstractInputSuggest: class {},
+  setIcon: () => {},
 })
 const { UniversalPalette } = require('../src/ui/UniversalPalette')
 
-describe('Palette mobile keyboard dismissal', () => {
-  it('dismisses on unmodified Enter, preserves composition, and releases its scope', () => {
-    const pushed: ScopeHost[] = []
-    const popped: ScopeHost[] = []
-    const app = {
-      keymap: {
-        pushScope: (s: ScopeHost) => pushed.push(s),
-        popScope: (s: ScopeHost) => popped.push(s),
-      },
+describe('Palette mobile keyboard control', () => {
+  it('does not create the dismiss control when disabled', () => {
+    const palette = new UniversalPalette(
+      {},
+      { ...DEFAULT_SETTINGS, showMobileKeyboardDismiss: false },
+      {},
+      [],
+    )
+    palette.inputEl.closest = () => assert.fail('Disabled control must not be created')
+    palette.setupMobileKeyboardDismiss()
+    assert.equal(palette.mobileKeyboardButton, null)
+  })
+
+  it('sits beside the input, dismisses without closing the Palette, and cleans up', () => {
+    const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+    const documentMock = { activeElement: null as unknown }
+    Object.defineProperty(globalThis, 'document', { configurable: true, value: documentMock })
+    try {
+      const handlers = new Map<string, (event: any) => void>()
+      const inputHandlers = new Map<string, () => void>()
+      const button = {
+        hidden: false,
+        addEventListener: (name: string, fn: (event: any) => void) => handlers.set(name, fn),
+        remove: () => {
+          removed = true
+        },
+      }
+      let removed = false
+      const close = {}
+      let insertedBefore: unknown
+      const container = {
+        createEl: () => button,
+        querySelector: () => close,
+        insertBefore: (_button: unknown, target: unknown) => {
+          insertedBefore = target
+        },
+      }
+      const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, [])
+      let closed = false
+      palette.close = () => {
+        closed = true
+      }
+      Object.assign(palette.inputEl, {
+        disabled: false,
+        closest: () => container,
+        addEventListener: (name: string, fn: () => void) => inputHandlers.set(name, fn),
+        removeEventListener: (name: string) => inputHandlers.delete(name),
+        blur: () => {
+          documentMock.activeElement = null
+          inputHandlers.get('blur')?.()
+        },
+      })
+      documentMock.activeElement = palette.inputEl
+      palette.setupMobileKeyboardDismiss()
+      assert.equal(insertedBefore, close)
+      assert.equal(button.hidden, false)
+      for (const eventName of ['touchstart', 'pointerdown', 'click']) {
+        documentMock.activeElement = palette.inputEl
+        inputHandlers.get('focus')!()
+        assert.equal(button.hidden, false)
+        let prevented = false
+        handlers.get(eventName)!({
+          preventDefault: () => {
+            prevented = true
+          },
+        })
+        assert.equal(button.hidden, true, `${eventName} must dismiss immediately`)
+        assert.equal(documentMock.activeElement, null)
+        assert.equal(closed, false)
+        if (eventName !== 'click') assert.equal(prevented, true)
+      }
+      palette.removeMobileKeyboardDismiss()
+      assert.equal(removed, true)
+      assert.equal(inputHandlers.size, 0)
+    } finally {
+      if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
+      else Reflect.deleteProperty(globalThis, 'document')
     }
-    const palette = new UniversalPalette(app, DEFAULT_SETTINGS, {}, [])
-    let blurred = 0
-    let prevented = 0
-    palette.inputEl.blur = () => blurred++
-    palette.activateMobileInputScope()
-    assert.equal(pushed.length, 1)
-    const enter = pushed[0].handlers.get('Enter')!
-    const event = { isComposing: false, preventDefault: () => prevented++ }
-    assert.equal(enter({ ...event, isComposing: true }), true)
-    assert.equal(enter(event), false)
-    assert.deepEqual([blurred, prevented], [1, 1])
-    assert.equal(pushed[0].handlers.has('Shift+Enter'), false)
-    palette.releaseMobileInputScope()
-    assert.deepEqual(popped, pushed)
   })
 })
 

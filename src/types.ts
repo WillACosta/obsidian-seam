@@ -14,6 +14,7 @@ export interface SeamSettings {
   paletteNoteCommandIds: Record<string, string>
   palettePinnedCommands: string[]
   showPaletteGroups: boolean
+  showMobileKeyboardDismiss: boolean
   confirmPeriodicNoteCreation: boolean
   calendarPins: CalendarPin[]
   calendarUsePeriodicNotes: boolean
@@ -99,6 +100,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
   paletteNoteCommandIds: {},
   palettePinnedCommands: [],
   showPaletteGroups: true,
+  showMobileKeyboardDismiss: true,
   confirmPeriodicNoteCreation: true,
   calendarPins: [],
   calendarUsePeriodicNotes: true,

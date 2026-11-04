@@ -9,6 +9,8 @@
 
 ### Added
 
+- **Mobile keyboard dismissal**: Use an optional button beside the Universal Palette input to hide the mobile keyboard while keeping Enter available to select a result.
+
 - **Initialize Seam Add Book**: Recommend a Quick Capture choice using the Book Template, Obsidian default location, a new tab, an ask-on-conflict policy, and the book icon. Existing choices are preserved.
 
 - **Global Statistics maximize**: Expand the dashboard to fill the visible window and restore its previous size with the same control.

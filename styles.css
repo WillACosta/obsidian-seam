@@ -2012,3 +2012,26 @@ body .prompt.seam-palette-global-statistics.seam-global-maximized {
   width: 20px;
   height: 20px;
 }
+
+/* Keep the keyboard action next to the Palette input on phones and tablets. */
+.prompt .prompt-input-container.seam-palette-input-container .seam-palette-keyboard-dismiss {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.prompt
+  .prompt-input-container.seam-palette-input-container
+  .seam-palette-keyboard-dismiss[hidden] {
+  display: none;
+}
+
+.prompt .seam-palette-keyboard-dismiss svg {
+  width: 20px;
+  height: 20px;
+}

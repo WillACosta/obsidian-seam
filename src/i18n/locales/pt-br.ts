@@ -162,6 +162,9 @@ export const ptBr: Translations = {
   paletteGroupPinnedNotes: 'Notas fixadas',
   paletteGroupBuiltinQueries: 'Consultas especiais',
   paletteGroupCustomQueries: 'Consultas personalizadas',
+  settingsMobileKeyboardDismiss: 'Mostrar botão para ocultar o teclado',
+  settingsMobileKeyboardDismissDesc:
+    'Exibe um botão ao lado da busca da Paleta Universal para ocultar o teclado em dispositivos móveis.',
   settingsPaletteGroups: 'Mostrar nomes de grupos na Paleta Universal',
   settingsPaletteGroupsDesc:
     'Separar comandos e consultas especiais com nomes de grupos discretos.',
@@ -320,6 +323,7 @@ export const ptBr: Translations = {
   paletteHelpReturnToSearch: 'voltar à busca',
   paletteBaseResultsLabel: 'Resultados da Base',
   paletteHelpSelect: 'selecionar',
+  paletteDismissKeyboard: 'Ocultar teclado',
   paletteHelpDismiss: 'fechar',
   paletteHelpCommands: 'comandos',
   paletteHelpBack: 'voltar',

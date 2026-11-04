@@ -335,6 +335,20 @@ export class SeamSettingsTab extends PluginSettingTab {
             },
           },
           {
+            name: strings.settingsMobileKeyboardDismiss,
+            desc: strings.settingsMobileKeyboardDismissDesc,
+            render: (setting) => {
+              setting.addToggle((toggle) =>
+                toggle
+                  .setValue(this.plugin.settings.showMobileKeyboardDismiss)
+                  .onChange(async (value) => {
+                    this.plugin.settings.showMobileKeyboardDismiss = value
+                    await this.plugin.saveSettings()
+                  }),
+              )
+            },
+          },
+          {
             name: strings.settingsShowIcons,
             desc: strings.settingsShowIconsDesc,
             render: (setting) => this.renderShowIconsSetting(setting),

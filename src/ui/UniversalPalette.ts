@@ -113,7 +113,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   onClosed?: () => void
   private createSuggestionActive = false
   private closeButtonScope: Scope | null = null
-  private mobileInputScope: Scope | null = null
+  private mobileKeyboardButton: HTMLButtonElement | null = null
   private lastQuery = ''
   private selectedTags: string[] = []
   private excludedTags: string[] = []
@@ -259,20 +259,13 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   onOpen(): void {
     window.addEventListener('keydown', this.baseNavigationKeyListener, true)
     void super.onOpen()
-    if (Platform.isMobile) {
-      this.inputEl.setAttribute('enterkeyhint', 'done')
-      this.inputEl.addEventListener('focus', this.activateMobileInputScope)
-      this.inputEl.addEventListener('blur', this.releaseMobileInputScope)
-      if (document.activeElement === this.inputEl) this.activateMobileInputScope()
-    }
     this.setupChipsContainer()
+    if (Platform.isMobile) this.setupMobileKeyboardDismiss()
   }
 
   onClose(): void {
     window.removeEventListener('keydown', this.baseNavigationKeyListener, true)
-    this.inputEl.removeEventListener('focus', this.activateMobileInputScope)
-    this.inputEl.removeEventListener('blur', this.releaseMobileInputScope)
-    this.releaseMobileInputScope()
+    this.removeMobileKeyboardDismiss()
     this.releaseCloseButtonScope()
     this.disposeCalendar()
     this.globalStatisticsView?.destroy()
@@ -522,23 +515,54 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     if (scope) this.app.keymap.popScope(scope)
   }
 
-  private readonly activateMobileInputScope = (): void => {
-    if (this.mobileInputScope || this.mode !== 'search') return
-    const scope = new Scope(this.scope)
-    scope.register([], 'Enter', (event: KeyboardEvent) => {
-      if (event.isComposing) return true
-      event.preventDefault()
-      this.inputEl.blur()
-      return false
+  private setupMobileKeyboardDismiss(): void {
+    if (!this.settings.showMobileKeyboardDismiss) return
+    const container = this.inputEl.closest<HTMLElement>('.prompt-input-container')
+    if (!container) return
+    const button = container.createEl('button', {
+      cls: 'clickable-icon seam-palette-keyboard-dismiss',
+      attr: { type: 'button', 'aria-label': t().paletteDismissKeyboard },
     })
-    this.mobileInputScope = scope
-    this.app.keymap.pushScope(scope)
+    setIcon(button, 'keyboard-toggle')
+    const close = container.querySelector('.seam-palette-close')
+    if (close) container.insertBefore(button, close)
+    button.hidden = true
+    const dismiss = (): void => {
+      this.inputEl.blur()
+      button.hidden = true
+    }
+    // On iOS the keyboard and input focus can change before a click is delivered.
+    button.addEventListener(
+      'touchstart',
+      (event) => {
+        event.preventDefault()
+        dismiss()
+      },
+      { passive: false },
+    )
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault()
+      dismiss()
+    })
+    // Retain activation through assistive technology and keyboard input.
+    button.addEventListener('click', dismiss)
+    this.mobileKeyboardButton = button
+    this.inputEl.addEventListener('focus', this.updateMobileKeyboardDismiss)
+    this.inputEl.addEventListener('blur', this.updateMobileKeyboardDismiss)
+    this.updateMobileKeyboardDismiss()
   }
 
-  private readonly releaseMobileInputScope = (): void => {
-    const scope = this.mobileInputScope
-    this.mobileInputScope = null
-    if (scope) this.app.keymap.popScope(scope)
+  private readonly updateMobileKeyboardDismiss = (): void => {
+    const button = this.mobileKeyboardButton
+    if (!button) return
+    button.hidden = document.activeElement !== this.inputEl || this.inputEl.disabled
+  }
+
+  private removeMobileKeyboardDismiss(): void {
+    this.inputEl.removeEventListener('focus', this.updateMobileKeyboardDismiss)
+    this.inputEl.removeEventListener('blur', this.updateMobileKeyboardDismiss)
+    this.mobileKeyboardButton?.remove()
+    this.mobileKeyboardButton = null
   }
 
   /** Sets up the chips and dismiss control inside the prompt input container. */
