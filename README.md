@@ -92,6 +92,4 @@ Seam is free and open source. If it saves you time, consider supporting its deve
 
 See [README.dev.md](README.dev.md) for development and release instructions. Seam is licensed under the [GNU General Public License v3.0](LICENSE).
 
-Seam was built with the help of AI agents, guided by plain-text specifications written by me.
-
 Crafted with care by **William A. Costa** ([@WillACosta](https://github.com/WillACosta)).
