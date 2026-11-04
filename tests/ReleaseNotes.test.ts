@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveReleaseAssetUrls } from '../src/utils/releaseNotes'
+import { resolveReleaseAssetUrls, isMajorReleaseChange } from '../src/utils/releaseNotes'
 
 describe('Release note assets', () => {
   it('resolves repository-relative images against the release tag', () => {
@@ -16,5 +16,12 @@ describe('Release note assets', () => {
     const markdown = '[Docs](https://example.com/docs) ![Vault](images/local.png)'
 
     assert.equal(resolveReleaseAssetUrls(markdown, '2.0.1'), markdown)
+  })
+})
+
+describe('Release announcement policy', () => {
+  it('announces upgrades from 3.x to 4.0.1 but does not announce a 4.0.0 patch update', () => {
+    assert.equal(isMajorReleaseChange('3.0.1', '4.0.1'), true)
+    assert.equal(isMajorReleaseChange('4.0.0', '4.0.1'), false)
   })
 })

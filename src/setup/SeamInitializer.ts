@@ -83,7 +83,8 @@ function modK(value: unknown, shift: boolean): boolean {
     !Array.isArray(value.modifiers)
   )
     return false
-  const modifiers = value.modifiers.map((modifier) =>
+  const source: unknown[] = value.modifiers
+  const modifiers = source.map((modifier) =>
     modifier === (Platform.isMacOS ? 'Meta' : 'Ctrl') ? 'Mod' : modifier,
   )
   return (
@@ -216,7 +217,7 @@ export class SeamInitializer {
         if (current.types !== undefined && !object(current.types)) throw new Error('types')
         return {
           ...current,
-          types: { ...(current.types as JsonObject | undefined), ...SETUP_PROPERTY_TYPES },
+          types: { ...current.types, ...SETUP_PROPERTY_TYPES },
         }
       },
       Object.keys(SETUP_PROPERTY_TYPES).map((key) => `types.${key}`),

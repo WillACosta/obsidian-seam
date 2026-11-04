@@ -1,4 +1,10 @@
 import { App, TFolder } from 'obsidian'
+import {
+  legacyStatisticsValue,
+  loadLocalStatistics,
+  saveLocalStatistics,
+  stableResourcePath,
+} from './LocalStatisticsStorage'
 import { ActivityState, emptyActivity, localDay } from './WritingActivity'
 
 export const STATISTICS_FOLDER = 'Resources/Seam/Statistics'
@@ -19,11 +25,7 @@ export async function ensureStatisticsFolder(app: App): Promise<void> {
   }
 }
 
-/** Strip the session-specific authority and cache-buster from Obsidian resource URLs. */
-export function stableResourcePath(resource: string): string {
-  const withoutQuery = resource.split('?')[0]
-  return withoutQuery.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, '')
-}
+export { stableResourcePath } from './LocalStatisticsStorage'
 
 /** Device-local identity must never be stored in synced plugin settings. */
 export function statisticsDeviceId(app: App, pluginDirectory: string): string {
@@ -31,20 +33,12 @@ export function statisticsDeviceId(app: App, pluginDirectory: string): string {
   const resource = stableResourcePath(app.vault.adapter.getResourcePath(pluginDirectory))
   const key = `seam-statistics-device:${resource}`
   const valid = (value: string | null): value is string => !!value && /^[a-zA-Z0-9-]+$/.test(value)
-  const stored = localStorage.getItem(key)
+  const stored = loadLocalStatistics(app, key)
   if (valid(stored)) return stored
-  // Reuse the most recent identity created by the old cache-busted key format.
-  const legacy = Object.keys(localStorage)
-    .filter(
-      (candidate) =>
-        candidate.startsWith('seam-statistics-device:') &&
-        stableResourcePath(candidate.slice('seam-statistics-device:'.length)) === resource,
-    )
-    .sort((a, b) => Number(b.split('?')[1] ?? 0) - Number(a.split('?')[1] ?? 0))
-    .map((candidate) => localStorage.getItem(candidate))
-    .find(valid)
-  const id = legacy ?? crypto.randomUUID()
-  localStorage.setItem(key, id)
+  // Preserve the existing device identity, including older cache-busted keys.
+  const legacy = legacyStatisticsValue('seam-statistics-device:', resource, valid)
+  const id = valid(legacy) ? legacy : crypto.randomUUID()
+  saveLocalStatistics(app, key, id)
   return id
 }
 

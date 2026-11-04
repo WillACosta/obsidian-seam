@@ -16,7 +16,7 @@ export function countNoteText(
   content: string,
 ): Pick<NoteStatistics, 'words' | 'characters' | 'paragraphs' | 'readMinutes'> {
   const words =
-    content.match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*(?:['’\-][\p{L}\p{N}][\p{L}\p{M}\p{N}]*)*/gu)
+    content.match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*(?:['’-][\p{L}\p{N}][\p{L}\p{M}\p{N}]*)*/gu)
       ?.length ?? 0
   const paragraphs = content.trim()
     ? content.trim().split(/\r?\n[\t ]*\r?\n(?:[\t ]*\r?\n)*/).length

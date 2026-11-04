@@ -7,8 +7,6 @@ import {
   setIcon,
   Setting,
   SettingDefinitionItem,
-  SettingDefinitionGroup,
-  SettingDefinitionRender,
   SliderComponent,
 } from 'obsidian'
 import type SeamPlugin from '../main'
@@ -435,7 +433,7 @@ export class SeamSettingsTab extends PluginSettingTab {
 
   private decorateSettingsGroup(entry: SettingDefinitionItem): SettingDefinitionItem {
     if (!('type' in entry) || entry.type !== 'group') return entry
-    const group = entry as SettingDefinitionGroup
+    const group = entry
     const key = group.heading ?? ''
     return {
       ...group,
@@ -469,7 +467,7 @@ export class SeamSettingsTab extends PluginSettingTab {
           ],
       items: group.items?.map((item) => {
         if (!('render' in item) || typeof item.render !== 'function') return item
-        const original = item as SettingDefinitionRender
+        const original = item
         return {
           ...original,
           render: (setting, settingGroup) => {

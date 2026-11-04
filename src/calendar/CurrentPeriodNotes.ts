@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian'
-import moment from 'moment'
+import { moment } from '../utils/moment'
 import type { Moment } from 'moment'
 import { SeamSettings } from '../types'
 import { detectLocale } from '../i18n'

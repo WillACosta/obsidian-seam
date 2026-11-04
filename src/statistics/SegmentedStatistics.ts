@@ -36,7 +36,16 @@ export function encodeStatistics(
 ): Map<string, string> {
   const previousManifest = incremental?.previous.get(`${base(device)}.json`)
   // Legacy snapshots have no reusable shards; the first subsequent save must encode all history.
-  if (previousManifest && JSON.parse(previousManifest).version === 1) incremental = undefined
+  if (previousManifest) {
+    const parsed: unknown = JSON.parse(previousManifest)
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'version' in parsed &&
+      parsed.version === 1
+    )
+      incremental = undefined
+  }
   if (!incremental) parseActivity(state)
   const files = new Map<string, string>()
   if (incremental) {

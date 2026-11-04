@@ -421,6 +421,11 @@ function fixture(
   let reads = 0
   let fail = false
   const app = {
+    loadLocalStorage: (key: string) => storage.get(key) ?? null,
+    saveLocalStorage: (key: string, value: string | null) => {
+      if (value === null) storage.delete(key)
+      else storage.set(key, value)
+    },
     vault: {
       createFolder: async (path: string) => {
         files.set(path, new MockTFolder(path) as MockTFile)
@@ -667,6 +672,48 @@ describe('Background global statistics and persistence', () => {
     await restored.flush()
     assert.equal(contribution(await f.readState(), localDay(), 'words'), 3)
     restored.onunload()
+  })
+  it('migrates a legacy pending journal once without replaying it after a successful save', async () => {
+    const f = fixture()
+    const key = `seam-writing:${f.path}`
+    const event = {
+      kind: 'edit',
+      id: 'legacy-note',
+      path: 'A.md',
+      words: 5,
+      timestamp: Date.now(),
+      day: localDay(),
+      sequence: 1,
+    }
+    const legacyValue = JSON.stringify([event])
+    storage.set(key, legacyValue)
+    Object.defineProperty(globalThis.localStorage, key, {
+      value: legacyValue,
+      configurable: true,
+      enumerable: true,
+    })
+    // Vault-scoped values use a separate namespace from legacy browser keys.
+    const scoped = new Map<string, string>()
+    f.app.loadLocalStorage = (name) => scoped.get(name) ?? null
+    f.app.saveLocalStorage = (name, value) => {
+      if (value === null) scoped.delete(name)
+      else scoped.set(name, value as string)
+    }
+    try {
+      await f.service.initialize()
+      await f.service.flush()
+      assert.equal(contribution(await f.readState(), localDay(), 'words'), 5)
+      assert.equal(scoped.get(`${key}:migrated`), '1')
+      f.service.onunload()
+      const restored = new GlobalStatistics(f.app, 'test-plugin', f.device)
+      await restored.initialize()
+      await restored.flush()
+      assert.equal(contribution(restored.snapshot().activity, localDay(), 'words'), 5)
+      restored.onunload()
+    } finally {
+      storage.delete(key)
+      Reflect.deleteProperty(globalThis.localStorage, key)
+    }
   })
   it('stores user activity once and recovers a journal after an immediate failed-save reload', async () => {
     const f = fixture()

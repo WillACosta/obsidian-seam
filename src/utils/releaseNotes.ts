@@ -16,3 +16,19 @@ export function resolveReleaseAssetUrls(markdown: string, releaseTag: string): s
     },
   )
 }
+
+/** Match the announcement policy used for major and minor version changes. */
+export function isMajorReleaseChange(previousVersion: string, currentVersion: string): boolean {
+  const previousParts = previousVersion.split('.').map(Number)
+  const currentParts = currentVersion.split('.').map(Number)
+  if (
+    previousParts.some((part) => !Number.isFinite(part)) ||
+    currentParts.some((part) => !Number.isFinite(part))
+  )
+    return false
+  const [previousMajor, previousMinor] = previousParts
+  const [currentMajor, currentMinor] = currentParts
+  return (
+    currentMajor > previousMajor || (currentMajor === previousMajor && currentMinor > previousMinor)
+  )
+}

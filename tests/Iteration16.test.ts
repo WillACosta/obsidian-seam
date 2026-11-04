@@ -3,9 +3,14 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { App } from 'obsidian'
 import { stableResourcePath, statisticsDeviceId } from '../src/statistics/StatisticsStorage'
+import { saveLocalStatistics } from '../src/statistics/LocalStatisticsStorage'
 import { DEFAULT_SETTINGS } from '../src/types'
 
 describe('Iteration 16 safety', () => {
+  it('detects a silently failed vault-scoped write', () => {
+    const app = { saveLocalStorage: () => {}, loadLocalStorage: () => null } as unknown as App
+    assert.throws(() => saveLocalStatistics(app, 'journal', 'pending'), /could not be verified/)
+  })
   it('enables automatic processing by default', () => {
     assert.equal(DEFAULT_SETTINGS.automaticProcessing, true)
   })
@@ -28,7 +33,12 @@ describe('Iteration 16 safety', () => {
     Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage })
     try {
       let url = 'app://new/vault/.obsidian/plugins/seam?40'
-      const app = { vault: { adapter: { getResourcePath: () => url } } } as unknown as App
+      const vaultStorage = new Map<string, string>()
+      const app = {
+        vault: { adapter: { getResourcePath: () => url } },
+        loadLocalStorage: (key: string) => vaultStorage.get(key) ?? null,
+        saveLocalStorage: (key: string, value: string) => vaultStorage.set(key, value),
+      } as unknown as App
       assert.equal(statisticsDeviceId(app, 'plugin'), 'latest-id')
       url = 'app://another/vault/.obsidian/plugins/seam?50'
       assert.equal(statisticsDeviceId(app, 'plugin'), 'latest-id')

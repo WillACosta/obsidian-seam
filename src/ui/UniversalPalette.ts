@@ -1536,8 +1536,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       const file = await this.app.vault.create(path, '')
       if (tags.length) {
         await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-          const existing = Array.isArray(frontmatter.tags) ? frontmatter.tags : []
-          frontmatter.tags = [...new Set([...existing, ...tags])]
+          const properties = frontmatter as Record<string, unknown>
+          const existing: unknown[] = Array.isArray(properties.tags) ? properties.tags : []
+          properties.tags = [...new Set([...existing, ...tags])]
         })
       }
       const leaf = this.app.workspace.getLeaf(

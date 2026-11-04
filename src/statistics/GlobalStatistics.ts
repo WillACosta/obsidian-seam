@@ -11,6 +11,11 @@ import {
   wordCount,
 } from './WritingActivity'
 import { t } from '../i18n'
+import {
+  legacyStatisticsValue,
+  loadLocalStatistics,
+  saveLocalStatistics,
+} from './LocalStatisticsStorage'
 import { decodeStatistics, encodeStatistics } from './SegmentedStatistics'
 import {
   STATISTICS_FOLDER,
@@ -22,16 +27,17 @@ import {
 
 // Share only in-flight writes across module reloads, then release each queue entry.
 const pendingWritesKey = Symbol.for('seam.statistics.pending-writes')
-const runtime = globalThis as typeof globalThis & {
+const runtime = window as typeof window & {
   [pendingWritesKey]?: Map<string, Promise<void>>
 }
-const pendingWrites = runtime[pendingWritesKey] ?? (runtime[pendingWritesKey] = new Map())
+const pendingWrites: Map<string, Promise<void>> = runtime[pendingWritesKey] ??
+(runtime[pendingWritesKey] = new Map<string, Promise<void>>())
 const initializationKey = Symbol.for('seam.statistics.initializations')
-const initializationRuntime = globalThis as typeof globalThis & {
+const initializationRuntime = window as typeof window & {
   [initializationKey]?: Map<string, Promise<void>>
 }
-const initializations =
-  initializationRuntime[initializationKey] ?? (initializationRuntime[initializationKey] = new Map())
+const initializations: Map<string, Promise<void>> = initializationRuntime[initializationKey] ??
+(initializationRuntime[initializationKey] = new Map<string, Promise<void>>())
 
 export interface GlobalStatisticsSnapshot {
   activity: ActivityState
@@ -205,20 +211,18 @@ export class GlobalStatistics extends Component {
           this.state = emptyActivity(localDay())
           this.savedSequence = -1
         }
-        // Recover a pending journal written with the former cache-busted resource URL.
-        const legacyJournal = Object.keys(localStorage)
-          .filter(
-            (key) =>
-              key.startsWith('seam-writing:') &&
-              stableResourcePath(key.slice('seam-writing:'.length)) ===
-                this.journalKey.slice('seam-writing:'.length),
+        // Migrate any pending journal once, including old cache-busted keys.
+        const migrationKey = `${this.journalKey}:migrated`
+        let journalData = loadLocalStatistics(this.app, this.journalKey)
+        if (loadLocalStatistics(this.app, migrationKey) !== '1') {
+          journalData ??= legacyStatisticsValue(
+            'seam-writing:',
+            this.journalKey.slice('seam-writing:'.length),
           )
-          .sort((a, b) => Number(b.split('?')[1] ?? 0) - Number(a.split('?')[1] ?? 0))
-          .map((key) => localStorage.getItem(key))
-          .find((value) => value !== null)
-        const journal = parseActivityJournal(
-          JSON.parse(localStorage.getItem(this.journalKey) ?? legacyJournal ?? '[]'),
-        )
+          if (journalData !== null) saveLocalStatistics(this.app, this.journalKey, journalData)
+          saveLocalStatistics(this.app, migrationKey, '1')
+        }
+        const journal = parseActivityJournal(JSON.parse(journalData ?? '[]') as unknown)
         // Validate replay by checking the resulting schema before accepting recovery.
         const recovered = JSON.parse(JSON.stringify(this.state)) as ActivityState
         for (const event of journal) {
@@ -324,7 +328,7 @@ export class GlobalStatistics extends Component {
     const event = { ...change, sequence: this.state.sequence + 1 }
     this.journal.push(event)
     try {
-      localStorage.setItem(this.journalKey, JSON.stringify(this.journal))
+      saveLocalStatistics(this.app, this.journalKey, JSON.stringify(this.journal))
     } catch {
       this.saveError = true
     }
@@ -351,7 +355,10 @@ export class GlobalStatistics extends Component {
     if (!(await adapter.exists(this.checkpointPath))) return
     let transaction: { files: [string, string][]; remove: string[] }
     try {
-      transaction = JSON.parse(await adapter.read(this.checkpointPath))
+      transaction = JSON.parse(await adapter.read(this.checkpointPath)) as {
+        files: [string, string][]
+        remove: string[]
+      }
       if (!Array.isArray(transaction.files) || !Array.isArray(transaction.remove))
         throw new Error('Invalid checkpoint')
       const prefix = `${STATISTICS_FOLDER}/${this.deviceId}.`
@@ -439,8 +446,9 @@ export class GlobalStatistics extends Component {
             if (revision <= sequence) this.dirtyMonths.delete(month)
           if (this.dirtyReferences <= sequence) this.dirtyReferences = 0
           const remaining = this.journal.filter((event) => event.sequence > sequence)
-          if (remaining.length) localStorage.setItem(this.journalKey, JSON.stringify(remaining))
-          else localStorage.removeItem(this.journalKey)
+          if (remaining.length)
+            saveLocalStatistics(this.app, this.journalKey, JSON.stringify(remaining))
+          else saveLocalStatistics(this.app, this.journalKey, null)
           await this.app.vault.adapter.remove(this.checkpointPath)
           this.journal = remaining
           this.savedSequence = sequence

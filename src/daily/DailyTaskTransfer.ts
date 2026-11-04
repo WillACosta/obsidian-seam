@@ -1,5 +1,5 @@
 import { App, MarkdownView, TFile } from 'obsidian'
-import moment from 'moment'
+import { moment } from '../utils/moment'
 import {
   createDailyNote,
   dailyNoteDate,

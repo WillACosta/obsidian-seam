@@ -4,8 +4,8 @@ export interface TextChange {
   fromB: number
   toB: number
 }
-const wordPattern = /[\p{L}\p{N}][\p{L}\p{M}\p{N}]*(?:['’\-][\p{L}\p{N}][\p{L}\p{M}\p{N}]*)*/gu
-const wordCharacter = /[\p{L}\p{M}\p{N}'’\-]/u
+const wordPattern = /[\p{L}\p{N}][\p{L}\p{M}\p{N}]*(?:['’-][\p{L}\p{N}][\p{L}\p{M}\p{N}]*)*/gu
+const wordCharacter = /[\p{L}\p{M}\p{N}'’-]/u
 
 function spans(text: string, from: number, to: number): { from: number; to: number }[] {
   const regex = new RegExp(wordPattern.source, 'gu')

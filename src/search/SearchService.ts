@@ -1,5 +1,5 @@
 import { App, normalizePath, TFile } from 'obsidian'
-import moment from 'moment'
+import { moment } from '../utils/moment'
 import { SeamSettings, SearchResult, QueryToken, MatchSnippet, SpecialSearch } from '../types'
 import { hasDirectoryFilter, parseQuery } from './QueryParser'
 import { isFileInFolder } from '../utils/isFileInFolder'

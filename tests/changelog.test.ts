@@ -1,4 +1,5 @@
 import { describe, it } from 'node:test'
+import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import {
   normalizeVersion,
@@ -169,5 +170,22 @@ describe('Changelog Automation — Iteration Doc Parsing & Aggregation', () => {
     assert.ok(formatted.includes('### Added\n- Feature A in iter 01.'))
     assert.ok(formatted.includes('### Changed\n- Refactored settings structure.'))
     assert.ok(formatted.includes('### Fixed\n- Bug 1 in iter 01.'))
+  })
+})
+
+describe('4.0.1 release continuity', () => {
+  it('includes the 4.0.0 feature notes in the current release notes', () => {
+    const changelog = readFileSync('CHANGELOG.md', 'utf8')
+    const patch = extractReleaseNotes(changelog, '4.0.1')
+    const major = extractReleaseNotes(changelog, '4.0.0')
+    for (const feature of [
+      'Initialize Seam',
+      'Bookshelf',
+      'Global Statistics',
+      'Calendar and periodic notes',
+    ]) {
+      assert.ok(major.includes(feature))
+      assert.ok(patch.includes(feature))
+    }
   })
 })

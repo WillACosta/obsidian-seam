@@ -1,5 +1,5 @@
 import { App, Component, normalizePath, Notice, TAbstractFile, TFile } from 'obsidian'
-import moment from 'moment'
+import { moment } from '../utils/moment'
 import type { Moment } from 'moment'
 import { CalendarPin, SeamSettings } from '../types'
 import { detectLocale, t } from '../i18n'
