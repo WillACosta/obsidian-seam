@@ -36,6 +36,7 @@ import { readResultMetadataSettings } from './settings/ResultMetadataSettings'
 import { SeamInitializer } from './setup/SeamInitializer'
 import { SetupModal } from './setup/SetupModal'
 import { t } from './i18n'
+import { isMajorReleaseChange } from './utils/releaseNotes'
 import {
   getSeamReleaseNotesAfter,
   getSeamReleaseNotesForVersion,
@@ -1180,7 +1181,7 @@ export default class SeamPlugin extends Plugin {
       this.settings.updateAnnouncementMode === 'all'
         ? versionChanged
         : this.settings.updateAnnouncementMode === 'major'
-          ? this.isMajorReleaseChange(previousVersion, currentVersion)
+          ? isMajorReleaseChange(previousVersion, currentVersion)
           : false
 
     this.settings.lastAnnouncedVersion = currentVersion
@@ -1212,23 +1213,6 @@ export default class SeamPlugin extends Plugin {
     } catch {
       new Notice(t().noticeReleaseNotesFailed)
     }
-  }
-
-  private isMajorReleaseChange(previousVersion: string, currentVersion: string): boolean {
-    const previousParts = previousVersion.split('.').map(Number)
-    const currentParts = currentVersion.split('.').map(Number)
-    if (
-      previousParts.some((part) => !Number.isFinite(part)) ||
-      currentParts.some((part) => !Number.isFinite(part))
-    )
-      return false
-
-    const [previousMajor, previousMinor] = previousParts
-    const [currentMajor, currentMinor] = currentParts
-    return (
-      currentMajor > previousMajor ||
-      (currentMajor === previousMajor && currentMinor > previousMinor)
-    )
   }
 
   /**

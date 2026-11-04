@@ -2,7 +2,50 @@
 
 What's new and changed in each Seam release.
 
-## [4.0.0] - Unreleased
+## [4.0.1] - 2026-11-03
+
+### Fixed
+
+- Improved compatibility with Obsidian’s plugin guidelines while preserving writing statistics and recovery data.
+
+
+### Added
+
+- **Initialize Seam**: Preview and set up recommended folders, templates, settings, and searches for your vault. Existing notes stay untouched, and configuration backups are kept for recovery.
+
+!["Setup SEAM"](./docs/images/v4.0.0/setup_seam.png)
+
+- **Bookshelf**: Set up a four-view reading dashboard in Obsidian Bases, with `@bookshelf` and `@reading` searches.
+
+!["Bookshelf view"](./docs/images/v4.0.0/boohshelf.gif)
+
+- **Global Statistics**: Explore your note and word totals, writing streaks, activity calendar, and monthly trends. Select a day to see its notes, and sync activity across devices by enabling “Sync all other types” in Obsidian Sync.
+
+!["Global Statistics"](./docs/images/v4.0.0/global_stats.png)
+
+- **Calendar and periodic notes**: Browse Daily Notes with `@calendar`, open or create notes with `@today`, `@yesterday`, `@thisWeek`, and `@thisYear`, and pin up to three notes above the calendar.
+
+!["Calendar view"](./docs/images/v4.0.0/calendar.gif)
+
+- **Daily task transfer**: Move unfinished tasks to tomorrow's Daily Note or bring yesterday's tasks into today, keeping their nested context.
+- **Note reports**: View a note's word count, reading time, task completion, and outline in the Universal Palette. Fold outline headings to focus on a section.
+- **Delete current note**: Delete the open note with a command that respects your Obsidian deletion settings.
+- **Palette pins and command mode**: Pin notes and up to five commands for quick access. Open the Palette directly in command mode with an assignable shortcut.
+- **More special searches**: Find recently opened files and notes in your Fleeting or Permanent folders with `@recentlyOpened`, `@fleeting`, and `@permanent`.
+- **Create from saved searches**: Create a note directly from an empty saved search, using its folder and positive tag filters.
+- **Settings search**: Find settings by name or description and expand or collapse sections.
+
+!["Global Statistics"](./docs/images/v4.0.0/pinned_items.png)
+
+### Changed
+
+- **Palette search**: Optionally show only Markdown files, and choose separately whether to show file extensions and match counts. Title matches are included in the count.
+- **Palette and Bases navigation**: Use keyboard shortcuts to open notes in tabs or splits and navigate Base results. Commands and searches can show group names and descriptions.
+- **Periodic note creation**: Review a confirmation before creating a missing daily, weekly, or yearly note; you can turn this off in settings.
+- **Mobile Palette**: Hide the keyboard with an optional button beside the search field while keeping your search open.
+- **Query history**: Up and Down now navigate results instead of cycling through previous searches.
+
+## [4.0.0] - 2026-11-03
 <!-- iterations: iteration_11..iteration_17 -->
 
 ### Added

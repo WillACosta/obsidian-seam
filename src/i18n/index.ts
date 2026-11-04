@@ -1,3 +1,4 @@
+import { getLanguage } from 'obsidian'
 import { en, Translations } from './locales/en'
 import { ptBr } from './locales/pt-br'
 
@@ -28,19 +29,17 @@ export function detectLocale(): Locale {
 
   let lang = 'en'
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const obsidian = require('obsidian')
-    if (typeof obsidian.getLanguage === 'function') {
-      lang = obsidian.getLanguage()
+    if (typeof getLanguage === 'function') {
+      lang = getLanguage()
     } else {
-      const globalWithMoment = globalThis as unknown as GlobalWithMoment
+      const globalWithMoment = window as unknown as GlobalWithMoment
       if (typeof globalWithMoment.moment?.locale === 'function') {
         lang = globalWithMoment.moment.locale()
       }
     }
   } catch {
     try {
-      const globalWithMoment = globalThis as unknown as GlobalWithMoment
+      const globalWithMoment = window as unknown as GlobalWithMoment
       lang = globalWithMoment.moment?.locale?.() || 'en'
     } catch {
       lang = 'en'

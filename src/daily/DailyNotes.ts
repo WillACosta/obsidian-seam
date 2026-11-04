@@ -1,5 +1,5 @@
 import { App, normalizePath, TFile } from 'obsidian'
-import moment from 'moment'
+import { moment } from '../utils/moment'
 import type { Moment } from 'moment'
 
 export interface DailyNoteSettings {
