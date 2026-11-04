@@ -8,6 +8,7 @@
 ## Summary of Changes
 
 ### Fixed
+
 - **Removal of Predefined `#archived` Tag and Temporary Items When Moving to Permanent**:
   - **Root Cause**: Previously, `PermanentAction.performPostMoveCleanup` only added `settings.permanentTag` and configured `moveCleanupTags` to the list of tags to strip. If a note was un-archived or moved from the `Archive/` folder to `Permanent/`, `settings.archivedTag` (`#archived`) and `settings.archiveTag` (`#archive`) were not included in the removal list, leaving the predefined `#archived` tag stuck on the note.
   - **Fix**:
@@ -22,6 +23,7 @@
     - Scenario 2 (Adding `#permanent` tag): Adding `#permanent` to an archived note triggers automation, moving the note to `Permanent/` while stripping `#permanent`, `#archived`, `#todo`, and `status`.
 
 ### Tests
+
 - Added 6 new unit tests in [`tests/TagLogic.test.ts`](../../tests/TagLogic.test.ts) covering:
   - Permanent cleanup tag resolution including `#permanent`, `#archive`, `#archived`, and cleanup tags.
   - `#archived` removal even when `enableMoveCleanup` is disabled.

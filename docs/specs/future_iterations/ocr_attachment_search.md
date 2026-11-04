@@ -8,12 +8,12 @@ Obsidian Mobile does not provide Node.js or Electron APIs. A mobile-compatible s
 
 ### Candidate libraries
 
-| Use case | Candidate | Findings |
-| --- | --- | --- |
-| Image OCR | Tesseract.js | Runs in browsers through WebAssembly and Web Workers. It is suitable for local image OCR, but it does not parse PDFs directly. |
-| PDF text extraction and rendering | PDF.js | Can parse PDF data in the browser. Text-native PDFs should use extraction; scanned PDFs must be rendered page-by-page before OCR. |
-| DOCX text extraction | Mammoth.js | Supports browser `ArrayBuffer` input and raw-text extraction from `.docx` files. |
-| Images and PDFs in one pipeline | Scribe.js | Provides browser OCR and PDF extraction, but is AGPL-licensed and has stricter same-origin asset requirements. License compatibility must be reviewed before adoption. |
+| Use case                          | Candidate    | Findings                                                                                                                                                               |
+| --------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Image OCR                         | Tesseract.js | Runs in browsers through WebAssembly and Web Workers. It is suitable for local image OCR, but it does not parse PDFs directly.                                         |
+| PDF text extraction and rendering | PDF.js       | Can parse PDF data in the browser. Text-native PDFs should use extraction; scanned PDFs must be rendered page-by-page before OCR.                                      |
+| DOCX text extraction              | Mammoth.js   | Supports browser `ArrayBuffer` input and raw-text extraction from `.docx` files.                                                                                       |
+| Images and PDFs in one pipeline   | Scribe.js    | Provides browser OCR and PDF extraction, but is AGPL-licensed and has stricter same-origin asset requirements. License compatibility must be reviewed before adoption. |
 
 ### Mobile considerations
 

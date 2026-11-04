@@ -1,13 +1,15 @@
 name: Release Plugin
 
 on:
+  pull_request:
+    types: [closed]
+    branches: [main]
   push:
-    tags:
-      - "*"
+    tags: ['*']
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. 1.0.0)"
+        description: 'Release tag (e.g. 1.0.0)'
         required: true
 
 permissions:
@@ -15,39 +17,73 @@ permissions:
   id-token: write
   attestations: write
 
+concurrency:
+  group: release-plugin
+  cancel-in-progress: false
+
 jobs:
-  build:
+  release:
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'feat/'))
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Check out the release commit
         uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: "pnpm"
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || inputs.tag || github.ref }}
+          fetch-depth: 0
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Verify release version and commit
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if [[ "$EVENT_NAME" == pull_request ]]; then
+            [[ "$HEAD_REF" =~ ^feat/(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo '::error::Version branches must use feat/x.y.z.'; exit 1; }
+            version=${HEAD_REF#feat/}
+            git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+            [[ "$(git rev-parse HEAD)" == "$MERGE_SHA" ]] && git merge-base --is-ancestor "$MERGE_SHA" origin/main || { echo '::error::The release commit is not the merged commit on main.'; exit 1; }
+          else
+            version=$TAG
+            [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo '::error::Release tags must use x.y.z without a leading v.'; exit 1; }
+            [[ "$(git rev-parse "refs/tags/$version^{commit}")" == "$(git rev-parse HEAD)" ]] || { echo '::error::The checked-out commit does not match the release tag.'; exit 1; }
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Run tests
-        run: pnpm test
+      - uses: ./.github/actions/validate
 
-      - name: Build plugin
-        run: pnpm build
+      - name: Validate release files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node -e 'const version = process.argv[1]; for (const file of ["manifest.json", "package.json"]) { const actual = require("./" + file).version; if (actual !== version) { console.error(`${file} version ${actual} does not match ${version}`); process.exitCode = 1; } }' "$VERSION"
+          pnpm run release:check "$VERSION"
+          pnpm run changelog:extract "$VERSION" --out release_notes.md
 
-      - name: Validate release consistency
-        run: node scripts/changelog.mjs validate "${{ inputs.tag || github.ref_name }}"
+      - name: Create and verify version tag
+        if: github.event_name == 'pull_request'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          existing=$(git ls-remote --tags origin "refs/tags/$VERSION" | cut -f1)
+          if [[ -n "$existing" && "$existing" != "$MERGE_SHA" ]]; then
+            echo "::error::Tag $VERSION already points to another commit."
+            exit 1
+          fi
+          if [[ -z "$existing" ]]; then
+            git tag "$VERSION" "$MERGE_SHA"
+            git push origin "refs/tags/$VERSION"
+          fi
+          [[ "$(git ls-remote --tags origin "refs/tags/$VERSION" | cut -f1)" == "$MERGE_SHA" ]] || { echo '::error::The remote tag does not match the merged commit.'; exit 1; }
 
-      - name: Extract release notes
-        run: node scripts/changelog.mjs extract "${{ inputs.tag || github.ref_name }}" --out release_notes.md
-
-      - name: Attest Build Provenance
+      - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
@@ -55,15 +91,15 @@ jobs:
             manifest.json
             styles.css
 
-      - name: Create GitHub Release
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
-          name: ${{ inputs.tag || github.ref_name }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
           body_path: release_notes.md
           files: |
             main.js
             manifest.json
             styles.css
           draft: false
-          prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
+          prerelease: false

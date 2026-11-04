@@ -1,155 +1,155 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
-import './mocks/obsidian';
-import { parseQuery } from '../src/search/QueryParser';
-import { normalizeTextQuery, parseSpecialSearch } from '../src/search/SearchService';
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
+import './mocks/obsidian'
+import { parseQuery } from '../src/search/QueryParser'
+import { normalizeTextQuery, parseSpecialSearch } from '../src/search/SearchService'
 
 describe('QueryParser', () => {
-    it('parses empty query', () => {
-        const result = parseQuery('');
-        assert.equal(result.isValid, true);
-        assert.equal(result.tokens.length, 0);
-    });
+  it('parses empty query', () => {
+    const result = parseQuery('')
+    assert.equal(result.isValid, true)
+    assert.equal(result.tokens.length, 0)
+  })
 
-    it('parses single positive tag', () => {
-        const result = parseQuery('#electronics');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [{ type: 'tag', value: 'electronics' }]);
-    });
+  it('parses single positive tag', () => {
+    const result = parseQuery('#electronics')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [{ type: 'tag', value: 'electronics' }])
+  })
 
-    it('parses partial/prefix tag', () => {
-        const result = parseQuery('#ele');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [{ type: 'tag', value: 'ele' }]);
-    });
+  it('parses partial/prefix tag', () => {
+    const result = parseQuery('#ele')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [{ type: 'tag', value: 'ele' }])
+  })
 
-    it('parses negative tag', () => {
-        const result = parseQuery('-#archived');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [{ type: 'negativeTag', value: 'archived' }]);
-    });
+  it('parses negative tag', () => {
+    const result = parseQuery('-#archived')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [{ type: 'negativeTag', value: 'archived' }])
+  })
 
-    it('parses exclamation-prefixed negative tags', () => {
-        const result = parseQuery('#projects/seam #todo !#archived');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'tag', value: 'projects/seam' },
-            { type: 'tag', value: 'todo' },
-            { type: 'negativeTag', value: 'archived' },
-        ]);
-    });
+  it('parses exclamation-prefixed negative tags', () => {
+    const result = parseQuery('#projects/seam #todo !#archived')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'tag', value: 'projects/seam' },
+      { type: 'tag', value: 'todo' },
+      { type: 'negativeTag', value: 'archived' },
+    ])
+  })
 
-    it('parses multiple tags (AND logic)', () => {
-        const result = parseQuery('#electronics -#archived #kicad');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'tag', value: 'electronics' },
-            { type: 'negativeTag', value: 'archived' },
-            { type: 'tag', value: 'kicad' },
-        ]);
-    });
+  it('parses multiple tags (AND logic)', () => {
+    const result = parseQuery('#electronics -#archived #kicad')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'tag', value: 'electronics' },
+      { type: 'negativeTag', value: 'archived' },
+      { type: 'tag', value: 'kicad' },
+    ])
+  })
 
-    it('parses OR queries with || operator', () => {
-        const result = parseQuery('#electronics || #zmk');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'tag', value: 'electronics' },
-            { type: 'or', value: 'or' },
-            { type: 'tag', value: 'zmk' },
-        ]);
-    });
+  it('parses OR queries with || operator', () => {
+    const result = parseQuery('#electronics || #zmk')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'tag', value: 'electronics' },
+      { type: 'or', value: 'or' },
+      { type: 'tag', value: 'zmk' },
+    ])
+  })
 
-    it('parses || operator without spaces (#a||#b)', () => {
-        const result = parseQuery('#electronics||#zmk');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'tag', value: 'electronics' },
-            { type: 'or', value: 'or' },
-            { type: 'tag', value: 'zmk' },
-        ]);
-    });
+  it('parses || operator without spaces (#a||#b)', () => {
+    const result = parseQuery('#electronics||#zmk')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'tag', value: 'electronics' },
+      { type: 'or', value: 'or' },
+      { type: 'tag', value: 'zmk' },
+    ])
+  })
 
-    it('parses single | operator', () => {
-        const result = parseQuery('#electronics | #zmk');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'tag', value: 'electronics' },
-            { type: 'or', value: 'or' },
-            { type: 'tag', value: 'zmk' },
-        ]);
-    });
+  it('parses single | operator', () => {
+    const result = parseQuery('#electronics | #zmk')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'tag', value: 'electronics' },
+      { type: 'or', value: 'or' },
+      { type: 'tag', value: 'zmk' },
+    ])
+  })
 
-    it('parses OR queries with text OR', () => {
-        const result = parseQuery('#electronics OR #zmk');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'tag', value: 'electronics' },
-            { type: 'or', value: 'or' },
-            { type: 'tag', value: 'zmk' },
-        ]);
-    });
+  it('parses OR queries with text OR', () => {
+    const result = parseQuery('#electronics OR #zmk')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'tag', value: 'electronics' },
+      { type: 'or', value: 'or' },
+      { type: 'tag', value: 'zmk' },
+    ])
+  })
 
-    it('handles case-insensitive OR operator', () => {
-        const result = parseQuery('#electronics or #zmk');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'tag', value: 'electronics' },
-            { type: 'or', value: 'or' },
-            { type: 'tag', value: 'zmk' },
-        ]);
-    });
+  it('handles case-insensitive OR operator', () => {
+    const result = parseQuery('#electronics or #zmk')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'tag', value: 'electronics' },
+      { type: 'or', value: 'or' },
+      { type: 'tag', value: 'zmk' },
+    ])
+  })
 
-    it('flags invalid queries starting with ||', () => {
-        const result = parseQuery('|| #electronics');
-        assert.equal(result.isValid, false);
-    });
+  it('flags invalid queries starting with ||', () => {
+    const result = parseQuery('|| #electronics')
+    assert.equal(result.isValid, false)
+  })
 
-    it('flags invalid queries ending with ||', () => {
-        const result = parseQuery('#electronics ||');
-        assert.equal(result.isValid, false);
-    });
+  it('flags invalid queries ending with ||', () => {
+    const result = parseQuery('#electronics ||')
+    assert.equal(result.isValid, false)
+  })
 
-    it('flags consecutive || operators', () => {
-        const result = parseQuery('#a || || #b');
-        assert.equal(result.isValid, false);
-    });
+  it('flags consecutive || operators', () => {
+    const result = parseQuery('#a || || #b')
+    assert.equal(result.isValid, false)
+  })
 
-    it('parses plain text search', () => {
-        const result = parseQuery('Dormin Note');
-        assert.equal(result.isValid, true);
-        assert.deepEqual(result.tokens, [
-            { type: 'text', value: 'Dormin' },
-            { type: 'text', value: 'Note' },
-        ]);
-    });
+  it('parses plain text search', () => {
+    const result = parseQuery('Dormin Note')
+    assert.equal(result.isValid, true)
+    assert.deepEqual(result.tokens, [
+      { type: 'text', value: 'Dormin' },
+      { type: 'text', value: 'Note' },
+    ])
+  })
 
-    it('normalizes a quoted exact phrase without changing unquoted text', () => {
-        assert.equal(normalizeTextQuery('"KiCad is a PCB editor app"'), 'KiCad is a PCB editor app');
-        assert.equal(normalizeTextQuery('KiCad is a PCB editor app'), 'KiCad is a PCB editor app');
-    });
+  it('normalizes a quoted exact phrase without changing unquoted text', () => {
+    assert.equal(normalizeTextQuery('"KiCad is a PCB editor app"'), 'KiCad is a PCB editor app')
+    assert.equal(normalizeTextQuery('KiCad is a PCB editor app'), 'KiCad is a PCB editor app')
+  })
 
-    it('parses supported special searches and their optional text query', () => {
-        assert.deepEqual(parseSpecialSearch('@todo'), { search: 'todo', textQuery: '' });
-        assert.deepEqual(parseSpecialSearch('@docs "project brief"'), {
-            search: 'docs',
-            textQuery: 'project brief',
-        });
-        assert.deepEqual(parseSpecialSearch('@recent Hyperion'), {
-            search: 'recent',
-            textQuery: 'Hyperion',
-        });
-        assert.deepEqual(parseSpecialSearch('@today'), { search: 'today', textQuery: '' });
-        assert.deepEqual(parseSpecialSearch('@yesterday planning'), {
-            search: 'yesterday',
-            textQuery: 'planning',
-        });
-        assert.deepEqual(parseSpecialSearch('@last20Days project'), {
-            search: 'lastDays',
-            textQuery: 'project',
-            days: 20,
-        });
-        assert.deepEqual(parseSpecialSearch('@last0Days'), { search: null, textQuery: '@last0Days' });
-        assert.deepEqual(parseSpecialSearch('@ocr'), { search: null, textQuery: '@ocr' });
-        assert.deepEqual(parseSpecialSearch('@unknown'), { search: null, textQuery: '@unknown' });
-    });
-});
+  it('parses supported special searches and their optional text query', () => {
+    assert.deepEqual(parseSpecialSearch('@todo'), { search: 'todo', textQuery: '' })
+    assert.deepEqual(parseSpecialSearch('@docs "project brief"'), {
+      search: 'docs',
+      textQuery: 'project brief',
+    })
+    assert.deepEqual(parseSpecialSearch('@recent Hyperion'), {
+      search: 'recent',
+      textQuery: 'Hyperion',
+    })
+    assert.deepEqual(parseSpecialSearch('@today'), { search: 'today', textQuery: '' })
+    assert.deepEqual(parseSpecialSearch('@yesterday planning'), {
+      search: 'yesterday',
+      textQuery: 'planning',
+    })
+    assert.deepEqual(parseSpecialSearch('@last20Days project'), {
+      search: 'lastDays',
+      textQuery: 'project',
+      days: 20,
+    })
+    assert.deepEqual(parseSpecialSearch('@last0Days'), { search: null, textQuery: '@last0Days' })
+    assert.deepEqual(parseSpecialSearch('@ocr'), { search: null, textQuery: '@ocr' })
+    assert.deepEqual(parseSpecialSearch('@unknown'), { search: null, textQuery: '@unknown' })
+  })
+})

@@ -10,6 +10,7 @@
 ## Summary of Changes
 
 ### Added
+
 - **Full Internationalization (i18n) Framework**:
   - Implemented language detection using Obsidian's official `getLanguage()` API (with fallbacks to `localStorage` and `moment.locale()`).
   - Added full localization dictionaries for **English (US)** (`en.ts`) and **Portuguese (Brazil)** (`pt-br.ts`).
@@ -22,6 +23,7 @@
   - Added an Internationalization section to the README explaining language detection, supported languages, fallback behavior, and contribution instructions.
 
 ### Fixed
+
 - **Archiving Command False "Conditions no longer met" Failure**:
   - **Root Cause**: When "Archive current note" was triggered from a command or palette action, `AutomationService.archiveFile()` previously added the `#archive` tag via `addTag()` and immediately invoked `ArchiveAction.apply()`. Because Obsidian's `MetadataCache` re-indexing is asynchronous, `hasTag()` checked the stale cache before it finished updating, causing `canApply()` to fail and produce an erroneous notice `Archive failed: Conditions no longer met`, even though the file was subsequently archived when the background queue caught up.
   - **Fix**: Added an `options?: { force?: boolean }` parameter to `ArchiveAction.apply()` and `PermanentAction.apply()`. In `AutomationService.archiveFile()` and `AutomationService.moveFileToPermanent()`, Seam now directly applies the action with `{ force: true }`, moving the note to the destination folder and running post-move cleanup without requiring redundant intermediate tag writes or failing on asynchronous metadata cache delays.

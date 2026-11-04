@@ -13,6 +13,7 @@
 ## Summary of Changes
 
 ### Added
+
 - **In-Note Content Search**: Text queries now search inside note content (body text) in addition to title and path matching. Results display a contextual snippet with the matching text highlighted using Obsidian's `--text-highlight-bg` theme variable.
 - **Create Note from Search**: When no results are found for a text query, the palette suggests a "Create new note: {query}" action that creates the note in the configured Fleeting folder and opens it immediately.
 - **Open Note in New Tab**: Notes selected from the palette can be opened in a new tab using `Cmd+Enter` (Mac) or `Ctrl+Enter` (Win/Linux). Default Enter opens in the current active tab.
@@ -26,6 +27,7 @@
 - **`renderHighlightedText` Helper**: Reusable function that renders text into a DOM element with all matching query substrings highlighted.
 
 ### Changed
+
 - **Settings Refactor: "Moving Notes Behavior"**: Renamed "Archive Behavior" cleanup section to "Moving Notes Behavior". The cleanup settings (`enableMoveCleanup`, `moveCleanupTags`, `moveCleanupProperties`) now apply to both archive and permanent move operations, not just archiving.
 - **PermanentAction Cleanup**: `PermanentAction` now performs the same post-move tag and property cleanup as `ArchiveAction`, using the shared `updateNoteTagsAndProperties` pipeline.
 - **Plugin ID**: Changed from `seam` to `obsidian-seam` to comply with Obsidian community plugin naming guidelines.
@@ -33,6 +35,7 @@
 - **Contextual Palette Commands**: The "Archive current note" and "Move to Permanent" palette commands dynamically display the active note name and configured destination folder.
 
 ### Fixed
+
 - **Palette Rendering for Actions**: The `renderSuggestion` method now correctly handles the new `'create'` palette item type with appropriate icon (`file-plus`).
 - **Arrow Key Navigation During Content Search**: Fixed arrow keys not cycling between results during in-content text search. Root cause: manual `updateSuggestions()` calls from debounced async callbacks were resetting the cursor position. Fix: use Obsidian's native async `getSuggestions` support (`T[] | Promise<T[]>`) instead of manual async + `updateSuggestions()`.
 - **Cmd+Enter / Ctrl+Enter Not Opening in New Tab**: Fixed modifier key detection for opening notes in a new tab from the palette. Root cause: `SuggestModal`'s internal Enter handler does not preserve modifier state when calling `onChooseSuggestion`, so `Keymap.isModEvent(evt)` always saw no modifier. Fix: register a custom `['Mod'], 'Enter'` handler on the modal's `scope` that intercepts the event before the default handler, reads the selected item from the internal `chooser`, and opens it via `workspace.getLeaf('tab').openFile(file)`.

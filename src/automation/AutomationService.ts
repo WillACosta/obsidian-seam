@@ -1,10 +1,10 @@
-import { App, TFile } from 'obsidian';
-import { SeamSettings, AutomationResult, AutomationStatus, AutomationError } from '../types';
-import { ArchiveAction, hasTag } from './actions/ArchiveAction';
-import { PermanentAction } from './actions/PermanentAction';
-import { FleetingAction } from './actions/FleetingAction';
-import { t } from '../i18n';
-import { SourceIngestion } from './SourceIngestion';
+import { App, TFile } from 'obsidian'
+import { SeamSettings, AutomationResult, AutomationStatus, AutomationError } from '../types'
+import { ArchiveAction, hasTag } from './actions/ArchiveAction'
+import { PermanentAction } from './actions/PermanentAction'
+import { FleetingAction } from './actions/FleetingAction'
+import { t } from '../i18n'
+import { SourceIngestion } from './SourceIngestion'
 
 /**
  * Single authoritative automation service.
@@ -12,181 +12,189 @@ import { SourceIngestion } from './SourceIngestion';
  * must route through this service.
  */
 export class AutomationService {
-    private sources: SourceIngestion;
-    private archiveAction: ArchiveAction;
-    private permanentAction: PermanentAction;
-    private fleetingAction: FleetingAction;
+  private sources: SourceIngestion
+  private archiveAction: ArchiveAction
+  private permanentAction: PermanentAction
+  private fleetingAction: FleetingAction
 
-    private processedCount = 0;
-    private failedCount = 0;
-    private errors: AutomationError[] = [];
+  private processedCount = 0
+  private failedCount = 0
+  private errors: AutomationError[] = []
 
-    constructor(
-        private app: App,
-        private settings: SeamSettings,
-    ) {
-        this.sources = new SourceIngestion(app, settings);
-        this.archiveAction = new ArchiveAction();
-        this.permanentAction = new PermanentAction();
-        this.fleetingAction = new FleetingAction();
+  constructor(
+    private app: App,
+    private settings: SeamSettings,
+  ) {
+    this.sources = new SourceIngestion(app, settings)
+    this.archiveAction = new ArchiveAction()
+    this.permanentAction = new PermanentAction()
+    this.fleetingAction = new FleetingAction()
+  }
+
+  /**
+   * Process a single file through the automation pipeline.
+   * Determines which action (if any) applies and delegates.
+   */
+  async processFile(file: TFile): Promise<AutomationResult> {
+    // Re-verify file still exists
+    const currentFile = this.app.vault.getAbstractFileByPath(file.path)
+    if (!currentFile || !(currentFile instanceof TFile)) {
+      return {
+        status: 'skipped',
+        file,
+        action: 'none',
+        message: t().msgFileNoLongerExists,
+      }
     }
 
-    /**
-     * Process a single file through the automation pipeline.
-     * Determines which action (if any) applies and delegates.
-     */
-    async processFile(file: TFile): Promise<AutomationResult> {
-        // Re-verify file still exists
-        const currentFile = this.app.vault.getAbstractFileByPath(file.path);
-        if (!currentFile || !(currentFile instanceof TFile)) {
-            return {
-                status: 'skipped',
-                file,
-                action: 'none',
-                message: t().msgFileNoLongerExists,
-            };
-        }
-
-        if (currentFile.extension !== 'md') {
-            const result = await this.sources.createCompanion(currentFile);
-            this.recordResult(currentFile.path, result);
-            return result;
-        }
-
-        const hasArchiveTag = hasTag(currentFile, this.app, this.settings.archiveTag);
-        const hasPermanentTag = hasTag(currentFile, this.app, this.settings.permanentTag);
-
-        // Conflict: both action tags present → do not move (SDD v0.1 recommendation)
-        if (hasArchiveTag && hasPermanentTag) {
-            const result: AutomationResult = {
-                status: 'conflict',
-                file: currentFile,
-                action: 'conflict',
-                message: t().msgConflictBothTags,
-            };
-            this.recordFailure(currentFile.path, result);
-            return result;
-        }
-
-        // Try archive action
-        if (this.archiveAction.canApply(currentFile, this.app, this.settings)) {
-            const result = await this.archiveAction.apply(currentFile, this.app, this.settings);
-            this.recordResult(currentFile.path, result);
-            return result;
-        }
-
-        // Try permanent action
-        if (this.permanentAction.canApply(currentFile, this.app, this.settings)) {
-            const result = await this.permanentAction.apply(currentFile, this.app, this.settings);
-            this.recordResult(currentFile.path, result);
-            return result;
-        }
-
-        // No action applicable
-        return {
-            status: 'skipped',
-            file: currentFile,
-            action: 'none',
-            message: t().msgNoApplicableAutomation,
-        };
+    if (currentFile.extension !== 'md') {
+      const result = await this.sources.createCompanion(currentFile)
+      this.recordResult(currentFile.path, result)
+      return result
     }
 
-    private recordResult(path: string, result: AutomationResult): void {
-        if (result.status === 'success') {
-            this.processedCount++;
-        } else if (result.status === 'error' || result.status === 'conflict') {
-            this.recordFailure(path, result);
-        }
+    const hasArchiveTag = hasTag(currentFile, this.app, this.settings.archiveTag)
+    const hasPermanentTag = hasTag(currentFile, this.app, this.settings.permanentTag)
+
+    // Conflict: both action tags present → do not move (SDD v0.1 recommendation)
+    if (hasArchiveTag && hasPermanentTag) {
+      const result: AutomationResult = {
+        status: 'conflict',
+        file: currentFile,
+        action: 'conflict',
+        message: t().msgConflictBothTags,
+      }
+      this.recordFailure(currentFile.path, result)
+      return result
     }
 
-    private recordFailure(path: string, result: AutomationResult): void {
-        this.failedCount++;
-        this.errors.push({
-            filePath: path,
-            action: result.action,
-            message: result.message,
-            timestamp: Date.now(),
-        });
+    // Try archive action
+    if (this.archiveAction.canApply(currentFile, this.app, this.settings)) {
+      const result = await this.archiveAction.apply(currentFile, this.app, this.settings)
+      this.recordResult(currentFile.path, result)
+      return result
     }
 
-    getStatus(): AutomationStatus {
-        return {
-            pending: 0, // Queue tracks pending count separately
-            processed: this.processedCount,
-            failed: this.failedCount,
-            errors: [...this.errors],
-        };
+    // Try permanent action
+    if (this.permanentAction.canApply(currentFile, this.app, this.settings)) {
+      const result = await this.permanentAction.apply(currentFile, this.app, this.settings)
+      this.recordResult(currentFile.path, result)
+      return result
     }
 
-    /**
-     * Directly archive a specific file (used by "Archive current note" command).
-     * Bypasses tag precondition verification ({ force: true }) so manual archiving
-     * succeeds immediately without race conditions or metadata cache delays.
-     */
-    async archiveFile(file: TFile): Promise<AutomationResult> {
-        const currentFile = this.app.vault.getAbstractFileByPath(file.path);
-        if (!currentFile || !(currentFile instanceof TFile)) {
-            return {
-                status: 'skipped',
-                file,
-                action: 'archive',
-                message: t().msgFileNoLongerExists,
-            };
-        }
+    // No action applicable
+    return {
+      status: 'skipped',
+      file: currentFile,
+      action: 'none',
+      message: t().msgNoApplicableAutomation,
+    }
+  }
 
-        const result = await this.archiveAction.apply(currentFile, this.app, this.settings, {
-            force: true,
-        });
-        this.recordResult(currentFile.path, result);
-        return result;
+  private recordResult(path: string, result: AutomationResult): void {
+    if (result.status === 'success') {
+      this.processedCount++
+    } else if (result.status === 'error' || result.status === 'conflict') {
+      this.recordFailure(path, result)
+    }
+  }
+
+  private recordFailure(path: string, result: AutomationResult): void {
+    this.failedCount++
+    this.errors.push({
+      filePath: path,
+      action: result.action,
+      message: result.message,
+      timestamp: Date.now(),
+    })
+  }
+
+  getStatus(): AutomationStatus {
+    return {
+      pending: 0, // Queue tracks pending count separately
+      processed: this.processedCount,
+      failed: this.failedCount,
+      errors: [...this.errors],
+    }
+  }
+
+  /**
+   * Directly archive a specific file (used by "Archive current note" command).
+   * Bypasses tag precondition verification ({ force: true }) so manual archiving
+   * succeeds immediately without race conditions or metadata cache delays.
+   */
+  async archiveFile(file: TFile): Promise<AutomationResult> {
+    const currentFile = this.app.vault.getAbstractFileByPath(file.path)
+    if (!currentFile || !(currentFile instanceof TFile)) {
+      return {
+        status: 'skipped',
+        file,
+        action: 'archive',
+        message: t().msgFileNoLongerExists,
+      }
     }
 
-    /**
-     * Directly move a specific file to permanent folder (used by "Move to Permanent" command).
-     * Bypasses tag precondition verification ({ force: true }) so manual moving
-     * succeeds immediately without race conditions or metadata cache delays.
-     */
-    async moveFileToPermanent(file: TFile): Promise<AutomationResult> {
-        const currentFile = this.app.vault.getAbstractFileByPath(file.path);
-        if (!currentFile || !(currentFile instanceof TFile)) {
-            return {
-                status: 'skipped',
-                file,
-                action: 'permanent',
-                message: t().msgFileNoLongerExists,
-            };
-        }
+    const result = await this.archiveAction.apply(currentFile, this.app, this.settings, {
+      force: true,
+    })
+    this.recordResult(currentFile.path, result)
+    return result
+  }
 
-        const result = await this.permanentAction.apply(currentFile, this.app, this.settings, {
-            force: true,
-        });
-        this.recordResult(currentFile.path, result);
-        return result;
+  /**
+   * Directly move a specific file to permanent folder (used by "Move to Permanent" command).
+   * Bypasses tag precondition verification ({ force: true }) so manual moving
+   * succeeds immediately without race conditions or metadata cache delays.
+   */
+  async moveFileToPermanent(file: TFile): Promise<AutomationResult> {
+    const currentFile = this.app.vault.getAbstractFileByPath(file.path)
+    if (!currentFile || !(currentFile instanceof TFile)) {
+      return {
+        status: 'skipped',
+        file,
+        action: 'permanent',
+        message: t().msgFileNoLongerExists,
+      }
     }
 
-    /** Directly move an open note to Fleeting and apply the configured move cleanup. */
-    async moveFileToFleeting(file: TFile): Promise<AutomationResult> {
-        const result = await this.fleetingAction.apply(file, this.app, this.settings);
-        this.recordResult(file.path, result);
-        return result;
-    }
+    const result = await this.permanentAction.apply(currentFile, this.app, this.settings, {
+      force: true,
+    })
+    this.recordResult(currentFile.path, result)
+    return result
+  }
 
-    isSourceAttachment(file: TFile): boolean { return this.sources.isSource(file); }
+  /** Directly move an open note to Fleeting and apply the configured move cleanup. */
+  async moveFileToFleeting(file: TFile): Promise<AutomationResult> {
+    const result = await this.fleetingAction.apply(file, this.app, this.settings)
+    this.recordResult(file.path, result)
+    return result
+  }
 
-    onSourceRename(file: TFile, oldPath: string): void { this.sources.onRename(file, oldPath); }
+  isSourceAttachment(file: TFile): boolean {
+    return this.sources.isSource(file)
+  }
 
-    getSourceAttachments(): TFile[] { return this.sources.getAttachments(); }
+  onSourceRename(file: TFile, oldPath: string): void {
+    this.sources.onRename(file, oldPath)
+  }
 
-    async createSourceCompanion(file: TFile): Promise<AutomationResult> {
-        const result = await this.sources.createCompanion(file, true);
-        this.recordResult(file.path, result);
-        return result;
-    }
+  getSourceAttachments(): TFile[] {
+    return this.sources.getAttachments()
+  }
 
-    destroy(): void { this.sources.destroy(); }
+  async createSourceCompanion(file: TFile): Promise<AutomationResult> {
+    const result = await this.sources.createCompanion(file, true)
+    this.recordResult(file.path, result)
+    return result
+  }
 
-    updateSettings(settings: SeamSettings): void {
-        this.settings = settings;
-        this.sources.updateSettings(settings);
-    }
+  destroy(): void {
+    this.sources.destroy()
+  }
+
+  updateSettings(settings: SeamSettings): void {
+    this.settings = settings
+    this.sources.updateSettings(settings)
+  }
 }

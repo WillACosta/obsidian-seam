@@ -4,181 +4,94 @@
 
 > Capture thoughts, tag naturally, and let Seam organize your vault quietly in the background.
 
-Seam is a lightweight Obsidian plugin that organizes notes through tags. Inspired by the [Zettelkasten](https://zettelkasten.de/introduction/) method and apps like Apple Notes and Bear, it uses a simple workflow built around `Fleeting`, `Permanent`, and `Archive`. Add `#permanent` or `#archive` to move a note, and use the Universal Palette to search your vault. Spend less time managing files and more time writing.
+Seam is a lightweight Obsidian plugin for capturing, finding, and organizing notes. Inspired by [Zettelkasten](https://zettelkasten.de/introduction/), Apple Notes, and Bear, it brings a simple `Fleeting`, `Permanent`, and `Archive` workflow to your vault—so you can spend less time managing files and more time writing.
 
-!["Seam Showcase"](docs/images/seam_showcase.gif)
+> [!NOTE]
+> **100% private.** Seam does not collect or send us your personal information, note contents, or usage data. Your writing statistics stay on your devices and can be synced through your chosen service.
+
+![Seam showcase](docs/images/seam_showcase.gif)
 
 ## Why Seam?
 
-Seam keeps organization simple and stays out of your way:
+| Traditional workflow                                         | With Seam                                                                    |
+| :----------------------------------------------------------- | :--------------------------------------------------------------------------- |
+| ❌ Break your flow to create a note                          | ✅ Capture an idea from the Universal Palette, with your preferred template. |
+| ❌ Move notes between folders by hand                        | ✅ Add `#permanent` and let Seam file a note for you.                        |
+| ❌ Leave finished work mixed with active notes               | ✅ Add `#archive` to move it out of the way.                                 |
+| ❌ Switch between search tools                               | ✅ Search notes, files, tags, saved queries, and commands in one place.      |
+| ❌ Juggle separate views to revisit notes and track progress | ✅ Browse your notes in a calendar and explore your writing statistics.      |
+| ❌ Depend on desktop-only workflows                          | ✅ Use the same workflow on desktop and mobile.                              |
 
-| Traditional Workflow | With Seam |
-|:---|:---|
-| ❌ Move files between folders by hand | ✅ Add `#permanent` to file a note automatically |
-| ❌ Leave completed notes mixed with active work | ✅ Add `#archive` to move them out of the way |
-| ❌ Switch between different search tools | ✅ Search notes, content, tags, and commands in one palette |
-| ❌ Use separate tools for search, quick capture, and source notes | ✅ Explore Special Search, create notes with Quick Capture, and keep Source notes linked from the same workflow |
-| ❌ Maintain a deep folder hierarchy | ✅ Use a simple workflow guided by tags |
-| ❌ Depend on desktop-only features | ✅ Use Seam on desktop and mobile |
+## Find and create with the Universal Palette
 
-## How Seam Fits into Your Workflow
+The Universal Palette brings search and action together. Find notes by title, content, tag, or folder; preview matches; and create a note when you need one. Type `>` to run Seam commands, or open the Palette directly in command mode.
 
-### 1. Capture Without Friction (Fleeting Notes)
+Combine filters like `/Fleeting #project !#archived`, save your favorite searches, and pin notes, commands, or queries for quick access. You can also browse an Obsidian Base as a table or cards without leaving the Palette.
 
-Open the **Universal Palette** from the command palette or with your chosen shortcut, then type a note title. If the note does not exist, press `Enter` to create it in `Fleeting/`. You can also use a template for your preferred properties and headings.
+![Combined search](docs/images/combined_search.png)
 
-```
-Universal Palette → "Meeting with Design Team" → [Create new note]
-```
-!["Creating new note"](./docs/images/creating_new_note.png)
+![Custom searches and Bases](docs/images/special_queries_bookshelf.png)
 
-### 2. File Permanent Notes (`#permanent`)
+## Make space for writing
 
-When a note is ready to keep, add `#permanent` in the note body or properties.
+### Capture and organize
 
-Seam will:
+Create Fleeting notes from the Palette or use Quick Capture choices with your own folders and templates. When a note is ready to keep, add `#permanent`; when you're done with it, add `#archive`. Seam moves the note and can clean up tags and properties you no longer need.
 
-1. Move the note to your `Permanent/` folder.
-2. Remove the `#permanent` action tag.
-3. Remove any additional tags or properties you chose in settings.
+![Creating a note](docs/images/creating_new_note.png)
 
-### 3. Archive Completed Work (`#archive`)
+### Keep your days connected
 
-When a project, task, or meeting note is complete, add `#archive`.
+Open `@calendar` to browse Daily Notes and create missing ones from your template. Open or create weekly and yearly notes, pin important notes above the calendar, and move unfinished tasks between Daily Notes.
 
-1. The note moves to your `Archive/` folder.
-2. Seam removes the `#archive` action tag.
-3. Seam can add `#archived` so the note remains easy to find.
+![Calendar](docs/images/calendar.png)
 
-!["Archiving a note"](./docs/images/archiving.png)
+### See your progress
 
-### 4. Search and Filter with Live Tag Chips
+Explore **Global Statistics** for your current note and word totals, writing activity, streaks, and monthly trends. Select a day to revisit its notes. For a closer look, open a note's statistics, task completion, or outline in the Palette.
 
-Open the **Universal Palette**:
+Writing history starts when Seam begins recording it; your existing notes are still included in vault totals. To share activity with Obsidian Sync, enable **Sync all other types** on each device.
 
-- **Search notes and content**: Find matches in titles, paths, and note text.
-- **Filter by tag**: Type `#` to browse tags, then press `Enter` to add one.
-- **Combine filters**: Add multiple tag chips and remove them with `Backspace` or `×`.
-- **Open in a new tab**: Press `Cmd + Enter` on macOS or `Ctrl + Enter` on Windows and Linux.
+![Dashboard Stats](docs/images/dashboard_stats.png)
 
-!["Combined search"](./docs/images/combined_search.png)
+### Bring your sources along
 
-## Key Features
+Turn documents and images into linked Source notes, then find them with `@sources`. Seam can create notes automatically for files in your chosen source folder, and you can read PDFs with continuous pages.
 
-### Hands-Off Tag Routing
+![Source note with a PDF](docs/images/sources.png)
 
-Seam reads action tags from the note body or properties. It creates destination folders when needed, avoids overwriting files, and removes action tags only after a successful move. If a note has both `#permanent` and `#archive`, Seam leaves it in place.
+## Get started
 
-### Universal Palette
+Seam requires Obsidian **1.13.0** or later.
 
-Search and act from one place:
+1. In Obsidian, open **Settings → Community plugins**, turn off Restricted mode if needed, and browse for **Seam**.
+2. Install and enable the plugin.
+3. In Seam settings, choose your folders and templates—or preview **Initialize Seam** for a recommended setup. Setup is optional and doesn't move or edit existing notes.
+4. Open the **Universal Palette** from Obsidian's command palette or assign it a shortcut.
 
-- Find notes by title, path, tag, or content.
-- Preview matching text before opening a note.
-- Create a fleeting note when no result matches.
-- Type `>` to run Seam commands.
+Initialize Seam can also set up a Bookshelf Base and the `@bookshelf` and `@reading` searches. Review the proposed changes before applying them.
 
-### Custom Search
+<!-- Screenshot or GIF: Initialize Seam and Bookshelf -->
 
-Keep your favorite searches one step away. Create shortcuts for projects, reading lists, or any collection of notes, and pin them in the Universal Palette. Choose how each query finds notes:
-
-- **Seam search system**: Combine tags, directory filters, and text search in a reusable query.
-- **Bases**: Use a Base and its views to explore results as tables or cards in the Universal Palette.
-
-!["Custom queries"](./docs/images/custom_queries.png)
-
-### Automatic Cleanup on Move
-
-Choose which temporary tags and note properties Seam removes after a successful move. For example, you can clear `#todo`, `#review`, or a `status` property.
-
-### Fleeting Note Templates
-
-Choose a template note, such as `Templates/Fleeting Note`. New notes created from the palette will start with its content and properties.
-
-### Source Notes
-
-Bring handwritten notes, documents, and images into your workflow. Export them to `Sources/`, and Seam creates a note linked to the original.
-
-Find your sources with `@sources` in the Universal Palette and read PDFs with continuous pages.
-
-!["Sources ingestion"](./docs/images/sources.png)
-
-### First-Class Mobile Support
-
-Seam uses Obsidian's public APIs and no desktop-only code. It works on desktop, iPhone, iPad, and Android.
-
-## Settings
-
-!["Seam settings"](./docs/images/settings.png)
-
-Customize Seam under **Settings → Community Plugins → Seam**.
-
-## Installation
-
-### From Obsidian Community Plugins
-
-1. Open **Settings → Community plugins** in Obsidian.
-2. Turn off **Restricted mode** if needed.
-3. Click **Browse** and search for **Seam**.
-4. Click **Install**, then **Enable**.
-
-### Manual Installation
-
-1. Download the latest release (`main.js`, `manifest.json`, `styles.css`) from the [Releases](https://github.com/WillACosta/obsidian-seam/releases) page.
-2. Create a folder named `obsidian-seam` inside your vault's plugin directory: `<vault>/.obsidian/plugins/obsidian-seam/`.
-3. Copy the downloaded files into that folder.
-4. Reload Obsidian and enable **Seam** under **Settings → Community plugins**.
-
-## Seam Filtering Syntax
-
-Use these tokens in the Universal Palette to narrow a search or switch modes:
-
-| Token | What it does | Example |
-|:---|:---|:---|
-| `#tag` | Filter notes by tag. | `#reading` |
-| `!#tag` or `-#tag` | Exclude notes with a tag. | `!#archived` |
-| `/` | Filter notes by directory. Put paths with spaces in quotes. | `/Fleeting` · `/"Project Archive"` |
-| `@` | Run a built-in or custom Special Search. | `@today` · `@sources` · `@books` |
-| `OR` or `||` | Match either side of a search. | `#reading OR #research` |
-| `>` | Browse and run Seam commands. | `>archive` |
+For manual installation, download `main.js`, `manifest.json`, and `styles.css` from [Releases](https://github.com/WillACosta/obsidian-seam/releases), place them in `<vault>/.obsidian/plugins/obsidian-seam/`, then reload Obsidian and enable Seam.
 
 ## Languages
 
-Seam follows Obsidian's language setting. It currently supports:
+Seam follows Obsidian's language setting and supports English and Brazilian Portuguese. Other languages fall back to English. Translation contributions are welcome.
 
-- **English (US)**
-- **Portuguese (BR)**
-
-Other languages use English by defaultCombined search.
-
-### Contributing Translations
-
-Want to use Seam in another language? Contributions are welcome:
-
-1. Create a new locale file in `src/i18n/locales/<locale-code>.ts` (e.g., `es.ts`, `fr.ts`, `de.ts`) implementing the `Translations` type.
-2. Register the new locale in `src/i18n/index.ts`.
-3. Open a Pull Request on [GitHub](https://github.com/WillACosta/obsidian-seam).
-
-## Support the Project
+## Support the project
 
 Seam is free and open source. If it saves you time, consider supporting its development:
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-8A2BE2?logo=ko-fi&logoColor=white&style=for-the-badge)](https://ko-fi.com/acostawill)
 
 **Pix**<br>
+![QR code for Pix](docs/images/qrcode.svg)
 
-!["QRCode PIX"](./docs/images/qrcode.svg)
+## Development and license
 
-## Development
+See [README.dev.md](README.dev.md) for development and release instructions. Seam is licensed under the [GNU General Public License v3.0](LICENSE).
 
-For developer instructions, Spec-Driven Development (SDD) guidelines, and release procedures, see [README.dev.md](README.dev.md).
-
-## License
-
-This project is licensed under the [GNU General Public License v3.0](LICENSE).
-
-## Built with
-
-Seam was built with the help of AI agents. Each iteration was guided and documented with plain-text specifications written by me.
+Seam was built with the help of AI agents, guided by plain-text specifications written by me.
 
 Crafted with care by **William A. Costa** ([@WillACosta](https://github.com/WillACosta)).

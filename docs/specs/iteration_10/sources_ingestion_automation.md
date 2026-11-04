@@ -1,4 +1,3 @@
-
 **Context**:
 
 We can use documents as sources, e.g., handwritten notes as raw draft files when studying or taking notes in a class, meeting, etc. Without paying attention to structure or organization, we want the freedom of sketching ideas.

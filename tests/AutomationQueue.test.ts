@@ -1,157 +1,168 @@
-import './mocks/obsidian';
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
-import { AutomationQueue } from '../src/automation/AutomationQueue';
-import { MockTFile } from './mocks/obsidian';
-import type { App, TFile } from 'obsidian';
+import './mocks/obsidian'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
+import { AutomationQueue } from '../src/automation/AutomationQueue'
+import { MockTFile } from './mocks/obsidian'
+import type { App, TFile } from 'obsidian'
 
-function createMockApp(activePath: string | null = null, files: Record<string, MockTFile> = {}): {
-    app: App;
-    setActiveFile: (path: string | null) => void;
+function createMockApp(
+  activePath: string | null = null,
+  files: Record<string, MockTFile> = {},
+): {
+  app: App
+  setActiveFile: (path: string | null) => void
 } {
-    let currentActivePath = activePath;
+  let currentActivePath = activePath
 
-    const mockApp = {
-        workspace: {
-            getActiveFile: () => {
-                if (!currentActivePath) return null;
-                return files[currentActivePath] ?? new MockTFile(currentActivePath);
-            },
-        },
-        vault: {
-            getAbstractFileByPath: (path: string) => {
-                return files[path] ?? new MockTFile(path);
-            },
-        },
-    } as unknown as App;
+  const mockApp = {
+    workspace: {
+      getActiveFile: () => {
+        if (!currentActivePath) return null
+        return files[currentActivePath] ?? new MockTFile(currentActivePath)
+      },
+    },
+    vault: {
+      getAbstractFileByPath: (path: string) => {
+        return files[path] ?? new MockTFile(path)
+      },
+    },
+  } as unknown as App
 
-    return {
-        app: mockApp,
-        setActiveFile: (path: string | null) => {
-            currentActivePath = path;
-        },
-    };
+  return {
+    app: mockApp,
+    setActiveFile: (path: string | null) => {
+      currentActivePath = path
+    },
+  }
 }
 
 describe('AutomationQueue', () => {
-    it('processes an imported attachment without an active file or a navigation event', async () => {
-        const processed: string[] = [];
-        const attachment = new MockTFile('Sources/Import.pdf');
-        const { app } = createMockApp(null, { [attachment.path]: attachment });
-        const queue = new AutomationQueue(app, async (file) => {
-            processed.push(file.path);
-        }, 'on-switch');
+  it('processes an imported attachment without an active file or a navigation event', async () => {
+    const processed: string[] = []
+    const attachment = new MockTFile('Sources/Import.pdf')
+    const { app } = createMockApp(null, { [attachment.path]: attachment })
+    const queue = new AutomationQueue(
+      app,
+      async (file) => {
+        processed.push(file.path)
+      },
+      'on-switch',
+    )
 
-        try {
-            queue.enqueue(attachment as unknown as TFile);
-            assert.equal(queue.isPending(attachment.path), true);
-            await new Promise(resolve => setTimeout(resolve, 2100));
-            assert.deepEqual(processed, [attachment.path]);
-            assert.equal(queue.isPending(attachment.path), false);
-        } finally {
-            queue.destroy();
-        }
-    });
+    try {
+      queue.enqueue(attachment as unknown as TFile)
+      assert.equal(queue.isPending(attachment.path), true)
+      await new Promise((resolve) => setTimeout(resolve, 2100))
+      assert.deepEqual(processed, [attachment.path])
+      assert.equal(queue.isPending(attachment.path), false)
+    } finally {
+      queue.destroy()
+    }
+  })
 
-    it('holds processing while note is active in on-switch mode', async () => {
-        const processed: string[] = [];
-        const { app, setActiveFile } = createMockApp('Notes/Idea.md');
+  it('holds processing while note is active in on-switch mode', async () => {
+    const processed: string[] = []
+    const { app, setActiveFile } = createMockApp('Notes/Idea.md')
 
-        const queue = new AutomationQueue(
-            app,
-            async (file: TFile) => {
-                processed.push(file.path);
-            },
-            'on-switch',
-        );
+    const queue = new AutomationQueue(
+      app,
+      async (file: TFile) => {
+        processed.push(file.path)
+      },
+      'on-switch',
+    )
 
-        const file = new MockTFile('Notes/Idea.md') as unknown as TFile;
-        queue.enqueue(file);
+    const file = new MockTFile('Notes/Idea.md') as unknown as TFile
+    queue.enqueue(file)
 
-        assert.equal(queue.isPending('Notes/Idea.md'), true);
-        // Wait a short time to verify no timer fired
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        assert.deepEqual(processed, [], 'Should not process active note while still editing it');
+    assert.equal(queue.isPending('Notes/Idea.md'), true)
+    // Wait a short time to verify no timer fired
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    assert.deepEqual(processed, [], 'Should not process active note while still editing it')
 
-        // Switch note
-        setActiveFile('Notes/Other.md');
-        queue.onActiveFileChange(new MockTFile('Notes/Other.md') as unknown as TFile);
+    // Switch note
+    setActiveFile('Notes/Other.md')
+    queue.onActiveFileChange(new MockTFile('Notes/Other.md') as unknown as TFile)
 
-        assert.deepEqual(processed, ['Notes/Idea.md'], 'Should process note immediately when switched away');
-        assert.equal(queue.isPending('Notes/Idea.md'), false);
+    assert.deepEqual(
+      processed,
+      ['Notes/Idea.md'],
+      'Should process note immediately when switched away',
+    )
+    assert.equal(queue.isPending('Notes/Idea.md'), false)
 
-        queue.destroy();
-    });
+    queue.destroy()
+  })
 
-    it('processes timed mode after specified duration', () => {
-        const processed: string[] = [];
-        const { app } = createMockApp('Notes/Idea.md');
+  it('processes timed mode after specified duration', () => {
+    const processed: string[] = []
+    const { app } = createMockApp('Notes/Idea.md')
 
-        const queue = new AutomationQueue(
-            app,
-            async (file: TFile) => {
-                processed.push(file.path);
-            },
-            '1000',
-        );
+    const queue = new AutomationQueue(
+      app,
+      async (file: TFile) => {
+        processed.push(file.path)
+      },
+      '1000',
+    )
 
-        const file = new MockTFile('Notes/Idea.md') as unknown as TFile;
-        queue.enqueue(file);
+    const file = new MockTFile('Notes/Idea.md') as unknown as TFile
+    queue.enqueue(file)
 
-        assert.equal(queue.isPending('Notes/Idea.md'), true);
-        assert.deepEqual(processed, []);
+    assert.equal(queue.isPending('Notes/Idea.md'), true)
+    assert.deepEqual(processed, [])
 
-        // Switching away triggers it early for seamless transition
-        queue.onActiveFileChange(new MockTFile('Notes/Other.md') as unknown as TFile);
-        assert.deepEqual(processed, ['Notes/Idea.md']);
+    // Switching away triggers it early for seamless transition
+    queue.onActiveFileChange(new MockTFile('Notes/Other.md') as unknown as TFile)
+    assert.deepEqual(processed, ['Notes/Idea.md'])
 
-        queue.destroy();
-    });
+    queue.destroy()
+  })
 
-    it('processes all pending notes on flush()', async () => {
-        const processed: string[] = [];
-        const { app } = createMockApp('Notes/Active.md');
+  it('processes all pending notes on flush()', async () => {
+    const processed: string[] = []
+    const { app } = createMockApp('Notes/Active.md')
 
-        const queue = new AutomationQueue(
-            app,
-            async (file: TFile) => {
-                processed.push(file.path);
-            },
-            'on-switch',
-        );
+    const queue = new AutomationQueue(
+      app,
+      async (file: TFile) => {
+        processed.push(file.path)
+      },
+      'on-switch',
+    )
 
-        queue.enqueue(new MockTFile('Notes/Active.md') as unknown as TFile);
-        queue.enqueue(new MockTFile('Notes/Background.md') as unknown as TFile);
+    queue.enqueue(new MockTFile('Notes/Active.md') as unknown as TFile)
+    queue.enqueue(new MockTFile('Notes/Background.md') as unknown as TFile)
 
-        assert.equal(queue.isPending('Notes/Active.md'), true);
-        assert.equal(queue.isPending('Notes/Background.md'), true);
+    assert.equal(queue.isPending('Notes/Active.md'), true)
+    assert.equal(queue.isPending('Notes/Background.md'), true)
 
-        await queue.flush();
+    await queue.flush()
 
-        assert.equal(processed.includes('Notes/Active.md'), true);
-        assert.equal(processed.includes('Notes/Background.md'), true);
-        assert.equal(queue.isPending('Notes/Active.md'), false);
-        assert.equal(queue.isPending('Notes/Background.md'), false);
+    assert.equal(processed.includes('Notes/Active.md'), true)
+    assert.equal(processed.includes('Notes/Background.md'), true)
+    assert.equal(queue.isPending('Notes/Active.md'), false)
+    assert.equal(queue.isPending('Notes/Background.md'), false)
 
-        queue.destroy();
-    });
+    queue.destroy()
+  })
 
-    it('cancels all timers and pending items on destroy()', () => {
-        const { app } = createMockApp('Notes/Active.md');
+  it('cancels all timers and pending items on destroy()', () => {
+    const { app } = createMockApp('Notes/Active.md')
 
-        const queue = new AutomationQueue(
-            app,
-            // eslint-disable-next-line @typescript-eslint/require-await
-            async () => {},
-            'on-switch',
-        );
+    const queue = new AutomationQueue(
+      app,
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async () => {},
+      'on-switch',
+    )
 
-        queue.enqueue(new MockTFile('Notes/Active.md') as unknown as TFile);
-        queue.enqueue(new MockTFile('Notes/Background.md') as unknown as TFile);
+    queue.enqueue(new MockTFile('Notes/Active.md') as unknown as TFile)
+    queue.enqueue(new MockTFile('Notes/Background.md') as unknown as TFile)
 
-        queue.destroy();
+    queue.destroy()
 
-        assert.equal(queue.isPending('Notes/Active.md'), false);
-        assert.equal(queue.isPending('Notes/Background.md'), false);
-    });
-});
+    assert.equal(queue.isPending('Notes/Active.md'), false)
+    assert.equal(queue.isPending('Notes/Background.md'), false)
+  })
+})

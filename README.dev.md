@@ -17,17 +17,31 @@ pnpm run build
 # Run unit tests
 pnpm test
 
-# Link compiled plugin to test vault (seam_test_vault/)
-pnpm run symlink
+# Check formatting and TypeScript ESLint rules
+pnpm ci:quality
+
+# Apply the repository's Prettier formatting
+pnpm format
+
+# From the workspace root: build and copy Seam into the shared test vault
+# mise run install:seam
+
+# From the workspace root: build, copy, and reload Seam in personal_vault
+# mise run install:personal
 ```
 
-Test against `seam_test_vault/` using the Obsidian CLI:
+Test against the workspace root `seam_test_vault/` using the Obsidian CLI:
+
 ```bash
 obsidian plugin:reload id=seam
 obsidian dev:errors
 ```
 
+`pnpm ci:quality` runs `pnpm format:check` and `pnpm lint` without modifying files. Prettier uses `.prettierrc.json`; generated changelogs, the pnpm lockfile, build output, and local vaults are excluded. ESLint retains the repository's TypeScript rules, with formatting delegated to Prettier. The workspace task `mise run install:personal` runs the CLI reload only after all plugin files have been copied and exits with an error if the copy or reload fails.
+
 ---
+
+The optional **Initialize Seam** flow in Seam Settings and both command palettes previews workflow folders/templates, Bookshelf views, selected Obsidian/Seam preferences, and query registrations before applying. Existing notes and customized files are preserved. Configuration changes require a restart; recoverable snapshots of existing configuration are stored under the plugin's `setup-backups/` directory. Setup does not provide automatic undo.
 
 ## 2. Spec-Driven Development (SDD)
 
@@ -51,10 +65,12 @@ Each release in [`CHANGELOG.md`](CHANGELOG.md) stores an iteration range marker:
 
 ```markdown
 ## [1.0.0] - 2026-09-13
+
 <!-- iterations: iteration_00..iteration_05 -->
 ```
 
 ### Automatic Iteration Grouping
+
 The release script (`scripts/changelog.mjs`) reads this marker to determine where the previous release ended. When generating notes for the next release, it **automatically detects and groups all newer iteration files**:
 
 ```bash
@@ -64,6 +80,7 @@ pnpm run changelog:generate 1.1.0 --update
 ```
 
 You can also target specific ranges manually if needed:
+
 ```bash
 # Group iterations starting after iteration_05:
 pnpm run changelog:generate 1.1.0 --since iteration_05 --update
@@ -76,7 +93,7 @@ pnpm run changelog:generate 1.1.0 --from 6 --to 8 --update
 
 ## 4. Releasing a New Version (GitHub Actions)
 
-Releases are automated by the [merged version PR workflow](.github/workflows/tag-version-pr.yml) and the [Release Pipeline](.github/workflows/release.yml). Do not build or package release assets manually.
+Releases are automated by the [Release Pipeline](.github/workflows/release.yml). Do not build or package release assets manually.
 
 > **Version branch naming rule:** Create each new version branch as `feat/<major>.<minor>.<patch>`, for example `feat/3.0.0`.
 > **Release naming rule:** Seam release versions and Git tags must use plain semantic versions without a leading `v`, such as `3.0.0` (never `v3.0.0`). The GitHub release name must match the same unprefixed version. The plugin display name in `manifest.json` remains `Seam`.
@@ -87,21 +104,29 @@ Releases are automated by the [merged version PR workflow](.github/workflows/tag
    Update `"version"` in:
    - `manifest.json`
    - `package.json`
-   - `versions.json` (`"<new-version>": "1.5.0"`)
+   - `versions.json` (`"<new-version>": "<manifest.minAppVersion>"`)
 
 2. **Generate the Changelog entry**:
+
    ```bash
    pnpm run changelog:generate <new-version> --update
    ```
+
    If an earlier release did not become available in the Obsidian Community Directory, carry its user-facing notes into the corrected patch release so users can see those features.
 
 3. **Open a PR** from `feat/<new-version>` into `main` with the version files and changelog committed. Merge it after review. Do not create the release tag manually.
 
+### Obsidian validation
+
+PR checks run typecheck, lint, tests, a production build, and `obsidianmd/obsidian-workflows@v1` with the community scanner rules and strict policy enforcement. The same Obsidian check gates version tagging and release publication. It uses validation mode, preserving the existing automated release flow. Review and resolve findings in the workflow summary before merging a release PR.
+
 ### What GitHub Actions Does Automatically
-After a `feat/x.y.z` PR is merged into `main`, the merged version PR workflow:
+
+After a `feat/x.y.z` PR is merged into `main`, the Release Pipeline:
+
 1. Verifies the branch name, merged commit, release files, typecheck, lint, tests, and build.
 2. Creates and pushes the unprefixed version tag on the merged commit.
-3. Starts the Release Pipeline for that tag. The Release Pipeline validates the version again, extracts release notes, and publishes the GitHub Release with `main.js`, `manifest.json`, and `styles.css`.
+3. Extracts release notes and publishes the GitHub Release with the validated `main.js`, `manifest.json`, and `styles.css` assets.
 
 ### Changelog Content Rule
 
@@ -118,3 +143,10 @@ Before opening a version PR, check the current [Obsidian plugin checklist](https
 - Keep values and calls type-safe under `@typescript-eslint/no-unsafe-assignment`, `no-unsafe-call`, and `no-unsafe-member-access`. Ensure types for Obsidian's `moment` import resolve, and remove redundant Boolean conversions and unused imports.
 - Enumerate vault files only for features that need it, such as the Universal Palette's vault-wide results and source discovery. Prefer direct path lookup when the path is known; avoid repeated full-vault scans and do not read file contents unless the feature needs them. Seam keeps these operations within Obsidian's vault APIs.
 - Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm run release:check <version>`. Then reload Seam in `seam_test_vault`, exercise the affected UI and workflow, and check `obsidian dev:errors` and `obsidian dev:console level=error` before release.
+
+Global writing statistics are stored in `Resources/Seam/Statistics/<device-id>.json`.
+Each installation writes its own file and combines incoming device snapshots for the dashboard.
+The device identity and recovery journal stay local. The folder is created automatically,
+including when Initialize Seam has not been run, and is also included in setup previews.
+For Obsidian Sync, enable **Sync all other types** on every device and leave this folder included.
+Unreleased `statistics.json` history is not migrated. Sessions are counted per device.

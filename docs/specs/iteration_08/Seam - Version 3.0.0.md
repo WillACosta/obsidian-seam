@@ -1,6 +1,5 @@
-
-
 > **General Rules**:
+>
 > - Modularize the code where needed; do not duplicate code that already exists in other parts of the codebase.
 > - All text inputs should fill 100% of the modal width.
 > - Remember that all features should also work on mobile
@@ -107,6 +106,7 @@ For the pipeline config, we want to enable these options:
 - Pipeline name (will be used to invoke it, e.g., `@booksLibrary`)
 - Queries for the pipeline (input text with suggestions - chip-like)
 - Canvas for arranging queries and directions.
+
 ### Implementation of "New Pipeline" config modal
 
 - Text input fields should fill 100% of the available space, with the title on top of it (column).
