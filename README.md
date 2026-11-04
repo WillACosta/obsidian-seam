@@ -13,14 +13,14 @@ Seam is a lightweight Obsidian plugin for capturing, finding, and organizing not
 
 ## Why Seam?
 
-| Traditional workflow | With Seam |
-| :--- | :--- |
-| ❌ Break your flow to create a note | ✅ Capture an idea from the Universal Palette, with your preferred template. |
-| ❌ Move notes between folders by hand | ✅ Add `#permanent` and let Seam file a note for you. |
-| ❌ Leave finished work mixed with active notes | ✅ Add `#archive` to move it out of the way. |
-| ❌ Switch between search tools | ✅ Search notes, files, tags, saved queries, and commands in one place. |
-| ❌ Juggle separate views to revisit notes and track progress | ✅ Browse your notes in a calendar and explore your writing statistics. |
-| ❌ Depend on desktop-only workflows | ✅ Use the same workflow on desktop and mobile. |
+| Traditional workflow                                         | With Seam                                                                    |
+| :----------------------------------------------------------- | :--------------------------------------------------------------------------- |
+| ❌ Break your flow to create a note                          | ✅ Capture an idea from the Universal Palette, with your preferred template. |
+| ❌ Move notes between folders by hand                        | ✅ Add `#permanent` and let Seam file a note for you.                        |
+| ❌ Leave finished work mixed with active notes               | ✅ Add `#archive` to move it out of the way.                                 |
+| ❌ Switch between search tools                               | ✅ Search notes, files, tags, saved queries, and commands in one place.      |
+| ❌ Juggle separate views to revisit notes and track progress | ✅ Browse your notes in a calendar and explore your writing statistics.      |
+| ❌ Depend on desktop-only workflows                          | ✅ Use the same workflow on desktop and mobile.                              |
 
 ## Find and create with the Universal Palette
 

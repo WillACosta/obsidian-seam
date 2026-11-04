@@ -15,14 +15,14 @@ Suas ideias a passam por um fluxo simples entre `Fleeting`, `Permanent` e `Archi
 
 ## Por que o Seam?
 
-| Sem o Seam | Com o Seam |
-| :--- | :--- |
-| ❌ Parar o que está fazendo para criar uma nota | ✅ Registre uma ideia rápida pela Paleta Universal. |
-| ❌ Mover notas entre pastas manualmente | ✅ Adicione `#permanent` e deixe o Seam cuidar da organização. |
-| ❌ Deixar notas concluídas junto das que ainda estão em andamento | ✅ Adicione `#archive` para arquivá-las. |
-| ❌ Usar ferramentas diferentes para encontrar o que precisa | ✅ Busque notas, arquivos, tags, consultas salvas e comandos em um só lugar. |
-| ❌ Procurar suas notas e seu progresso em lugares diferentes | ✅ Navegue pelas notas no calendário e acompanhe suas estatísticas de escrita. |
-| ❌ Depender do computador para manter a rotina | ✅ Use o Seam tanto no computador quanto em dispositivos móveis. |
+| Sem o Seam                                                        | Com o Seam                                                                     |
+| :---------------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| ❌ Parar o que está fazendo para criar uma nota                   | ✅ Registre uma ideia rápida pela Paleta Universal.                            |
+| ❌ Mover notas entre pastas manualmente                           | ✅ Adicione `#permanent` e deixe o Seam cuidar da organização.                 |
+| ❌ Deixar notas concluídas junto das que ainda estão em andamento | ✅ Adicione `#archive` para arquivá-las.                                       |
+| ❌ Usar ferramentas diferentes para encontrar o que precisa       | ✅ Busque notas, arquivos, tags, consultas salvas e comandos em um só lugar.   |
+| ❌ Procurar suas notas e seu progresso em lugares diferentes      | ✅ Navegue pelas notas no calendário e acompanhe suas estatísticas de escrita. |
+| ❌ Depender do computador para manter a rotina                    | ✅ Use o Seam tanto no computador quanto em dispositivos móveis.               |
 
 ## Encontre e crie com a Paleta Universal
 

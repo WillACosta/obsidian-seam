@@ -38,7 +38,7 @@ What's new and changed in each Seam release.
 - **Palette search**: Optionally show only Markdown files, and choose separately whether to show file extensions and match counts. Title matches are included in the count.
 - **Palette and Bases navigation**: Use keyboard shortcuts to open notes in tabs or splits and navigate Base results. Commands and searches can show group names and descriptions.
 - **Periodic note creation**: Review a confirmation before creating a missing daily, weekly, or yearly note; you can turn this off in settings.
-- **Mobile Palette**: Use the keyboard's Done action to dismiss the keyboard while keeping your search open.
+- **Mobile Palette**: Hide the keyboard with an optional button beside the search field while keeping your search open.
 - **Query history**: Up and Down now navigate results instead of cycling through previous searches.
 
 ## [3.0.1] - 2026-10-04

@@ -1,0 +1,24 @@
+name: Validate Seam
+description: Install dependencies and run all plugin checks.
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+    - run: pnpm typecheck && pnpm ci:quality && pnpm test && pnpm build
+      shell: bash
+    - name: Validate Obsidian plugin
+      uses: obsidianmd/obsidian-workflows@v1
+      with:
+        type: plugin
+        mode: pr
+        build: 'false'
+        scanner-lint: 'true'
+        strict: 'true'
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
