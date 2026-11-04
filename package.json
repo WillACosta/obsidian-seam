@@ -6,6 +6,7 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "dev": "node esbuild.config.mjs",
+    "dev:mobile": "obsidian vault=seam_test_vault dev:mobile on",
     "build": "node esbuild.config.mjs production",
     "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit",
