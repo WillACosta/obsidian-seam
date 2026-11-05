@@ -77,19 +77,30 @@ export function overviewInsights(
   state: ActivityState,
   today: string,
 ): {
+  monthlyWords: number
   monthlyWordChange: number | null
+  comparisonDays: number
+  comparisonState: 'incomplete' | 'zero' | 'ready'
   monthlyNotes: number
   activeYearPercent: number
   longestStreak: number
 } {
   const date = new Date(`${today}T12:00:00`)
   const month = today.slice(0, 7)
-  const previousMonth = localDay(new Date(date.getFullYear(), date.getMonth() - 1, 1)).slice(0, 7)
-  const wordsIn = (prefix: string): number =>
+  const previousStart = localDay(new Date(date.getFullYear(), date.getMonth() - 1, 1))
+  const previousMonth = previousStart.slice(0, 7)
+  // Use the same number of calendar days, even when the preceding month is shorter.
+  const comparisonDays = Math.min(
+    date.getDate(),
+    new Date(date.getFullYear(), date.getMonth(), 0).getDate(),
+  )
+  const wordsIn = (prefix: string, through = 31): number =>
     Object.keys(state.days)
-      .filter((day) => day <= today && day.startsWith(prefix))
+      .filter((day) => day <= today && day.startsWith(prefix) && Number(day.slice(8)) <= through)
       .reduce((sum, day) => sum + contribution(state, day, 'words'), 0)
-  const previousWords = wordsIn(previousMonth)
+  const previousWords = wordsIn(previousMonth, comparisonDays)
+  const comparisonState =
+    state.startedAt > previousStart ? 'incomplete' : previousWords === 0 ? 'zero' : 'ready'
   const active = Object.keys(state.days)
     .filter((day) => day <= today && contribution(state, day, 'sessions') > 0)
     .sort()
@@ -105,7 +116,13 @@ export function overviewInsights(
     previous = current
   }
   return {
-    monthlyWordChange: previousWords > 0 ? (wordsIn(month) - previousWords) / previousWords : null,
+    monthlyWords: wordsIn(month),
+    monthlyWordChange:
+      comparisonState === 'ready'
+        ? (wordsIn(month, comparisonDays) - previousWords) / previousWords
+        : null,
+    comparisonDays,
+    comparisonState,
     monthlyNotes: Object.values(state.created).filter(
       (day) => day <= today && day.startsWith(month),
     ).length,

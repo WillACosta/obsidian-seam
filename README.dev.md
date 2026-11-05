@@ -152,3 +152,11 @@ The device identity and recovery journal stay local. The folder is created autom
 including when Initialize Seam has not been run, and is also included in setup previews.
 For Obsidian Sync, enable **Sync all other types** on every device and leave this folder included.
 Unreleased `statistics.json` history is not migrated. Sessions are counted per device.
+
+Total words measures the current Markdown content, including properties, code, link destinations,
+and unsaved editor changes. Writing over time measures gross additions: pastes and replacement
+words count, while deletions preserve previously recorded effort. Recognized text moves receive
+no new-writing credit. Monthly comparisons use the same first N days in both months and require
+history beginning by the comparison month's first day; short months limit N. The full current
+month's recorded additions remain visible even when a comparison is unavailable. Historical
+vault growth and net writing cannot be reconstructed from the addition-only ledger.

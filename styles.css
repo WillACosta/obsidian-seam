@@ -1539,6 +1539,14 @@ body .prompt.seam-palette-global-statistics.seam-global-maximized {
   justify-content: flex-end;
   margin-bottom: 16px;
 }
+
+.seam-global-writing-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
 .seam-global-activity-grid {
   display: flex;
   gap: 3px;

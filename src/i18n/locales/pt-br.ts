@@ -88,10 +88,17 @@ export const ptBr: Translations = {
   globalTitle: 'Estatísticas globais',
   globalMaximize: 'Maximizar',
   globalRestoreSize: 'Restaurar tamanho',
-  globalDescription: 'Atividade de escrita, consistência e crescimento do cofre.',
+  globalDescription: 'Atividade de escrita, consistência e tamanho do cofre.',
   globalOverview: 'Visão geral',
-  globalWordsMonthChange: (value: string) => `${value} em relação ao mês passado`,
-  globalNoMonthBaseline: 'Sem referência no mês anterior',
+  globalWordsMonthChange: (value: string, days: string) =>
+    `${value} · ${days === '1' ? 'primeiro dia' : `primeiros ${days} dias`} em relação ao mês passado`,
+  globalNoMonthBaseline: 'Nenhuma palavra no período de comparação',
+  globalInsufficientHistory: 'Histórico insuficiente para comparação',
+  globalCurrentVaultSize: 'Tamanho atual do cofre',
+  globalWordsThisMonth: (value: string) =>
+    `${value} ${value === '1' ? 'palavra adicionada' : 'palavras adicionadas'} neste mês`,
+  globalWordsAddedInfo:
+    'As adições registradas incluem texto colado no editor e palavras de substituição. Exclusões não são descontadas deste histórico.',
   globalNotesThisMonth: (value: string) => `${value} criadas neste mês`,
   globalActiveYear: (value: string) => `${value} do ano`,
   globalLongestStreak: (value: string) => `Maior sequência: ${value} dias`,
@@ -101,7 +108,7 @@ export const ptBr: Translations = {
   globalStreak: 'Sequência de escrita',
   globalMetricInfoLabel: (metric: string) => `Sobre ${metric}`,
   globalWordsInfo:
-    'Palavras atuais nas notas Markdown. A porcentagem compara as palavras adicionadas neste mês com todo o mês passado.',
+    'Palavras atuais nas notas Markdown, incluindo propriedades, código e destinos de links. Exclusões reduzem este total.',
   globalNotesInfo:
     'Notas Markdown atuais no cofre. O número menor conta as notas registradas como criadas neste mês.',
   globalActiveDaysInfo:
@@ -111,7 +118,7 @@ export const ptBr: Translations = {
   globalContributions: 'Atividade de escrita',
   globalMetric: 'Métrica',
   globalPeriod: 'Período',
-  globalWordsWritten: 'Palavras escritas',
+  globalWordsWritten: 'Palavras adicionadas',
   globalNotesEdited: 'Notas editadas',
   globalWritingActivity: 'Atividade de escrita',
   globalYear: 'Ano',

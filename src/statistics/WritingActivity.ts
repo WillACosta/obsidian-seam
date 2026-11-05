@@ -53,6 +53,8 @@ export function grossWordsAdded(
   }
   if (a < before.length) unchanged.push({ a, b, length: before.length - a })
   let added = 0
+  const retained = new Map<string, number>()
+  const introduced: string[] = []
   for (const window of windows) {
     const oldWords = spans(before, ...window.a)
     const newWords = spans(after, ...window.b)
@@ -90,8 +92,7 @@ export function grossWordsAdded(
         }
       }
     })
-    // Re-pasting/reordering unchanged words is not new writing, even when their characters were replaced.
-    const retained = new Map<string, number>()
+    // Match removed/inserted tokens across all change windows so distant moves are retained too.
     oldWords.forEach((word, index) => {
       if (assignedOld.has(index)) return
       const text = before.slice(word.from, word.to).toLowerCase()
@@ -99,14 +100,13 @@ export function grossWordsAdded(
     })
     newWords.forEach((word, index) => {
       if (assignedNew.has(index)) return
-      const text = after.slice(word.from, word.to).toLowerCase()
-      const count = retained.get(text) ?? 0
-      if (count > 0) {
-        retained.set(text, count - 1)
-        assignedNew.add(index)
-      }
+      introduced.push(after.slice(word.from, word.to).toLowerCase())
     })
-    added += newWords.length - assignedNew.size
+  }
+  for (const text of introduced) {
+    const count = retained.get(text) ?? 0
+    if (count > 0) retained.set(text, count - 1)
+    else added++
   }
   return added
 }

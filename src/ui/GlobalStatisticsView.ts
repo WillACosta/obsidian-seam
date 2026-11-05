@@ -254,9 +254,7 @@ export class GlobalStatisticsView {
         'words',
         t().globalTotalWords,
         ready ? number.format(snapshot.totalWords) : '—',
-        insights.monthlyWordChange === null
-          ? t().globalNoMonthBaseline
-          : t().globalWordsMonthChange(percent.format(insights.monthlyWordChange)),
+        t().globalCurrentVaultSize,
         t().globalWordsInfo,
       ],
       [
@@ -509,6 +507,29 @@ export class GlobalStatisticsView {
         this.trend = value
       },
     )
+    if (this.trend === 'words') {
+      const summary = trends.createDiv({ cls: 'seam-global-writing-summary' })
+      summary.createEl('strong', {
+        text: ready ? t().globalWordsThisMonth(number.format(insights.monthlyWords)) : '—',
+      })
+      if (ready)
+        summary.createSpan({
+          cls: 'seam-global-description',
+          text:
+            insights.comparisonState === 'incomplete'
+              ? t().globalInsufficientHistory
+              : insights.monthlyWordChange === null
+                ? t().globalNoMonthBaseline
+                : t().globalWordsMonthChange(
+                    percent.format(insights.monthlyWordChange),
+                    number.format(insights.comparisonDays),
+                  ),
+        })
+      trends.createEl('p', {
+        cls: 'seam-global-description',
+        text: t().globalWordsAddedInfo,
+      })
+    }
     const months = monthlyTrends(state, today, this.trend)
     const scale = monthlyChartScale(months.map((month) => month.value))
     const compact = new Intl.NumberFormat(detectLocale(), {

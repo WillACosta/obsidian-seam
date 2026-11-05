@@ -84,10 +84,17 @@ export const en = {
   globalTitle: 'Global statistics',
   globalMaximize: 'Maximize',
   globalRestoreSize: 'Restore size',
-  globalDescription: 'Writing activity, consistency, and vault growth.',
+  globalDescription: 'Writing activity, consistency, and vault size.',
   globalOverview: 'Overview',
-  globalWordsMonthChange: (value: string) => `${value} vs last month`,
-  globalNoMonthBaseline: 'No previous-month baseline',
+  globalWordsMonthChange: (value: string, days: string) =>
+    `${value} · first ${days} ${days === '1' ? 'day' : 'days'} vs last month`,
+  globalNoMonthBaseline: 'No words in the comparison period',
+  globalInsufficientHistory: 'Insufficient history for comparison',
+  globalCurrentVaultSize: 'Current vault size',
+  globalWordsThisMonth: (value: string) =>
+    `${value} ${value === '1' ? 'word' : 'words'} added this month`,
+  globalWordsAddedInfo:
+    'Recorded additions include editor pastes and replacement words. Deletions do not subtract from this history.',
   globalNotesThisMonth: (value: string) => `${value} created this month`,
   globalActiveYear: (value: string) => `${value} of the year`,
   globalLongestStreak: (value: string) => `Longest: ${value} days`,
@@ -97,7 +104,7 @@ export const en = {
   globalStreak: 'Writing streak',
   globalMetricInfoLabel: (metric: string) => `About ${metric}`,
   globalWordsInfo:
-    'Words currently in Markdown notes. The percentage compares words added so far this month with all of last month.',
+    'Words currently in Markdown notes, including properties, code, and link destinations. Deletions reduce this total.',
   globalNotesInfo:
     'Markdown notes currently in the vault. The smaller number counts notes recorded as created this month.',
   globalActiveDaysInfo:
@@ -107,7 +114,7 @@ export const en = {
   globalContributions: 'Writing activity',
   globalMetric: 'Metric',
   globalPeriod: 'Period',
-  globalWordsWritten: 'Words written',
+  globalWordsWritten: 'Words added',
   globalNotesEdited: 'Notes edited',
   globalWritingActivity: 'Writing activity',
   globalYear: 'Year',

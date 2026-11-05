@@ -114,6 +114,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private utilityPanel: {
     host: HTMLElement
     handleKey?: (event: KeyboardEvent) => boolean
+    dispose?: () => void
   } | null = null
   private utilityHidden: HTMLElement[] = []
   private utilityScope: Scope | null = null
@@ -121,6 +122,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private leaveUtilityPanel(): void {
     if (this.utilityScope) this.app.keymap.popScope(this.utilityScope)
     this.utilityScope = null
+    this.utilityPanel?.dispose?.()
     this.utilityPanel?.host.remove()
     this.utilityPanel = null
     for (const el of this.utilityHidden) el.hidden = false
@@ -908,7 +910,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.onChooseSuggestion(value, evt)
       return
     }
-    if (['utility:embed-url', 'utility:add-caption'].includes(value.id)) {
+    if (['utility:embed-url', 'utility:add-caption', 'utility:image-layout'].includes(value.id)) {
       this.showUtilityPanel(value.id)
       return
     }

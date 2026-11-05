@@ -4,11 +4,21 @@ What's new and changed in each Seam release.
 
 ## [Unreleased]
 
-<!-- iterations: iteration_18 -->
+<!-- iterations: iteration_18..iteration_20 -->
+
+### Added
+
+- **Image Layout**: Create and edit Grid, Flex, and Masonry galleries from the Universal Palette, with live previews, image ordering, captions, and crop controls. Configuration stays in Markdown.
+- **Monthly writing summary**: See words added this month separately from the current vault word total, with clear explanations of how deletions affect each measure.
 
 ### Changed
 
 - Use Cmd+[ on macOS or Ctrl+[ on Windows/Linux to go back from Palette and Utility views, including with text in the input. Backspace remains available for text and selected-token editing.
+- **Writing comparisons**: Compare matching days across months and show when history is insufficient for a reliable comparison.
+
+### Fixed
+
+- Prevent recognized text moves within or between notes from inflating recorded words added.
 
 ## [4.0.1] - 2026-11-03
 
