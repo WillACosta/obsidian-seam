@@ -43,6 +43,8 @@ obsidian dev:errors
 
 The optional **Initialize Seam** flow in Seam Settings and both command palettes previews workflow folders/templates, Bookshelf views, selected Obsidian/Seam preferences, and query registrations before applying. Existing notes and customized files are preserved. Configuration changes require a restart; recoverable snapshots of existing configuration are stored under the plugin's `setup-backups/` directory. Setup does not provide automatic undo.
 
+Use **Cmd+[** on macOS or **Ctrl+[** on Windows/Linux for Back from Palette subviews, including nonempty filters. Backspace edits text and selected tokens; it does not navigate. Escape retains its existing dismiss and grid-navigation behavior.
+
 ## 2. Spec-Driven Development (SDD)
 
 ### How to develop a new feature using SDD?

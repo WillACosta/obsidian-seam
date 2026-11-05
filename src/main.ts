@@ -89,6 +89,12 @@ export default class SeamPlugin extends Plugin {
     this.addCommand({ ...withIcon })
   }
 
+  private getUtilityCommands(): PaletteItem[] {
+    const detail: { commands: PaletteItem[] } = { commands: [] }
+    window.dispatchEvent(new CustomEvent('seam:collect-utility-commands', { detail }))
+    return detail.commands
+  }
+
   getPinnableCommands(): { id: string; name: string; icon?: string }[] {
     const commands = this.seamCommands
       .filter((command) => !['open-palette', 'open-palette-command-mode'].includes(command.id))
@@ -97,6 +103,7 @@ export default class SeamPlugin extends Plugin {
         name: command.name,
         icon: command.icon,
       }))
+    commands.push(...this.getUtilityCommands().map((item) => ({ id: item.id, name: item.title, icon: item.icon })))
     // Pins created before the command catalog used a shared toggle identity.
     for (const legacy of [
       { id: 'cmd-palette-pin', name: t().cmdPinNote, icon: 'pin' },
@@ -107,7 +114,8 @@ export default class SeamPlugin extends Plugin {
   }
 
   private getPinnedCommandItems(): PaletteItem[] {
-    return this.seamCommands.flatMap((command) => {
+    const utility = this.getUtilityCommands().filter((item) => this.settings.palettePinnedCommands.includes(item.id))
+    return [...utility, ...this.seamCommands.flatMap((command) => {
       const id = PALETTE_COMMAND_IDS[command.id] ?? `registered:${command.id}`
       if (!this.settings.palettePinnedCommands.includes(id)) return []
       if (command.checkCallback && !command.checkCallback(true)) return []
@@ -125,7 +133,7 @@ export default class SeamPlugin extends Plugin {
           },
         },
       ]
-    })
+    })]
   }
 
   settings: SeamSettings = DEFAULT_SETTINGS
@@ -998,6 +1006,7 @@ export default class SeamPlugin extends Plugin {
       commands.splice(3, 0, ...actions)
     }
 
+    commands.push(...this.getUtilityCommands())
     return commands
   }
 

@@ -111,6 +111,66 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
  */
 export class UniversalPalette extends SuggestModal<PaletteItem> {
   onClosed?: () => void
+  private utilityPanel: {
+    host: HTMLElement
+    handleKey?: (event: KeyboardEvent) => boolean
+  } | null = null
+  private utilityHidden: HTMLElement[] = []
+  private utilityScope: Scope | null = null
+
+  private leaveUtilityPanel(): void {
+    if (this.utilityScope) this.app.keymap.popScope(this.utilityScope)
+    this.utilityScope = null
+    this.utilityPanel?.host.remove()
+    this.utilityPanel = null
+    for (const el of this.utilityHidden) el.hidden = false
+    this.utilityHidden = []
+    this.modalEl.removeClass('seam-utility-palette-active')
+    this.inputEl.focus()
+  }
+
+  private showUtilityPanel(id: string): void {
+    this.leaveUtilityPanel()
+    const host = this.modalEl.createDiv({ cls: 'seam-utility-panel-host' })
+    const panel = {
+      host,
+      id,
+      back: () => this.leaveUtilityPanel(),
+      close: () => this.close(),
+      handleKey: undefined as ((event: KeyboardEvent) => boolean) | undefined,
+    }
+    const event = new CustomEvent('seam:open-utility-view', { detail: panel, cancelable: true })
+    this.utilityPanel = panel
+    this.modalEl.addClass('seam-utility-palette-active')
+    this.utilityHidden = Array.from(
+      this.modalEl.querySelectorAll<HTMLElement>(
+        '.prompt-input-container, .prompt-results, .prompt-instructions',
+      ),
+    ).filter((el) => !host.contains(el) && !el.hidden)
+    for (const el of this.utilityHidden) el.hidden = true
+    window.dispatchEvent(event)
+    if (!event.defaultPrevented) {
+      this.leaveUtilityPanel()
+      return
+    }
+    const scope = new Scope(this.scope)
+    for (const key of ['Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', ' '])
+      scope.register([], key, (evt) => {
+        if (panel.handleKey?.(evt)) return false
+        if (key === 'Enter' && (evt.target as HTMLElement)?.tagName === 'BUTTON') {
+          ;(evt.target as HTMLButtonElement).click()
+          return false
+        }
+        return true
+      })
+    scope.register(['Mod'], '[', (evt) => (panel.handleKey?.(evt) ? false : true))
+    scope.register(['Mod'], 'Enter', (evt) => {
+      panel.handleKey?.(evt)
+      return false
+    })
+    this.utilityScope = scope
+    this.app.keymap.pushScope(scope)
+  }
   private createSuggestionActive = false
   private closeButtonScope: Scope | null = null
   private mobileKeyboardButton: HTMLButtonElement | null = null
@@ -145,6 +205,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private baseNavigationEnabled = false
   private baseSourcePath = ''
   private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
+    if (this.utilityPanel) {
+      if (this.utilityPanel.handleKey?.(event)) event.preventDefault()
+      event.stopImmediatePropagation()
+      return
+    }
     if (this.mode === 'statistics') {
       const dismiss = this.modalEl.querySelector<HTMLButtonElement>('.seam-note-statistics-dismiss')
       if (dismiss && event.target === dismiss && (event.key === 'Enter' || event.key === ' ')) {
@@ -243,13 +308,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.returnToSearch()
       return false
     })
-    this.scope.register([], 'Backspace', (evt: KeyboardEvent) => {
-      if (this.mode === 'statistics') {
-        evt.preventDefault()
-        this.returnToSearch()
-        return false
-      }
-      if (this.mode === 'search' || this.inputEl.value.length > 0) return true
+    this.scope.register(['Mod'], '[', (evt: KeyboardEvent) => {
+      if (evt.isComposing) return true
+      if (
+        this.mode === 'search' &&
+        !this.calendarHost &&
+        !this.baseRenderHost &&
+        !this.composedQueryPrefix &&
+        !/^[>@]/.test(this.inputEl.value.trimStart())
+      )
+        return true
       evt.preventDefault()
       this.returnToSearch()
       return false
@@ -264,6 +332,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   }
 
   onClose(): void {
+    this.leaveUtilityPanel()
     window.removeEventListener('keydown', this.baseNavigationKeyListener, true)
     this.removeMobileKeyboardDismiss()
     this.releaseCloseButtonScope()
@@ -837,6 +906,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       if (value.type !== 'heading') return
       this.close()
       this.onChooseSuggestion(value, evt)
+      return
+    }
+    if (['utility:embed-url', 'utility:add-caption'].includes(value.id)) {
+      this.showUtilityPanel(value.id)
       return
     }
     if (value.id === 'cmd-global-statistics') {
@@ -1717,6 +1790,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.outlinePreviousLimit = null
       this.emptyStateText = 'No results found.'
     }
+    if (this.calendarHost) this.disposeCalendar()
+    if (this.baseRenderHost || this.baseNavigationEnabled) {
+      this.baseNavigationEnabled = false
+      this.disposeBaseRender()
+    }
+    this.composedQueryPrefix = ''
     this.mode = 'search'
     this.inputEl.value = ''
     this.setPlaceholder(t().palettePlaceholder)
@@ -1726,6 +1805,18 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   }
 
   private setKeyboardInstructions(instructions: Instruction[]): void {
+    const canGoBack =
+      this.calendarHost ||
+      this.baseRenderHost ||
+      this.composedQueryPrefix ||
+      /^[>@]/.test(this.inputEl.value.trimStart())
+    if (canGoBack && !instructions.some((item) => item.purpose === t().paletteHelpBack)) {
+      const dismiss = instructions.findIndex((item) => item.command === 'esc')
+      instructions.splice(dismiss < 0 ? instructions.length : dismiss, 0, {
+        command: Platform.isMacOS ? '⌘[' : 'Ctrl+[',
+        purpose: t().paletteHelpBack,
+      })
+    }
     this.setInstructions(showShortcutHints() ? instructions : [])
   }
 
@@ -1794,14 +1885,17 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         { command: '↵', purpose: t().paletteHelpSelect },
         { command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵', purpose: t().outlineToggleChildren },
       ]
-      if (!query) instructions.push({ command: '⌫', purpose: t().paletteHelpBack })
+      instructions.push({
+        command: Platform.isMacOS ? '⌘[' : 'Ctrl+[',
+        purpose: t().paletteHelpBack,
+      })
       instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
       this.setKeyboardInstructions(instructions)
       return
     }
     if (this.mode === 'statistics') {
       this.setKeyboardInstructions([
-        { command: '⌫', purpose: t().paletteHelpBack },
+        { command: Platform.isMacOS ? '⌘[' : 'Ctrl+[', purpose: t().paletteHelpBack },
         { command: 'esc', purpose: t().paletteHelpDismiss },
       ])
       return
@@ -1874,8 +1968,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       { command: '↑↓', purpose: t().paletteHelpNavigate },
       { command: '↵', purpose: t().paletteHelpOpen },
     ]
-    if (this.mode !== 'search' && !query) {
-      instructions.push({ command: '⌫', purpose: t().paletteHelpBack })
+    if (this.mode !== 'search') {
+      instructions.push({
+        command: Platform.isMacOS ? '⌘[' : 'Ctrl+[',
+        purpose: t().paletteHelpBack,
+      })
     }
     instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
     this.setKeyboardInstructions(instructions)

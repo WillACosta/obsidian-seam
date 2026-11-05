@@ -153,26 +153,20 @@ describe('Note outline', () => {
     assert.equal(palette.closed, false)
     assert.deepEqual(opened, [])
   })
-  it('keeps Backspace as text editing until the input is empty, then restores Palette search', () => {
+  it('uses Mod+[ to return with a nonempty filter and leaves Backspace to editing', () => {
     const { palette, file } = fixture([heading('Nested', 2, 7)])
     palette.showNoteOutline(file)
     palette.inputEl.value = 'Nested'
     palette.getSuggestions('Nested')
     assert.deepEqual(
       palette.instructions.map((item: { purpose: string }) => item.purpose),
-      ['navigate', 'select', 'toggle nested headings', 'dismiss'],
+      ['navigate', 'select', 'toggle nested headings', 'back', 'dismiss'],
     )
-    assert.equal(
-      palette.handlers.get('Backspace')({
-        preventDefault: () => assert.fail('Must allow deletion'),
-      }),
-      true,
-    )
+    assert.equal(palette.handlers.has('Backspace'), false)
     assert.equal(palette.mode, 'outline')
-    palette.inputEl.value = ''
     let prevented = false
     assert.equal(
-      palette.handlers.get('Backspace')({
+      palette.handlers.get('Mod+[')({
         preventDefault: () => {
           prevented = true
         },

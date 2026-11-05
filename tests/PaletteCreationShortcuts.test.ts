@@ -140,7 +140,7 @@ describe('Palette date-query creation shortcuts', () => {
     assert.equal(items[0].id, 'period-query-error')
     assert.deepEqual(
       palette.instructions.map((entry: { purpose: string }) => entry.purpose),
-      ['dismiss'],
+      ['back', 'dismiss'],
     )
     palette.close = () => assert.fail('Error selection must not dismiss the Palette')
     palette.selectSuggestion(items[0], {})
@@ -211,7 +211,7 @@ describe('Palette date-query creation shortcuts', () => {
         assert.equal(items[0].type, 'create')
         assert.deepEqual(
           palette.instructions.map((entry: { purpose: string }) => entry.purpose),
-          ['create', 'create in a new tab', 'create in split view', 'dismiss'],
+          ['create', 'create in a new tab', 'create in split view', 'back', 'dismiss'],
         )
         palette.chooser = { values: items, selectedItem: 0 }
         if (shortcut === 'Enter') palette.onChooseSuggestion(items[0], {})
@@ -357,7 +357,7 @@ describe('Palette atomic special-query Backspace', () => {
   })
 })
 
-describe('Note report Backspace', () => {
+describe('Note report Back shortcut', () => {
   for (const query of ['> percentage completion', '> statistics']) {
     it(`${query} returns to usable Palette search and removes report controls`, () => {
       const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, [])
@@ -400,7 +400,7 @@ describe('Note report Backspace', () => {
       )
       let prevented = false
       assert.equal(
-        palette.handlers.get('Backspace')({
+        palette.handlers.get('Mod+[')({
           preventDefault: () => {
             prevented = true
           },
@@ -420,12 +420,7 @@ describe('Note report Backspace', () => {
     const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, [])
     palette.mode = 'search'
     palette.inputEl.value = 'text'
-    assert.equal(
-      palette.handlers.get('Backspace')({
-        preventDefault: () => assert.fail('Must not intercept'),
-      }),
-      true,
-    )
+    assert.equal(palette.handlers.has('Backspace'), false)
   })
 })
 
@@ -495,4 +490,21 @@ describe('Note completion title', () => {
     assert.equal((await render('Other/01-11-2026.md')).title, '01-11-2026')
     assert.equal((await render('Journal/31-02-2026.md')).title, '31-02-2026')
   })
+})
+
+describe('Palette Back shortcut', () => {
+  for (const query of ['', 'A typed note title'])
+    it(`returns from quick-add with ${query || 'an empty input'}`, () => {
+      const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, [])
+      palette.mode = 'quick-add'
+      palette.inputEl.value = query
+      palette.inputEl.focus = () => {}
+      palette.refreshSuggestions = () => {}
+      palette.updateInstructions(query)
+      assert.ok(palette.instructions.some((item: { purpose: string }) => item.purpose === 'back'))
+      assert.equal(palette.handlers.has('Backspace'), false)
+      assert.equal(palette.handlers.get('Mod+[')({ preventDefault() {} }), false)
+      assert.equal(palette.mode, 'search')
+      assert.equal(palette.inputEl.value, '')
+    })
 })

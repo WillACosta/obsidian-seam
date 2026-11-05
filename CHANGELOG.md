@@ -2,6 +2,14 @@
 
 What's new and changed in each Seam release.
 
+## [Unreleased]
+
+<!-- iterations: iteration_18 -->
+
+### Changed
+
+- Use Cmd+[ on macOS or Ctrl+[ on Windows/Linux to go back from Palette and Utility views, including with text in the input. Backspace remains available for text and selected-token editing.
+
 ## [4.0.1] - 2026-11-03
 
 ### Fixed

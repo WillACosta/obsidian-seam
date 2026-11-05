@@ -2,6 +2,7 @@ import { PaletteItem } from '../types'
 import { t } from '../i18n'
 
 function commandGroup(item: PaletteItem): string {
+  if (item.id.startsWith('utility:')) return 'Utility'
   if (['cmd-global-statistics', 'cmd-note-statistics', 'cmd-note-completion'].includes(item.id))
     return t().paletteGroupStatistics
   if (/^cmd-(archive|move-|daily-todos)/.test(item.id)) return t().paletteGroupMove
