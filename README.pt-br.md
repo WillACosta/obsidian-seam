@@ -95,3 +95,15 @@ O Seam é gratuito e de código aberto. Se ele ajuda no seu dia a dia, considere
 Para instruções de desenvolvimento e lançamento, consulte o [README.dev.md](README.dev.md). O Seam é distribuído sob a licença [GNU General Public License v3.0](LICENSE).
 
 Desenvolvido por **William A. Costa** ([@WillACosta](https://github.com/WillACosta)).
+
+## Editor e mídia
+
+Layouts de imagens, legendas, recolhimento de grupos e estilo de tarefas concluídas fazem parte
+do Seam. Ative ou desative cada recurso em **Configurações → Seam → Editor e mídia**. Os comandos
+ficam disponíveis na paleta do Obsidian e na Paleta Universal do Seam, sem plugin adicional.
+
+As prévias de URL ficam desativadas por padrão. Ao ativá-las, o Seam pode solicitar metadados aos
+sites vinculados e carregar imagens de seus servidores. Imagens remotas adicionadas a layouts ou
+abertas no seletor de legendas também acessam seus servidores; miniaturas do seletor são
+armazenadas em cache local. Não recebemos esses dados. A ordenação automática de tarefas
+recém-concluídas também fica desativada por padrão.

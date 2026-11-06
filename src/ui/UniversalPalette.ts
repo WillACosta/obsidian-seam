@@ -1,3 +1,5 @@
+import type { PanelContext } from '../editor-media/ui'
+import type { EditorMediaView } from '../editor-media/settings'
 import {
   App,
   Component,
@@ -111,50 +113,50 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
  */
 export class UniversalPalette extends SuggestModal<PaletteItem> {
   onClosed?: () => void
-  private utilityPanel: {
+  private editorMediaPanel: {
     host: HTMLElement
     handleKey?: (event: KeyboardEvent) => boolean
     dispose?: () => void
   } | null = null
-  private utilityHidden: HTMLElement[] = []
-  private utilityScope: Scope | null = null
+  private editorMediaHidden: HTMLElement[] = []
+  private editorMediaScope: Scope | null = null
 
-  private leaveUtilityPanel(): void {
-    if (this.utilityScope) this.app.keymap.popScope(this.utilityScope)
-    this.utilityScope = null
-    this.utilityPanel?.dispose?.()
-    this.utilityPanel?.host.remove()
-    this.utilityPanel = null
-    for (const el of this.utilityHidden) el.hidden = false
-    this.utilityHidden = []
-    this.modalEl.removeClass('seam-utility-palette-active')
+  private leaveEditorMediaPanel(): void {
+    if (this.editorMediaScope) this.app.keymap.popScope(this.editorMediaScope)
+    this.editorMediaScope = null
+    this.editorMediaPanel?.dispose?.()
+    this.editorMediaPanel?.host.remove()
+    this.editorMediaPanel = null
+    for (const el of this.editorMediaHidden) el.hidden = false
+    this.editorMediaHidden = []
+    this.modalEl.removeClass('seam-media-palette-active')
     this.inputEl.focus()
   }
 
-  private showUtilityPanel(id: string): void {
-    this.leaveUtilityPanel()
-    const host = this.modalEl.createDiv({ cls: 'seam-utility-panel-host' })
+  private showEditorMediaPanel(id: EditorMediaView): void {
+    this.leaveEditorMediaPanel()
+    const host = this.modalEl.createDiv({ cls: 'seam-media-panel-host' })
     const panel = {
       host,
       id,
-      back: () => this.leaveUtilityPanel(),
+      back: () => this.leaveEditorMediaPanel(),
       close: () => this.close(),
       handleKey: undefined as ((event: KeyboardEvent) => boolean) | undefined,
     }
-    const event = new CustomEvent('seam:open-utility-view', { detail: panel, cancelable: true })
-    this.utilityPanel = panel
-    this.modalEl.addClass('seam-utility-palette-active')
-    this.utilityHidden = Array.from(
+    this.editorMediaPanel = panel
+    this.modalEl.addClass('seam-media-palette-active')
+    this.editorMediaHidden = Array.from(
       this.modalEl.querySelectorAll<HTMLElement>(
         '.prompt-input-container, .prompt-results, .prompt-instructions',
       ),
     ).filter((el) => !host.contains(el) && !el.hidden)
-    for (const el of this.utilityHidden) el.hidden = true
-    window.dispatchEvent(event)
-    if (!event.defaultPrevented) {
-      this.leaveUtilityPanel()
+    for (const el of this.editorMediaHidden) el.hidden = true
+    if (!this.openEditorMediaView) {
+      this.leaveEditorMediaPanel()
       return
     }
+    this.openEditorMediaView(id, panel)
+    if (this.editorMediaPanel !== panel) return
     const scope = new Scope(this.scope)
     for (const key of ['Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', ' '])
       scope.register([], key, (evt) => {
@@ -170,7 +172,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       panel.handleKey?.(evt)
       return false
     })
-    this.utilityScope = scope
+    this.editorMediaScope = scope
     this.app.keymap.pushScope(scope)
   }
   private createSuggestionActive = false
@@ -207,8 +209,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private baseNavigationEnabled = false
   private baseSourcePath = ''
   private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
-    if (this.utilityPanel) {
-      if (this.utilityPanel.handleKey?.(event)) event.preventDefault()
+    if (this.editorMediaPanel) {
+      if (this.editorMediaPanel.handleKey?.(event)) event.preventDefault()
       event.stopImmediatePropagation()
       return
     }
@@ -246,6 +248,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private calendarPins?: CalendarPins,
     private globalStatistics?: GlobalStatistics,
     private pinnedCommandItems: PaletteItem[] = [],
+    private openEditorMediaView?: (id: EditorMediaView, panel: PanelContext) => void,
   ) {
     super(app)
     this.setPlaceholder(t().palettePlaceholder)
@@ -334,7 +337,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   }
 
   onClose(): void {
-    this.leaveUtilityPanel()
+    this.leaveEditorMediaPanel()
     window.removeEventListener('keydown', this.baseNavigationKeyListener, true)
     this.removeMobileKeyboardDismiss()
     this.releaseCloseButtonScope()
@@ -910,8 +913,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.onChooseSuggestion(value, evt)
       return
     }
-    if (['utility:embed-url', 'utility:add-caption', 'utility:image-layout'].includes(value.id)) {
-      this.showUtilityPanel(value.id)
+    if (value.editorMediaView) {
+      this.showEditorMediaPanel(value.editorMediaView)
       return
     }
     if (value.id === 'cmd-global-statistics') {

@@ -60,6 +60,22 @@ Turn documents and images into linked Source notes, then find them with `@source
 
 ![Source note with a PDF](docs/images/sources.png)
 
+## Editor & media
+
+Image layouts, image captions, group folding, and completed-task styling are included in Seam.
+Use **Settings → Seam → Editor & media** to enable or disable each feature. **Image Layout**
+creates responsive grid, flex, or masonry galleries, with live previews and an edit action on
+rendered layouts. See [Image Layout syntax and controls](docs/image-layouts.md).
+
+**Embed URL** creates card, compact, or minimal previews using `seam-embed` blocks. URL previews
+are off by default: enabling them allows requests to linked websites and their image hosts.
+Remote images explicitly added to layouts or opened in the caption picker also contact their
+hosts; caption-picker thumbnails are cached locally. Seam does not send this data to us.
+Automatic sorting of newly completed tasks is also off by default.
+
+These commands are available in Obsidian's command palette and the **Editor & media** group of
+Seam's Universal Palette. No companion plugin is needed.
+
 ## Get started
 
 Seam requires Obsidian **1.13.0** or later.

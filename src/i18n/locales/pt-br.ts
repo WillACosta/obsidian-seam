@@ -1,6 +1,27 @@
 import { Translations } from './en'
 
 export const ptBr: Translations = {
+  settingsEditorMediaHeading: 'Editor e mídia',
+  editorMediaEmbed: 'Incorporar URL',
+  editorMediaCaption: 'Adicionar legenda à imagem',
+  editorMediaFold: 'Recolher ou expandir grupo atual',
+  editorMediaLayout: 'Layout de imagens',
+  settingsMediaPreviews: 'Prévias de URL',
+  settingsMediaPreviewsDesc:
+    'Ative incorporações de URL e solicitações de metadados aos sites vinculados e seus servidores de imagens. Desativado por padrão.',
+  settingsMediaCaptions: 'Legendas de imagens',
+  settingsMediaCaptionsDesc:
+    'Mostre aliases e texto alternativo como legendas e ative o editor de legendas. Imagens remotas selecionadas no editor são baixadas e armazenadas em cache.',
+  settingsMediaLayouts: 'Layouts de imagens',
+  settingsMediaLayoutsDesc: 'Crie e renderize galerias responsivas em grade, flex e mosaico.',
+  settingsMediaFolding: 'Recolher grupos',
+  settingsMediaFoldingDesc: 'Recolha ou expanda o título, lista ou checklist que contém o cursor.',
+  settingsMediaAutoSort: 'Ordenar itens concluídos automaticamente',
+  settingsMediaAutoSortDesc:
+    'Mova tarefas recém-concluídas para o final da lista, sem adicionar linhas em branco. Desativado por padrão.',
+  settingsMediaCompleted: 'Suavizar itens concluídos',
+  settingsMediaCompletedDesc: 'Use texto suavizado e tachado nas tarefas concluídas.',
+
   setupTitle: 'Inicializar o Seam',
   setupDescription:
     'Visualize pastas, modelos, visualizações da biblioteca e preferências recomendadas do Obsidian/Seam para este vault.',

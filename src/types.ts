@@ -1,3 +1,4 @@
+import { DEFAULT_EDITOR_MEDIA, EditorMediaSettings, EditorMediaView } from './editor-media/settings'
 import { TFile } from 'obsidian'
 
 export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000'
@@ -10,6 +11,7 @@ export type CalendarPin =
   { kind: 'file'; path: string } | { kind: 'weekly'; week?: string; path?: string }
 
 export interface SeamSettings {
+  editorMedia: EditorMediaSettings
   palettePinnedNotes: string[]
   paletteNoteCommandIds: Record<string, string>
   palettePinnedCommands: string[]
@@ -96,6 +98,7 @@ export interface CustomSpecialSearch {
 }
 
 export const DEFAULT_SETTINGS: SeamSettings = {
+  editorMedia: { ...DEFAULT_EDITOR_MEDIA },
   palettePinnedNotes: [],
   paletteNoteCommandIds: {},
   palettePinnedCommands: [],
@@ -304,6 +307,7 @@ export interface AutomationError {
 }
 
 export interface PaletteItem {
+  editorMediaView?: EditorMediaView
   id: string
   title: string
   description: string

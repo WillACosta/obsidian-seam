@@ -1,4 +1,25 @@
 export const en = {
+  settingsEditorMediaHeading: 'Editor & media',
+  editorMediaEmbed: 'Embed URL',
+  editorMediaCaption: 'Add image caption',
+  editorMediaFold: 'Fold or unfold current group',
+  editorMediaLayout: 'Image Layout',
+  settingsMediaPreviews: 'URL previews',
+  settingsMediaPreviewsDesc:
+    'Enable URL embeds and metadata requests to linked websites and their image hosts. Off by default.',
+  settingsMediaCaptions: 'Image captions',
+  settingsMediaCaptionsDesc:
+    'Display image aliases and alt text as captions, and enable the caption editor. Remote images selected in the editor are downloaded and cached.',
+  settingsMediaLayouts: 'Image layouts',
+  settingsMediaLayoutsDesc: 'Create and render responsive grid, flex, and masonry galleries.',
+  settingsMediaFolding: 'Group folding',
+  settingsMediaFoldingDesc: 'Fold or unfold the heading, list, or checklist containing the cursor.',
+  settingsMediaAutoSort: 'Automatically sort completed items',
+  settingsMediaAutoSortDesc:
+    'Move newly checked tasks to the end of their list, without adding blank lines. Off by default.',
+  settingsMediaCompleted: 'Dim completed items',
+  settingsMediaCompletedDesc: 'Use muted, strikethrough text for completed tasks.',
+
   setupTitle: 'Initialize Seam',
   setupDescription:
     'Preview recommended folders, templates, Bookshelf views, and Obsidian/Seam preferences for this vault.',

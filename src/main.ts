@@ -1,3 +1,5 @@
+import { EditorMedia } from './editor-media/EditorMedia'
+import { readEditorMediaSettings } from './editor-media/settings'
 import {
   Command,
   Notice,
@@ -61,6 +63,10 @@ const SEAM_MANAGED_PROPERTIES = ['status']
  * - Event-driven + reconciliation automation
  */
 const PALETTE_COMMAND_IDS: Record<string, string> = {
+  'embed-url': 'cmd-embed-url',
+  'add-caption': 'cmd-add-caption',
+  'toggle-fold': 'cmd-toggle-fold',
+  'image-layout': 'cmd-image-layout',
   'show-global-statistics': 'cmd-global-statistics',
   'create-quick-note': 'cmd-quick-note',
   'create-new-note': 'cmd-quick-add',
@@ -89,21 +95,19 @@ export default class SeamPlugin extends Plugin {
     this.addCommand({ ...withIcon })
   }
 
-  private getUtilityCommands(): PaletteItem[] {
-    const detail: { commands: PaletteItem[] } = { commands: [] }
-    window.dispatchEvent(new CustomEvent('seam:collect-utility-commands', { detail }))
-    return detail.commands
-  }
-
   getPinnableCommands(): { id: string; name: string; icon?: string }[] {
     const commands = this.seamCommands
       .filter((command) => !['open-palette', 'open-palette-command-mode'].includes(command.id))
+      .filter(
+        (command) =>
+          this.editorMedia?.commandDefinitions().find((item) => item.id === command.id)?.enabled !==
+          false,
+      )
       .map((command) => ({
         id: PALETTE_COMMAND_IDS[command.id] ?? `registered:${command.id}`,
         name: command.name,
         icon: command.icon,
       }))
-    commands.push(...this.getUtilityCommands().map((item) => ({ id: item.id, name: item.title, icon: item.icon })))
     // Pins created before the command catalog used a shared toggle identity.
     for (const legacy of [
       { id: 'cmd-palette-pin', name: t().cmdPinNote, icon: 'pin' },
@@ -114,8 +118,7 @@ export default class SeamPlugin extends Plugin {
   }
 
   private getPinnedCommandItems(): PaletteItem[] {
-    const utility = this.getUtilityCommands().filter((item) => this.settings.palettePinnedCommands.includes(item.id))
-    return [...utility, ...this.seamCommands.flatMap((command) => {
+    return this.seamCommands.flatMap((command) => {
       const id = PALETTE_COMMAND_IDS[command.id] ?? `registered:${command.id}`
       if (!this.settings.palettePinnedCommands.includes(id)) return []
       if (command.checkCallback && !command.checkCallback(true)) return []
@@ -127,16 +130,30 @@ export default class SeamPlugin extends Plugin {
           type: 'command' as const,
           icon: command.icon,
           shortcutCommandId: `${this.manifest.id}:${command.id}`,
+          editorMediaView: this.editorMedia
+            ?.commandDefinitions()
+            .find((item) => item.id === command.id)?.view,
           action: () => {
             if (command.checkCallback) command.checkCallback(false)
             else command.callback?.()
           },
         },
       ]
-    })]
+    })
   }
 
   settings: SeamSettings = DEFAULT_SETTINGS
+
+  editorMedia!: EditorMedia
+  private editorMediaSnapshot = ''
+
+  private refreshEditorMedia(): void {
+    const snapshot = JSON.stringify(this.settings.editorMedia)
+    if (snapshot === this.editorMediaSnapshot) return
+    this.editorMediaSnapshot = snapshot
+    if (this.editorMedia) this.removeChild(this.editorMedia)
+    this.editorMedia = this.addChild(new EditorMedia(this, () => this.settings.editorMedia))
+  }
 
   private automationService!: AutomationService
   private automationQueue!: AutomationQueue
@@ -224,6 +241,24 @@ export default class SeamPlugin extends Plugin {
       ),
     )
     this.registerEditorExtension(writingActivityExtension(this.globalStatistics))
+
+    this.refreshEditorMedia()
+    for (const entry of this.editorMedia.commandDefinitions()) {
+      this.registerSeamCommand({
+        id: entry.id,
+        name: entry.name,
+        icon: entry.icon,
+        hotkeys: entry.id === 'toggle-fold' ? [{ modifiers: ['Mod'], key: 'Enter' }] : undefined,
+        checkCallback: (checking) => {
+          const current = this.editorMedia
+            .paletteItems()
+            .find((item) => item.id === `cmd-${entry.id}`)
+          if (!current) return false
+          if (!checking) void current.action?.()
+          return true
+        },
+      })
+    }
 
     // 3. Register commands
     this.registerSeamCommand({
@@ -625,6 +660,7 @@ export default class SeamPlugin extends Plugin {
       this.calendarPins,
       this.globalStatistics,
       this.getPinnedCommandItems(),
+      (id, panel) => this.editorMedia.openView(id, panel),
     )
     this.openTrackedPalette(palette)
     if (commandMode) palette.showCommands()
@@ -639,6 +675,7 @@ export default class SeamPlugin extends Plugin {
       this.calendarPins,
       this.globalStatistics,
       this.getPinnedCommandItems(),
+      (id, panel) => this.editorMedia.openView(id, panel),
     )
     this.openTrackedPalette(palette)
     window.setTimeout(() => palette.showQuickAdd(), 0)
@@ -654,6 +691,7 @@ export default class SeamPlugin extends Plugin {
       this.calendarPins,
       this.globalStatistics,
       this.getPinnedCommandItems(),
+      (id, panel) => this.editorMedia.openView(id, panel),
     )
     this.openTrackedPalette(palette)
     palette.showNoteOutline(file)
@@ -668,6 +706,7 @@ export default class SeamPlugin extends Plugin {
       this.calendarPins,
       this.globalStatistics,
       this.getPinnedCommandItems(),
+      (id, panel) => this.editorMedia.openView(id, panel),
     )
     this.openTrackedPalette(palette)
     palette.showGlobalStatistics()
@@ -683,6 +722,7 @@ export default class SeamPlugin extends Plugin {
       this.calendarPins,
       this.globalStatistics,
       this.getPinnedCommandItems(),
+      (id, panel) => this.editorMedia.openView(id, panel),
     )
     this.openTrackedPalette(palette)
     void palette.showNoteStatistics(file, completion)
@@ -1006,7 +1046,7 @@ export default class SeamPlugin extends Plugin {
       commands.splice(3, 0, ...actions)
     }
 
-    commands.push(...this.getUtilityCommands())
+    commands.push(...this.editorMedia.paletteItems())
     return commands
   }
 
@@ -1168,6 +1208,7 @@ export default class SeamPlugin extends Plugin {
     ] as const) {
       if (typeof this.settings[key] !== 'string') this.settings[key] = DEFAULT_SETTINGS[key]
     }
+    this.settings.editorMedia = readEditorMediaSettings(this.settings.editorMedia)
   }
 
   async saveSettings(): Promise<void> {
@@ -1228,6 +1269,7 @@ export default class SeamPlugin extends Plugin {
    * Called when settings change. Propagates new settings to all services.
    */
   onSettingsChange(): void {
+    this.refreshEditorMedia()
     this.settingsTab?.refreshSetupStatus()
     if (this.calendarPins?.rolling) void this.calendarPins.refreshWeeklySettings().catch(() => {})
     this.refreshPaletteRibbon()

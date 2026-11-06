@@ -1,3 +1,4 @@
+import { EditorMediaSettings } from '../editor-media/settings'
 import {
   App,
   ExtraButtonComponent,
@@ -388,6 +389,34 @@ export class SeamSettingsTab extends PluginSettingTab {
               this.renderHotkeySetting(setting, `${this.plugin.manifest.id}:open-palette`),
           },
         ],
+      },
+      {
+        type: 'group',
+        heading: strings.settingsEditorMediaHeading,
+        items: (
+          [
+            ['previews', strings.settingsMediaPreviews, strings.settingsMediaPreviewsDesc],
+            ['layouts', strings.settingsMediaLayouts, strings.settingsMediaLayoutsDesc],
+            ['captions', strings.settingsMediaCaptions, strings.settingsMediaCaptionsDesc],
+            ['folding', strings.settingsMediaFolding, strings.settingsMediaFoldingDesc],
+            ['autoSort', strings.settingsMediaAutoSort, strings.settingsMediaAutoSortDesc],
+            ['completed', strings.settingsMediaCompleted, strings.settingsMediaCompletedDesc],
+          ] as [keyof EditorMediaSettings, string, string][]
+        ).map(([key, name, desc]) => ({
+          name,
+          desc,
+          render: (setting: Setting) => {
+            setting.addToggle((toggle) =>
+              toggle.setValue(this.plugin.settings.editorMedia[key]).onChange(async (value) => {
+                this.plugin.settings.editorMedia = {
+                  ...this.plugin.settings.editorMedia,
+                  [key]: value,
+                }
+                await this.plugin.saveSettings()
+              }),
+            )
+          },
+        })),
       },
       {
         type: 'group',
