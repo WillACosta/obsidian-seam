@@ -48,7 +48,7 @@ Open `@calendar` to browse Daily Notes and create missing ones from your templat
 
 ### See your progress
 
-Explore **Global Statistics** for your current note and word totals, writing activity, streaks, and monthly trends. Select a day to revisit its notes. For a closer look, open a note's statistics, task completion, or outline in the Palette.
+Explore **Global Statistics** for your current note and word totals, writing activity, streaks, and monthly trends. Select a day to revisit its notes. For a closer look, open **Note statistics** for word count and task progress, or browse the note's outline in the Palette.
 
 Writing history starts when Seam begins recording it; your existing notes are still included in vault totals. To share activity with Obsidian Sync, enable **Sync all other types** on each device.
 
@@ -60,21 +60,16 @@ Turn documents and images into linked Source notes, then find them with `@source
 
 ![Source note with a PDF](docs/images/sources.png)
 
-## Editor & media
+### Add images and links
 
-Image layouts, image captions, group folding, and completed-task styling are included in Seam.
-Use **Settings → Seam → Editor & media** to enable or disable each feature. **Image Layout**
-creates responsive grid, flex, or masonry galleries, with live previews and an edit action on
-rendered layouts. See [Image Layout syntax and controls](docs/image-layouts.md).
+Create galleries with **Image Layout**, add image captions, and show links as cards or compact previews. Fold headings and lists, dim completed tasks, or move them to the end of the list automatically.
 
-**Embed URL** creates card, compact, or minimal previews using `seam-embed` blocks. URL previews
-are off by default: enabling them allows requests to linked websites and their image hosts.
-Remote images explicitly added to layouts or opened in the caption picker also contact their
-hosts; caption-picker thumbnails are cached locally. Seam does not send this data to us.
-Automatic sorting of newly completed tasks is also off by default.
+Find these tools in the Palette under **Editor & media**, and choose which to use in **Settings → Seam → Editor & media**. URL previews and automatic task sorting are off by default. Previews and remote images contact their source websites.
 
-These commands are available in Obsidian's command palette and the **Editor & media** group of
-Seam's Universal Palette. No companion plugin is needed.
+See [image layout options](docs/image-layouts.md).
+
+<!-- Screenshot: Image Layout gallery with captions -->
+<!-- Screenshot: URL preview styles -->
 
 ## Get started
 
