@@ -3009,3 +3009,35 @@ body.is-mobile .seam-media-view .seam-media-confirm {
   min-width: 44px;
   min-height: 44px;
 }
+
+.seam-note-completion-section {
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: var(--size-4-4);
+  padding-top: var(--size-4-3);
+}
+.seam-note-completion-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  cursor: pointer;
+  list-style: none;
+  font-weight: var(--font-semibold);
+}
+.seam-note-completion-toggle::-webkit-details-marker {
+  display: none;
+}
+.seam-note-completion-chevron {
+  display: flex;
+  transition: transform 160ms ease;
+}
+.seam-note-completion-section[open] .seam-note-completion-chevron {
+  transform: rotate(90deg);
+}
+.seam-note-completion-content {
+  margin-top: var(--size-4-3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .seam-note-completion-chevron {
+    transition: none;
+  }
+}

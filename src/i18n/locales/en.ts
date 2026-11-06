@@ -1,4 +1,6 @@
 export const en = {
+  paletteViewOpenFailed: 'Could not open this view.',
+  paletteHelpToggleCompletion: 'toggle task completion',
   settingsEditorMediaHeading: 'Editor & media',
   editorMediaEmbed: 'Embed URL',
   editorMediaCaption: 'Add image caption',

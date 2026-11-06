@@ -1,6 +1,8 @@
 import { Translations } from './en'
 
 export const ptBr: Translations = {
+  paletteViewOpenFailed: 'Não foi possível abrir esta visualização.',
+  paletteHelpToggleCompletion: 'alternar conclusão de tarefas',
   settingsEditorMediaHeading: 'Editor e mídia',
   editorMediaEmbed: 'Incorporar URL',
   editorMediaCaption: 'Adicionar legenda à imagem',

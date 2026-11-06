@@ -187,12 +187,12 @@ describe('Palette group labels', () => {
     const items = [
       item('cmd-note-statistics'),
       item('cmd-move-permanent', 'action'),
-      item('cmd-note-completion'),
+      item('cmd-global-statistics'),
     ]
     const grouped = groupPaletteItems(items, true)
     assert.deepEqual(
       grouped.map((i) => i.id),
-      ['cmd-note-statistics', 'cmd-note-completion', 'cmd-move-permanent'],
+      ['cmd-note-statistics', 'cmd-global-statistics', 'cmd-move-permanent'],
     )
     assert.deepEqual(
       grouped.map((i) => i.groupLabel),

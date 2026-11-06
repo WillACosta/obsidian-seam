@@ -4,7 +4,7 @@ import { t } from '../i18n'
 function commandGroup(item: PaletteItem): string {
   if (['cmd-embed-url', 'cmd-add-caption', 'cmd-image-layout', 'cmd-toggle-fold'].includes(item.id))
     return t().settingsEditorMediaHeading
-  if (['cmd-global-statistics', 'cmd-note-statistics', 'cmd-note-completion'].includes(item.id))
+  if (['cmd-global-statistics', 'cmd-note-statistics'].includes(item.id))
     return t().paletteGroupStatistics
   if (/^cmd-(archive|move-|daily-todos)/.test(item.id)) return t().paletteGroupMove
   if (/^cmd-(quick-|source-note)/.test(item.id)) return t().paletteGroupCreate

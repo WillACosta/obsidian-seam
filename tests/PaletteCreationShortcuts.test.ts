@@ -358,7 +358,43 @@ describe('Palette atomic special-query Backspace', () => {
 })
 
 describe('Note report Back shortcut', () => {
-  for (const query of ['> percentage completion', '> statistics']) {
+  it('keeps Enter and Space usable on the native completion disclosure', () => {
+    const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, [])
+    let clicks = 0
+    const summary = {
+      click: () => {
+        clicks++
+      },
+    }
+    palette.mode = 'statistics'
+    palette.statisticsHost = { querySelector: () => summary }
+    palette.modalEl = { querySelector: () => null }
+    for (const key of ['Enter', ' ']) {
+      let prevented = false
+      let stopped = false
+      palette.baseNavigationKeyListener({
+        target: summary,
+        key,
+        preventDefault: () => {
+          prevented = true
+        },
+        stopImmediatePropagation: () => {
+          stopped = true
+        },
+      })
+      assert.equal(prevented && stopped, true)
+    }
+    assert.equal(clicks, 2)
+    palette.baseNavigationKeyListener({
+      target: summary,
+      key: 'Enter',
+      metaKey: true,
+      preventDefault: () => assert.fail('Leave Cmd+Enter to the Palette scope'),
+    })
+    assert.equal(clicks, 2)
+  })
+
+  for (const query of ['> note statistics', '> statistics']) {
     it(`${query} returns to usable Palette search and removes report controls`, () => {
       const palette = new UniversalPalette({}, DEFAULT_SETTINGS, {}, [])
       let removedReport = false
@@ -367,6 +403,7 @@ describe('Note report Back shortcut', () => {
       let refreshed = false
       let focused = false
       palette.mode = 'statistics'
+      palette.commandReturnQuery = query
       palette.statisticsHost = {
         remove: () => {
           removedReport = true
@@ -413,7 +450,7 @@ describe('Note report Back shortcut', () => {
       assert.equal(palette.mode, 'search')
       assert.equal(palette.statisticsHost, null)
       assert.equal(palette.inputEl.disabled, false)
-      assert.equal(palette.inputEl.value, '')
+      assert.equal(palette.inputEl.value, query)
     })
   }
   it('preserves normal input editing', () => {
@@ -424,7 +461,7 @@ describe('Note report Back shortcut', () => {
   })
 })
 
-describe('Note completion title', () => {
+describe('Combined note statistics title', () => {
   it('uses the current Daily Notes format only for the displayed daily note name', async () => {
     class Element {
       children: Element[] = []
@@ -437,6 +474,14 @@ describe('Note completion title', () => {
       }
       addClass() {}
       removeAttribute() {}
+      querySelector(tag: string): Element | null {
+        for (const child of this.children) {
+          if (child.tag === tag) return child
+          const nested = child.querySelector(tag)
+          if (nested) return nested
+        }
+        return null
+      }
       createEl(tag: string, options: { text?: string } = {}) {
         const child = new Element(tag, options.text ?? '')
         this.children.push(child)
@@ -449,12 +494,13 @@ describe('Note completion title', () => {
         return this.createEl('span', options)
       }
     }
+    let content = '- [ ] Todo\n- [x] Done'
     let dailySettings = { folder: 'Journal', format: 'YYYY-MM-DD' }
     const app = {
       vault: {
         configDir: '.obsidian',
         adapter: { exists: async () => true, read: async () => JSON.stringify(dailySettings) },
-        cachedRead: async () => '- [ ] Todo\n- [x] Done',
+        cachedRead: async () => content,
       },
       workspace: { getActiveViewOfType: () => null },
     }
@@ -463,13 +509,30 @@ describe('Note completion title', () => {
     await service.refreshDailyNoteSettings()
     const palette = new UniversalPalette(app, DEFAULT_SETTINGS, service, [])
     const render = async (path: string) => {
-      const file = new MockTFile(path)
+      const file = Object.assign(new MockTFile(path), { stat: { mtime: 0, ctime: 0 } })
       const host = new Element()
       palette.createReportHost = () => {
+        palette.mode = 'statistics'
         palette.statisticsHost = host
         return host
       }
-      await palette.showNoteStatistics(file, true)
+      await palette.showNoteStatistics(file)
+      const details = host.children.find((child) => child.tag === 'details')! as Element & {
+        open?: boolean
+      }
+      assert.ok(details)
+      assert.equal(Boolean(details.open), false)
+      assert.ok(
+        palette.instructions.some(
+          (item: { purpose: string }) => item.purpose === 'toggle task completion',
+        ),
+      )
+      palette.handlers.get('Mod+Enter')({ preventDefault() {} })
+      assert.equal(details.open, true)
+      palette.handlers.get('Mod+Enter')({ preventDefault() {} })
+      assert.equal(details.open, false)
+      assert.equal(host.children.filter((child) => child.tag === 'header').length, 1)
+      if (!content) assert.equal(details.querySelector('progress'), null)
       const header = host.children.find((child) => child.tag === 'header')!
       return {
         heading: header.children.find((child) => child.tag === 'h2')?.text,
@@ -479,7 +542,7 @@ describe('Note completion title', () => {
       }
     }
     assert.deepEqual(await render('Journal/2026-11-01.md'), {
-      heading: 'Note completion',
+      heading: 'Note statistics',
       title: '1 Nov. 2026',
       path: 'Journal/2026-11-01.md',
       original: 'Journal/2026-11-01.md',
@@ -489,6 +552,8 @@ describe('Note completion title', () => {
     assert.equal((await render('Journal/01-11-2026.md')).title, '1 Nov. 2026')
     assert.equal((await render('Other/01-11-2026.md')).title, '01-11-2026')
     assert.equal((await render('Journal/31-02-2026.md')).title, '31-02-2026')
+    content = ''
+    assert.equal((await render('Empty.md')).title, 'Empty')
   })
 })
 

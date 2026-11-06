@@ -148,3 +148,16 @@ Verify that `CHANGELOG.md` reflects the changes cleanly.
 
 - Use plain semantic versions for releases and Git tags, without a leading `v` (for example, `2.0.0`, never `v2.0.0`).
 - The GitHub release title must match the unprefixed tag exactly.
+
+## Obsidian workflow reports
+
+When working on a pull request targeting `main`, watch its latest checks through completion and
+inspect the `obsidianmd/obsidian-workflows@v1` output: job/step summaries, scanner reports,
+annotations, logs, and report artifacts or review comments when provided. A successful workflow
+status or exit code does not mean its report is clean. Review and resolve every reported
+**Error**, **Warning**, and **Recommendation**, including findings that do not fail the pipeline;
+do not suppress findings just to make a check pass. After fixes, inspect the run for the latest
+PR head commit again before reporting it ready to merge. If a report cannot be retrieved or a
+finding cannot be resolved, state the missing evidence or blocker explicitly.
+
+Example: [a successful Seam run containing scanner warnings](https://github.com/WillACosta/obsidian-seam/actions/runs/41752374673).

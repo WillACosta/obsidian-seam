@@ -317,6 +317,7 @@ export interface PaletteItem {
   pinnedCommand?: boolean
   groupLabel?: string
   headingLevel?: number
+  headingLine?: number
   icon?: string
   file?: TFile
   tags?: string[]

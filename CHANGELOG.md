@@ -4,7 +4,7 @@ What's new and changed in each Seam release.
 
 ## [Unreleased]
 
-<!-- iterations: iteration_18..iteration_21 -->
+<!-- iterations: iteration_18..iteration_22 -->
 
 ### Added
 
@@ -12,14 +12,21 @@ What's new and changed in each Seam release.
 - **Monthly writing summary**: See words added this month separately from the current vault word total, with clear explanations of how deletions affect each measure.
 - **Editor & media**: URL previews, image captions, Image Layout, group folding, and completed-task styling are now built into Seam, with individual settings and no companion plugin required. URL previews and automatic task sorting are opt-in.
 
+- **Task completion in Note statistics**: Expand task progress in the same report with Cmd/Ctrl+Enter or a click/tap. Notes without tasks show clear empty-state feedback.
+- **Outline folding**: Fold or unfold a heading from the Palette and mirror that state in the note editor, preserving independent child folds.
+
 ### Changed
 
 - Use Cmd+[ on macOS or Ctrl+[ on Windows/Linux to go back from Palette and editor/media views, including with text in the input. Backspace remains available for text and selected-token editing.
 - **Writing comparisons**: Compare matching days across months and show when history is insufficient for a reliable comparison.
 
+- Note statistics and percentage completion now share one command and view. Back returns core Palette views to their originating command query when opened from command mode.
+
 ### Fixed
 
 - Prevent recognized text moves within or between notes from inflating recorded words added.
+
+- Keep Palette keyboard navigation responsive after Add image caption finds no images, including when opening from reading mode.
 
 ## [4.0.1] - 2026-11-03
 

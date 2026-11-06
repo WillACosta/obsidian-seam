@@ -1,13 +1,16 @@
-import { setIcon } from 'obsidian'
+import { setIcon, TFile } from 'obsidian'
 import { detectLocale, t } from '../i18n'
 import { NoteStatistics } from '../statistics/NoteStatistics'
+import { NoteCompletion } from '../statistics/NoteCompletion'
+import { renderNoteCompletion } from './NoteCompletionView'
 
 /** Static report content inside the Universal Palette, without selectable suggestions. */
 export function renderNoteStatistics(
   container: HTMLElement,
   report: NoteStatistics,
   showIcons: boolean,
-): void {
+  completion?: { file: TFile; report: NoteCompletion },
+): (() => void) | null {
   container.empty()
   const header = container.createEl('header', { cls: 'seam-note-statistics-header' })
   header.createEl('h2', { text: t().statisticsTitle })
@@ -56,5 +59,18 @@ export function renderNoteStatistics(
       text: date.format(timestamp),
       attr: { datetime: new Date(timestamp).toISOString() },
     })
+  }
+  if (!completion) return null
+  const section = container.createEl('details', { cls: 'seam-note-completion-section' })
+  const summary = section.createEl('summary', { cls: 'seam-note-completion-toggle' })
+  setIcon(
+    summary.createSpan({ cls: 'seam-note-completion-chevron', attr: { 'aria-hidden': 'true' } }),
+    'chevron-right',
+  )
+  summary.createSpan({ text: t().completionTitle })
+  const body = section.createDiv({ cls: 'seam-note-completion-content' })
+  renderNoteCompletion(body, completion.file, completion.report, report.title, false)
+  return () => {
+    section.open = !section.open
   }
 }

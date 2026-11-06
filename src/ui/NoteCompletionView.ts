@@ -7,13 +7,16 @@ export function renderNoteCompletion(
   file: TFile,
   report: NoteCompletion,
   title = file.basename,
+  showHeader = true,
 ): void {
   host.empty()
   host.addClass('seam-note-completion')
-  const header = host.createEl('header', { cls: 'seam-note-statistics-header' })
-  header.createEl('h2', { text: t().completionTitle })
-  header.createEl('h3', { cls: 'seam-note-statistics-title', text: title })
-  header.createEl('p', { cls: 'seam-note-statistics-path', text: file.path })
+  if (showHeader) {
+    const header = host.createEl('header', { cls: 'seam-note-statistics-header' })
+    header.createEl('h2', { text: t().completionTitle })
+    header.createEl('h3', { cls: 'seam-note-statistics-title', text: title })
+    header.createEl('p', { cls: 'seam-note-statistics-path', text: file.path })
+  }
   if (!report.total) {
     host.createEl('p', { text: t().completionEmpty })
     return

@@ -335,14 +335,18 @@ export class EditorMedia extends Plugin {
         action: item.run,
       }))
   }
-  openView(id: EditorMediaView, panel: PanelContext) {
+  async openView(id: EditorMediaView, panel: PanelContext): Promise<void> {
     if (!this.commandDefinitions().some((item) => item.view === id && item.enabled)) {
       panel.back()
       return
     }
-    if (id === 'embed-url') this.embed(panel)
-    else if (id === 'image-layout') this.imageLayout(panel)
-    else void this.withEditor((editor) => this.chooseCaption(editor, panel))
+    try {
+      if (id === 'embed-url') await this.embed(panel)
+      else if (id === 'image-layout') await this.imageLayout(panel)
+      else await this.withEditor((editor) => this.chooseCaption(editor, panel))
+    } finally {
+      if (!panel.handleKey) panel.back()
+    }
   }
   updateBody() {
     document.body.classList.toggle('seam-media-completed', this.mediaSettings.completed)
@@ -370,12 +374,12 @@ export class EditorMedia extends Plugin {
     if (this.active && current) fn(current.editor)
   }
   imageLayout(panel?: PanelContext) {
-    void this.withEditor((editor) =>
+    return this.withEditor((editor) =>
       this.layoutService.insert(editor, this.app.workspace.getActiveFile()?.path || '', panel),
     )
   }
   embed(panel?: PanelContext) {
-    void this.withEditor((editor) => {
+    return this.withEditor((editor) => {
       const modal = new EmbedModal(
         this.app,
         (embed) => editor.replaceSelection('```seam-embed\n' + stringifyYaml(embed) + '```\n'),

@@ -1,3 +1,4 @@
+import { OutlineFolding } from './outline/OutlineFolding'
 import { EditorMedia } from './editor-media/EditorMedia'
 import { readEditorMediaSettings } from './editor-media/settings'
 import {
@@ -16,7 +17,6 @@ import { PalettePins, normalizePalettePins } from './notes/PalettePins'
 import { confirmPeriodicNote } from './ui/PeriodicNoteConfirmation'
 import { GlobalStatistics } from './statistics/GlobalStatistics'
 import { writingActivityExtension } from './statistics/WritingActivityExtension'
-import { currentNoteCompletion } from './statistics/NoteCompletion'
 import { NoteDeletion } from './notes/NoteDeletion'
 import { isFileInFolder } from './utils/isFileInFolder'
 import {
@@ -75,7 +75,6 @@ const PALETTE_COMMAND_IDS: Record<string, string> = {
   'show-status': 'cmd-show-status',
   'show-note-outline': 'cmd-note-outline',
   'show-note-statistics': 'cmd-note-statistics',
-  'show-note-completion': 'cmd-note-completion',
   'delete-current-note': 'cmd-delete-current-note',
   'archive-current-note': 'cmd-archive-current',
   'move-to-permanent': 'cmd-move-permanent',
@@ -144,6 +143,7 @@ export default class SeamPlugin extends Plugin {
 
   settings: SeamSettings = DEFAULT_SETTINGS
 
+  private outlineFolding = new OutlineFolding()
   editorMedia!: EditorMedia
   private editorMediaSnapshot = ''
 
@@ -241,6 +241,7 @@ export default class SeamPlugin extends Plugin {
       ),
     )
     this.registerEditorExtension(writingActivityExtension(this.globalStatistics))
+    this.registerEditorExtension(this.outlineFolding.extension)
 
     this.refreshEditorMedia()
     for (const entry of this.editorMedia.commandDefinitions()) {
@@ -368,18 +369,6 @@ export default class SeamPlugin extends Plugin {
         },
       })
     }
-    this.registerSeamCommand({
-      id: 'show-note-completion',
-      name: t().cmdShowNoteCompletion,
-      checkCallback: (checking) => {
-        const file = this.app.workspace.getActiveFile()
-        if (!file || file.extension !== 'md' || !currentNoteCompletion(this.app, file).total)
-          return false
-        if (!checking) void this.openNoteStatistics(file, true)
-        return true
-      },
-    })
-
     this.registerSeamCommand({
       id: 'show-note-statistics',
       name: t().cmdShowNoteStatistics,
@@ -661,6 +650,7 @@ export default class SeamPlugin extends Plugin {
       this.globalStatistics,
       this.getPinnedCommandItems(),
       (id, panel) => this.editorMedia.openView(id, panel),
+      this.outlineFolding,
     )
     this.openTrackedPalette(palette)
     if (commandMode) palette.showCommands()
@@ -676,9 +666,13 @@ export default class SeamPlugin extends Plugin {
       this.globalStatistics,
       this.getPinnedCommandItems(),
       (id, panel) => this.editorMedia.openView(id, panel),
+      this.outlineFolding,
     )
     this.openTrackedPalette(palette)
-    window.setTimeout(() => palette.showQuickAdd(), 0)
+    window.setTimeout(() => {
+      palette.showCommands()
+      palette.showQuickAdd()
+    }, 0)
   }
 
   private async openNoteOutline(file: TFile): Promise<void> {
@@ -692,8 +686,10 @@ export default class SeamPlugin extends Plugin {
       this.globalStatistics,
       this.getPinnedCommandItems(),
       (id, panel) => this.editorMedia.openView(id, panel),
+      this.outlineFolding,
     )
     this.openTrackedPalette(palette)
+    palette.showCommands()
     palette.showNoteOutline(file)
   }
 
@@ -707,12 +703,14 @@ export default class SeamPlugin extends Plugin {
       this.globalStatistics,
       this.getPinnedCommandItems(),
       (id, panel) => this.editorMedia.openView(id, panel),
+      this.outlineFolding,
     )
     this.openTrackedPalette(palette)
+    palette.showCommands()
     palette.showGlobalStatistics()
   }
 
-  private async openNoteStatistics(file: TFile, completion = false): Promise<void> {
+  private async openNoteStatistics(file: TFile): Promise<void> {
     const commands = await this.getPaletteCommands()
     const palette = new UniversalPalette(
       this.app,
@@ -723,9 +721,11 @@ export default class SeamPlugin extends Plugin {
       this.globalStatistics,
       this.getPinnedCommandItems(),
       (id, panel) => this.editorMedia.openView(id, panel),
+      this.outlineFolding,
     )
     this.openTrackedPalette(palette)
-    void palette.showNoteStatistics(file, completion)
+    palette.showCommands()
+    void palette.showNoteStatistics(file)
   }
 
   private async ensureQuickNoteFolder(path: string): Promise<string> {
@@ -981,17 +981,6 @@ export default class SeamPlugin extends Plugin {
           action: () => this.deleteCurrentNote(activeFile),
         },
       ]
-      if (currentNoteCompletion(this.app, activeFile).total > 0) {
-        actions.push({
-          id: 'cmd-note-completion',
-          title: t().cmdShowNoteCompletion,
-          description: activeFile.basename,
-          type: 'command',
-          icon: 'chart-no-axes-combined',
-          file: activeFile,
-          action: () => this.openNoteStatistics(activeFile, true),
-        })
-      }
       if (!isFileInFolder(activeFile, this.settings.archiveFolder)) {
         actions.push({
           id: 'cmd-archive-current',
@@ -1181,16 +1170,22 @@ export default class SeamPlugin extends Plugin {
     this.settings.palettePinnedCommands = Array.isArray(this.settings.palettePinnedCommands)
       ? [
           ...new Set(
-            this.settings.palettePinnedCommands.filter(
-              (id): id is string =>
-                typeof id === 'string' &&
-                ![
-                  'registered:open-palette',
-                  'registered:open-palette-command-mode',
-                  'cmd-initialize-seam',
-                  'registered:initialize-seam',
-                ].includes(id),
-            ),
+            this.settings.palettePinnedCommands
+              .filter(
+                (id): id is string =>
+                  typeof id === 'string' &&
+                  ![
+                    'registered:open-palette',
+                    'registered:open-palette-command-mode',
+                    'cmd-initialize-seam',
+                    'registered:initialize-seam',
+                  ].includes(id),
+              )
+              .map((id) =>
+                ['cmd-note-completion', 'registered:show-note-completion'].includes(id)
+                  ? 'cmd-note-statistics'
+                  : id,
+              ),
           ),
         ].slice(0, PALETTE_COMMAND_PIN_LIMIT)
       : []
