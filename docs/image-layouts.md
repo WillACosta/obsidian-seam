@@ -4,6 +4,8 @@ Run **Image Layout** from either Obsidian's command palette or Seam's Universal 
 
 **Add images** expands three source tabs: **Vault** searches all vault images, **Current note** searches only images referenced in the source note, and **URL or path** adds a vault image path or HTTP(S) image URL. Each searchable source keeps its own filter. Selected images stay selected across tabs. Use Left/Right or Home/End on the tab row, then Tab into its content. External image URLs load directly from their hosts. Click or tap a selected thumbnail to toggle its caption and crop/fit options; the open image has an accent border. Use the grip’s **Drag to rearrange** action with a mouse or touch, or focus the grip and use Left/Right for keyboard reordering. The **Delete** action removes an image. Grip and Delete icons appear on desktop hover or keyboard focus and remain visible on mobile. While dragging, a placeholder marks the insertion slot and neighboring thumbnails shift into their prospective positions. The grip sits to the right of Delete.
 
+When you insert a new layout, matching image embeds in the note move into the gallery. Other images, existing layouts, and code examples stay in place. One Undo restores the original note.
+
 All configuration and images are stored in one Markdown code block. No additional JSON file is created.
 
 ```seam-layout

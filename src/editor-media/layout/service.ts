@@ -15,6 +15,8 @@ import { PanelContext } from '../ui'
 import { LayoutModal } from './modal'
 import { LayoutBlock, layoutBlock, layoutBlocks, parseLayout, replaceLayoutBlock } from './model'
 import { renderLayout } from './render'
+import { planLayoutInsertion } from './insertion'
+import { validUrl } from '../core'
 
 export class LayoutService {
   constructor(
@@ -32,8 +34,28 @@ export class LayoutService {
       (layout) => {
         if (editor.getValue() !== snapshot)
           throw new Error(mediaText('This note changed. Reopen Image Layout before inserting.'))
-        const prefix = from.ch > 0 ? '\n' : ''
-        editor.replaceRange(prefix + layoutBlock(layout, stringifyYaml), from, to)
+        const identity = (path: string) =>
+          validUrl(path) ??
+          this.app.metadataCache.getFirstLinkpathDest(path, sourcePath)?.path ??
+          path
+        const changes = planLayoutInsertion(
+          snapshot,
+          layout.images,
+          editor.posToOffset(from),
+          editor.posToOffset(to),
+          layoutBlock(layout, stringifyYaml),
+          identity,
+        )
+        editor.transaction(
+          {
+            changes: changes.map((change) => ({
+              from: editor.offsetToPos(change.from),
+              to: editor.offsetToPos(change.to),
+              text: change.text,
+            })),
+          },
+          'seam-image-layout',
+        )
       },
       undefined,
       false,

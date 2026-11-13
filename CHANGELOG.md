@@ -4,7 +4,7 @@ What's new and changed in each Seam release.
 
 ## [5.0.0] - 2026-11-06
 
-<!-- iterations: iteration_18..iteration_22 -->
+<!-- iterations: iteration_18..iteration_23 -->
 
 ### Added
 
@@ -39,7 +39,7 @@ Choose your tools in **Settings → Seam → Editor & media**. URL previews and 
 
 ### Fixed
 
-- Keep Palette shortcuts working when a note has no images to caption.
+- Move selected images into new layouts instead of leaving duplicate embeds in the note.
 - Avoid counting moved text as newly written words.
 
 ## [4.0.1] - 2026-11-03
