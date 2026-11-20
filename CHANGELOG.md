@@ -8,13 +8,17 @@ What's new and changed in each Seam release.
 
 ### Added
 
-- **Tab previews**: Hold Ctrl and press Tab to preview open tabs. Shift+Tab reverses direction; release Ctrl or click a preview to select. Escape cancels.
-- **Full-screen layout preview**: Expand a layout from your note or the layout editor. Zoom and fit the whole composition, including image spacing and captions.
+- **Calendar events and monthly notes**: Add `- [<] Event title` to a Daily Note to show it in `@calendar`. Expand the calendar to full screen, pin daily, weekly, or monthly notes, and use `@thisMonth` to find or create this month's note.
 
+<!-- GIF: Calendar event counts and selected-day details, then expand the calendar and open a monthly note -->
 
-- **Image Layout**: Arrange images in grid, flex, or masonry galleries. Preview changes, reorder images, and edit layouts from your note.
+- **Tab previews**: Hold Ctrl and press Tab to preview open tabs. Release Ctrl or click a preview to switch tabs. Turn previews off in **Settings → Seam → Interface**.
 
-<!-- Screenshot: Image Layout editor and a gallery in a note -->
+<!-- GIF: Cycle through Ctrl+Tab previews and release Ctrl to switch tabs -->
+
+- **Image Layout**: Arrange images in grid, flex, or masonry galleries. Turn existing image embeds into a layout and expand the gallery to zoom or fit the whole composition.
+
+<!-- GIF: Arrange images in the layout editor, then expand and zoom the gallery -->
 
 - **URL previews**: Show links as cards, compact previews, or minimal links. Customize the title, description, and image.
 
@@ -30,6 +34,8 @@ Choose your tools in **Settings → Seam → Editor & media**. URL previews and 
 
 ### Changed
 
+- **Daily task transfers**: Moving unfinished tasks between Daily Notes leaves the originals marked `[>]` and adds unchecked copies to the destination.
+
 - **Note statistics**: See word count, reading time, and task progress in one view. Expand completion with Cmd/Ctrl+Enter or a click.
 
 <!-- Screenshot: Note statistics with task completion expanded -->
@@ -40,11 +46,6 @@ Choose your tools in **Settings → Seam → Editor & media**. URL previews and 
 <!-- Screenshot: Monthly writing summary and comparison -->
 
 - **Back navigation**: Use Cmd+[ on macOS or Ctrl+[ elsewhere. Views opened from commands return to the command list; Backspace keeps editing text.
-
-### Fixed
-
-- Move selected images into new layouts instead of leaving duplicate embeds in the note.
-- Avoid counting moved text as newly written words.
 
 ## [4.0.1] - 2026-11-03
 
