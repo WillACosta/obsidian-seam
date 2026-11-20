@@ -147,6 +147,7 @@ export default class SeamPlugin extends Plugin {
   private outlineFolding = new OutlineFolding()
   editorMedia!: EditorMedia
   private editorMediaSnapshot = ''
+  private tabPreview: TabPreview | null = null
 
   private refreshEditorMedia(): void {
     const snapshot = JSON.stringify(this.settings.editorMedia)
@@ -154,6 +155,16 @@ export default class SeamPlugin extends Plugin {
     this.editorMediaSnapshot = snapshot
     if (this.editorMedia) this.removeChild(this.editorMedia)
     this.editorMedia = this.addChild(new EditorMedia(this, () => this.settings.editorMedia))
+  }
+
+  private refreshTabPreview(): void {
+    if (!this.app.workspace.layoutReady) return
+    if (this.settings.enableTabPreview) {
+      this.tabPreview ??= this.addChild(new TabPreview(this.app))
+    } else if (this.tabPreview) {
+      this.removeChild(this.tabPreview)
+      this.tabPreview = null
+    }
   }
 
   private automationService!: AutomationService
@@ -471,7 +482,7 @@ export default class SeamPlugin extends Plugin {
    * and seeds the tag suggestion cache.
    */
   private initializeAfterLayout(): void {
-    this.addChild(new TabPreview(this.app))
+    this.refreshTabPreview()
     // Register vault event handlers
     this.registerEvent(
       this.app.vault.on('create', (file: TAbstractFile) => {
@@ -1209,6 +1220,8 @@ export default class SeamPlugin extends Plugin {
       if (typeof this.settings[key] !== 'string') this.settings[key] = DEFAULT_SETTINGS[key]
     }
     this.settings.editorMedia = readEditorMediaSettings(this.settings.editorMedia)
+    if (typeof this.settings.enableTabPreview !== 'boolean')
+      this.settings.enableTabPreview = DEFAULT_SETTINGS.enableTabPreview
   }
 
   async saveSettings(): Promise<void> {
@@ -1270,6 +1283,7 @@ export default class SeamPlugin extends Plugin {
    */
   onSettingsChange(): void {
     this.refreshEditorMedia()
+    this.refreshTabPreview()
     this.settingsTab?.refreshSetupStatus()
     if (this.calendarPins?.rolling) void this.calendarPins.refreshWeeklySettings().catch(() => {})
     this.refreshPaletteRibbon()

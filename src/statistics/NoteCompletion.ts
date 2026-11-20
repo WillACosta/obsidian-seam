@@ -1,4 +1,5 @@
 import { App, MarkdownView, TFile } from 'obsidian'
+import { CALENDAR_EVENT_STATUS } from '../calendar/CalendarEvents'
 
 export interface NoteCompletion {
   total: number
@@ -9,7 +10,7 @@ export interface NoteCompletion {
 }
 
 export function summarizeTasks(statuses: string[]): NoteCompletion {
-  const total = statuses.length
+  const total = statuses.filter((status) => status !== CALENDAR_EVENT_STATUS).length
   const unfinished = statuses.filter((status) => status === ' ').length
   const partial = statuses.filter((status) => status === '/').length
   const completed = total - unfinished - partial

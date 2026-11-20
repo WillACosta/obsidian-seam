@@ -1147,8 +1147,10 @@ body .seam-source-pdf .pdf-embed .pdfViewer .page {
 }
 .seam-calendar-dots {
   display: flex;
+  align-items: center;
   justify-content: center;
-  min-height: 4px;
+  gap: 4px;
+  min-height: 16px;
 }
 .seam-calendar-dot {
   display: block;
@@ -1156,6 +1158,38 @@ body .seam-source-pdf .pdf-embed .pdfViewer .page {
   height: 4px;
   border-radius: 50%;
   background: var(--text-muted);
+}
+.seam-calendar-event-count {
+  padding-inline: 4px;
+  border-radius: var(--radius-s);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+}
+.seam-calendar-event-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  min-height: 24px;
+  color: var(--text-muted);
+  cursor: help;
+}
+.seam-calendar-events {
+  padding: 8px 0;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-small);
+  overflow-wrap: anywhere;
+}
+.seam-calendar-events h3 {
+  margin: 0 0 4px;
+  font-size: var(--font-ui-small);
+}
+.seam-calendar-events ul {
+  margin: 0;
+  padding-inline-start: 20px;
 }
 .seam-calendar-picker-row {
   display: grid;
@@ -1264,15 +1298,80 @@ body .seam-source-pdf .pdf-embed .pdfViewer .page {
   box-shadow: none;
   font-size: var(--font-ui-smaller);
 }
-.seam-calendar-weekly-action {
+.seam-calendar-period-actions {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.seam-calendar-action-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
+  min-width: 0;
 }
-.seam-calendar-weekly-action .seam-calendar-action {
+.seam-calendar-action-row .seam-calendar-action {
   flex: 1;
   min-width: 0;
+}
+.seam-calendar-action,
+.seam-calendar-period-control {
+  position: relative;
+  overflow: visible;
+}
+.seam-calendar-shortcut-tooltip {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  inset-block-end: calc(100% + 4px);
+  inset-inline-end: 0;
+  padding: 5px 8px;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-message);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal);
+  text-align: start;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.seam-calendar-period-control .seam-calendar-shortcut-tooltip {
+  inset-block: calc(100% + 4px) auto;
+}
+.seam-calendar-action:enabled:hover > .seam-calendar-shortcut-tooltip,
+.seam-calendar-period-control:hover > .seam-calendar-shortcut-tooltip,
+.seam-calendar-action:focus-visible > .seam-calendar-shortcut-tooltip,
+.seam-calendar-period-control:focus-visible > .seam-calendar-shortcut-tooltip {
+  display: grid;
+  gap: 4px;
+}
+.seam-calendar-shortcut-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.seam-calendar-shortcut-line kbd {
+  padding-inline: 4px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-s);
+  font-family: var(--font-interface);
+  font-size: inherit;
+}
+.prompt.seam-palette-calendar-fullscreen {
+  --prompt-max-height: 100dvh;
+  top: 0;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+}
+.prompt.seam-palette-calendar-fullscreen .seam-calendar,
+.prompt.seam-palette-calendar-fullscreen .seam-calendar-scroll {
+  flex: 1;
+}
+.prompt.seam-palette-calendar-fullscreen .seam-calendar-day {
+  min-height: clamp(44px, 7dvh, 96px);
 }
 @media (max-width: 480px) {
   .seam-calendar-scroll,
@@ -1285,7 +1384,9 @@ body.is-mobile .seam-calendar-pins-heading button {
   min-height: 44px;
 }
 
-.prompt .prompt-input-container.seam-palette-input-container .seam-palette-close {
+.prompt
+  .prompt-input-container.seam-palette-input-container
+  :is(.seam-palette-close, .seam-palette-calendar-expand) {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1298,11 +1399,14 @@ body.is-mobile .seam-calendar-pins-heading button {
   box-shadow: none;
   color: var(--text-muted);
 }
-.prompt .seam-palette-close svg {
+.prompt :is(.seam-palette-close, .seam-palette-calendar-expand) svg {
   width: 20px;
   height: 20px;
 }
-body.is-mobile .prompt .prompt-input-container.seam-palette-input-container .seam-palette-close {
+body.is-mobile
+  .prompt
+  .prompt-input-container.seam-palette-input-container
+  :is(.seam-palette-close, .seam-palette-calendar-expand) {
   flex-basis: 44px;
   width: 44px;
   height: 44px;

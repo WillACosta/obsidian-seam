@@ -10,6 +10,7 @@ import {
   readDailyNoteSettings,
 } from '../daily/DailyNotes'
 import { currentPeriodTarget, CurrentPeriod, isCurrentPeriod } from '../calendar/CurrentPeriodNotes'
+import { CALENDAR_EVENT_STATUS } from '../calendar/CalendarEvents'
 import { DOCUMENT_EXTENSIONS, IMAGE_EXTENSIONS } from '../utils/attachments'
 
 /**
@@ -165,11 +166,15 @@ export function matchesSpecialSearch(
     case 'images':
       return hasAttachmentType(app, file, IMAGE_EXTENSIONS)
     case 'task':
-      return (cache?.listItems ?? []).some((item) => item.task !== undefined)
+      return (cache?.listItems ?? []).some(
+        (item) => item.task !== undefined && item.task !== CALENDAR_EVENT_STATUS,
+      )
     case 'todo':
       return (cache?.listItems ?? []).some((item) => item.task === ' ')
     case 'done': {
-      const tasks = (cache?.listItems ?? []).filter((item) => item.task !== undefined)
+      const tasks = (cache?.listItems ?? []).filter(
+        (item) => item.task !== undefined && item.task !== CALENDAR_EVENT_STATUS,
+      )
       return tasks.length > 0 && tasks.every((item) => item.task !== ' ')
     }
     case 'code':

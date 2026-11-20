@@ -45,8 +45,10 @@ import { paletteResultMetadata } from './ResultMetadata'
 import { confirmPeriodicNote } from './PeriodicNoteConfirmation'
 import { readNoteCompletion, summarizeTasks } from '../statistics/NoteCompletion'
 import { renderNoteStatistics } from './NoteStatisticsView'
+import { CALENDAR_EVENT_STATUS } from '../calendar/CalendarEvents'
 import { currentPeriodTarget, CurrentPeriod, isCurrentPeriod } from '../calendar/CurrentPeriodNotes'
 import { CalendarPins } from '../calendar/CalendarPins'
+import { readMonthlyNoteSettings } from '../calendar/MonthlyNotes'
 import { readWeeklyNoteSettings } from '../calendar/WeeklyNotes'
 import { DailyNoteCalendar } from '../calendar/DailyNoteCalendar'
 import { readDailyNoteSettings } from '../daily/DailyNotes'
@@ -218,6 +220,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private calendarView: DailyNoteCalendar | null = null
   private calendarHost: HTMLElement | null = null
   private calendarGeneration = 0
+  private calendarFullscreenButton: HTMLButtonElement | null = null
   private statisticsHost: HTMLElement | null = null
   private globalStatisticsView: GlobalStatisticsView | null = null
   private quickAddDraft = ''
@@ -262,6 +265,20 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         return
       }
       this.globalStatisticsView?.handleKey(event)
+      return
+    }
+    if (
+      this.calendarFullscreenButton &&
+      event.target === this.calendarFullscreenButton &&
+      !event.isComposing &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      (event.key === 'Enter' || event.key === ' ')
+    ) {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      this.calendarFullscreenButton.click()
       return
     }
     if (this.calendarView?.handleKey(event)) return
@@ -423,7 +440,28 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.calendarView = null
     this.calendarHost?.remove()
     this.calendarHost = null
-    this.modalEl.removeClass('seam-palette-calendar')
+    this.calendarFullscreenButton?.remove()
+    this.calendarFullscreenButton = null
+    this.modalEl.removeClass('seam-palette-calendar', 'seam-palette-calendar-fullscreen')
+  }
+
+  private addCalendarFullscreenButton(): void {
+    const close = this.modalEl.querySelector('.seam-palette-close')
+    if (!close) return
+    const button = createEl('button', {
+      cls: 'clickable-icon seam-palette-calendar-expand',
+      attr: { type: 'button', 'aria-pressed': 'false', 'aria-label': t().calendarExpand },
+    })
+    close.before(button)
+    setIcon(button, 'maximize')
+    button.addEventListener('click', () => {
+      const expanded = this.modalEl.classList.toggle('seam-palette-calendar-fullscreen')
+      const label = expanded ? t().calendarExitFullscreen : t().calendarExpand
+      button.setAttribute('aria-pressed', String(expanded))
+      button.setAttribute('aria-label', label)
+      setIcon(button, expanded ? 'minimize' : 'maximize')
+    })
+    this.calendarFullscreenButton = button
   }
 
   private showCalendar(): void {
@@ -431,6 +469,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.baseNavigationEnabled = false
     this.disposeBaseRender()
     this.modalEl.addClass('seam-palette-calendar')
+    this.addCalendarFullscreenButton()
     const host = this.modalEl.createDiv({
       cls: 'seam-calendar',
       attr: { 'aria-label': t().paletteSpecialCalendar, 'aria-busy': 'true' },
@@ -442,8 +481,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     void Promise.all([
       readDailyNoteSettings(this.app),
       readWeeklyNoteSettings(this.app, this.settings),
+      readMonthlyNoteSettings(this.app, this.settings).catch((error: unknown) =>
+        error instanceof Error ? error : new Error(String(error)),
+      ),
     ])
-      .then(([settings, weekly]) => {
+      .then(([settings, weekly, monthly]) => {
         if (generation !== this.calendarGeneration) return
         const leaf = this.app.workspace.getLeaf(false)
         this.calendarView = new DailyNoteCalendar(
@@ -467,6 +509,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
           this.scope,
           this.calendarPins,
           weekly,
+          monthly,
           this.settings.confirmPeriodicNoteCreation,
         )
         this.calendarView.load()
@@ -1724,7 +1767,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     const tasks =
       this.app.metadataCache
         .getFileCache(file)
-        ?.listItems?.filter((item) => item.task !== undefined) ?? []
+        ?.listItems?.filter(
+          (item) => item.task !== undefined && item.task !== CALENDAR_EVENT_STATUS,
+        ) ?? []
     if (tasks.length === 0) return undefined
     return summarizeTasks(tasks.map((item) => item.task!)).percent
   }

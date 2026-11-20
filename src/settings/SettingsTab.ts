@@ -363,6 +363,18 @@ export class SeamSettingsTab extends PluginSettingTab {
             },
           },
           {
+            name: strings.settingsTabPreview,
+            desc: strings.settingsTabPreviewDesc,
+            render: (setting) => {
+              setting.addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.enableTabPreview).onChange(async (value) => {
+                  this.plugin.settings.enableTabPreview = value
+                  await this.plugin.saveSettings()
+                }),
+              )
+            },
+          },
+          {
             name: strings.settingsMobileKeyboardDismiss,
             desc: strings.settingsMobileKeyboardDismissDesc,
             render: (setting) => {

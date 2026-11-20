@@ -57,6 +57,7 @@ export interface SeamSettings {
   lastAnnouncedVersion: string
   customSpecialSearches: CustomSpecialSearch[]
   showPaletteDescriptions: boolean
+  enableTabPreview: boolean
   specialSearchPreferences: SpecialSearchPreference[]
   specialSearchOrder: string[]
   showTodoCompletionPercent: boolean
@@ -147,6 +148,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
   lastAnnouncedVersion: '',
   customSpecialSearches: [],
   showPaletteDescriptions: true,
+  enableTabPreview: true,
   specialSearchPreferences: [
     { search: 'today', pinned: false, hidden: false },
     { search: 'yesterday', pinned: false, hidden: false },
