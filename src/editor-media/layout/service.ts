@@ -15,10 +15,17 @@ import { PanelContext } from '../ui'
 import { LayoutModal } from './modal'
 import { LayoutBlock, layoutBlock, layoutBlocks, parseLayout, replaceLayoutBlock } from './model'
 import { renderLayout } from './render'
+import { LayoutPreviewModal } from './preview'
 import { planLayoutInsertion } from './insertion'
 import { validUrl } from '../core'
 
 export class LayoutService {
+  private previews = new Set<LayoutPreviewModal>()
+
+  dispose(): void {
+    for (const preview of this.previews) preview.close()
+    this.previews.clear()
+  }
   constructor(
     private app: App,
     private enabled: () => boolean,
@@ -76,6 +83,28 @@ export class LayoutService {
     const edit = () => {
       void this.edit(source, el, ctx).catch(showError)
     }
+    const expand = () => {
+      try {
+        const preview = new LayoutPreviewModal(
+          this.app,
+          parseLayout(source, parseYaml),
+          ctx.sourcePath,
+          content.getBoundingClientRect().width,
+        )
+        this.previews.add(preview)
+        preview.onDismiss = () => this.previews.delete(preview)
+        preview.open()
+      } catch (error) {
+        showError(error)
+      }
+    }
+    const expandButton = toolbar.createEl('button', {
+      cls: 'clickable-icon seam-layout-expand',
+      attr: { type: 'button', 'aria-label': mediaText('Expand layout') },
+    })
+    setIcon(expandButton, 'maximize')
+    setTooltip(expandButton, mediaText('Expand layout'))
+    expandButton.addEventListener('click', expand)
     const editButton = toolbar.createEl('button', {
       cls: 'clickable-icon seam-layout-edit',
       attr: { type: 'button', 'aria-label': mediaText('Edit layout') },
@@ -98,6 +127,9 @@ export class LayoutService {
       const menu = new Menu()
       menu.addItem((item) =>
         item.setTitle(mediaText('Edit layout')).setIcon('layout-grid').onClick(edit),
+      )
+      menu.addItem((item) =>
+        item.setTitle(mediaText('Expand layout')).setIcon('maximize').onClick(expand),
       )
       menu.showAtMouseEvent(event)
     })

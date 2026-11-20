@@ -2,7 +2,7 @@ import { PaletteItem, SeamSettings } from '../types'
 
 /** Keep visible daily-note entries together at the first daily entry's ordered position. */
 export function groupDailySearches(items: PaletteItem[]): PaletteItem[] {
-  const order = ['today', 'yesterday', 'calendar', 'thisWeek', 'thisYear']
+  const order = ['today', 'yesterday', 'calendar', 'thisWeek', 'thisMonth', 'thisYear']
   const daily = items
     .filter((item) => item.specialSearch && order.includes(item.specialSearch))
     .sort((a, b) => order.indexOf(a.specialSearch ?? '') - order.indexOf(b.specialSearch ?? ''))

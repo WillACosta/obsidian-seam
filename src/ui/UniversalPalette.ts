@@ -45,7 +45,7 @@ import { paletteResultMetadata } from './ResultMetadata'
 import { confirmPeriodicNote } from './PeriodicNoteConfirmation'
 import { readNoteCompletion, summarizeTasks } from '../statistics/NoteCompletion'
 import { renderNoteStatistics } from './NoteStatisticsView'
-import { currentPeriodTarget, CurrentPeriod } from '../calendar/CurrentPeriodNotes'
+import { currentPeriodTarget, CurrentPeriod, isCurrentPeriod } from '../calendar/CurrentPeriodNotes'
 import { CalendarPins } from '../calendar/CalendarPins'
 import { readWeeklyNoteSettings } from '../calendar/WeeklyNotes'
 import { DailyNoteCalendar } from '../calendar/DailyNoteCalendar'
@@ -1113,7 +1113,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     if (this.app.vault.getAbstractFileByPath(target.path)) return null
     return {
       id: `create-period-note-${search}`,
-      title: search === 'thisWeek' ? t().paletteCreateWeeklyNote : t().paletteCreateYearlyNote,
+      title: {
+        thisWeek: t().paletteCreateWeeklyNote,
+        thisMonth: t().paletteCreateMonthlyNote,
+        thisYear: t().paletteCreateYearlyNote,
+      }[search],
       description: target.path,
       type: 'create',
       icon: 'calendar-plus',
@@ -1308,13 +1312,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
               !chipQuery &&
               (dailySearch === 'today' ||
                 dailySearch === 'yesterday' ||
-                dailySearch === 'thisWeek' ||
-                dailySearch === 'thisYear')
+                isCurrentPeriod(dailySearch))
             ) {
-              const suggestion =
-                dailySearch === 'thisWeek' || dailySearch === 'thisYear'
-                  ? await this.getPeriodNoteCreationSuggestion(dailySearch)
-                  : await this.getDailyNoteCreationSuggestion(dailySearch)
+              const suggestion = isCurrentPeriod(dailySearch)
+                ? await this.getPeriodNoteCreationSuggestion(dailySearch)
+                : await this.getDailyNoteCreationSuggestion(dailySearch)
               if (this.lastQuery !== trimmed) return []
               if (suggestion) items.push(suggestion)
             }
@@ -1323,13 +1325,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return items
           })
           .catch((error: unknown) => {
-            if (
-              !combined.some(
-                (entry) =>
-                  entry.special?.search === 'thisWeek' || entry.special?.search === 'thisYear',
-              )
-            )
-              throw error
+            if (!combined.some((entry) => isCurrentPeriod(entry.special?.search))) throw error
             if (this.lastQuery !== trimmed) return []
             this.createSuggestionActive = false
             this.setKeyboardInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }])
@@ -2106,6 +2102,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         description: t().paletteSpecialThisWeek,
       },
       {
+        search: 'thisMonth',
+        label: SPECIAL_SEARCH_LABELS.thisMonth,
+        description: t().paletteSpecialThisMonth,
+      },
+      {
         search: 'thisYear',
         label: SPECIAL_SEARCH_LABELS.thisYear,
         description: t().paletteSpecialThisYear,
@@ -2240,7 +2241,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     const match = query
       .trimStart()
       .match(
-        /^@(last[1-9]\d*days|calendar|thisWeek|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i,
+        /^@(last[1-9]\d*days|calendar|thisWeek|thisMonth|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i,
       )
     return match?.[0] ?? null
   }

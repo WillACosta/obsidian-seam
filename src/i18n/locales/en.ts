@@ -1,4 +1,5 @@
 export const en = {
+  tabPreviewTitle: 'Open tabs',
   paletteViewOpenFailed: 'Could not open this view.',
   paletteHelpToggleCompletion: 'toggle task completion',
   settingsEditorMediaHeading: 'Editor & media',
@@ -191,7 +192,8 @@ export const en = {
   settingsPaletteGroups: 'Show group names in the Universal Palette',
   settingsPaletteGroupsDesc: 'Separate commands and special queries with dimmed group names.',
   settingsConfirmPeriodic: 'Ask before creating periodic notes',
-  settingsConfirmPeriodicDesc: 'Confirm before Seam creates a daily, weekly, or yearly note.',
+  settingsConfirmPeriodicDesc:
+    'Confirm before Seam creates a daily, weekly, monthly, or yearly note.',
   confirmPeriodicTitle: 'Create periodic note?',
   confirmPeriodicDescription: 'Create a new note at this path using the configured template?',
   confirmPeriodicCancel: 'Cancel',
@@ -248,7 +250,7 @@ export const en = {
   settingsCalendarHeading: 'Calendar and periodic notes',
   settingsWeeklyAuto: 'Use Periodic Notes settings',
   settingsWeeklyAutoDesc:
-    'Use enabled weekly and yearly configurations from Periodic Notes when available. Otherwise use the settings below.',
+    'Use enabled weekly, monthly, and yearly configurations from Periodic Notes when available. Otherwise use the settings below.',
   settingsWeeklyFolder: 'Weekly notes folder',
   settingsWeeklyFolderDesc: 'Folder for weekly notes when using Seam settings.',
   settingsWeeklyFormat: 'Weekly note format',
@@ -258,6 +260,15 @@ export const en = {
   settingsWeeklyTemplateDesc:
     'Template for new weekly notes. Supports date, title, time, and weekday tokens.',
   paletteSpecialThisWeek: "This week's note",
+  paletteSpecialThisMonth: "This month's note",
+  paletteCreateMonthlyNote: "Create this month's note",
+  settingsMonthlyFolder: 'Monthly notes folder',
+  settingsMonthlyFolderDesc: 'Folder for monthly notes when using Seam settings.',
+  settingsMonthlyFormat: 'Monthly note format',
+  settingsMonthlyFormatDesc: 'Moment date format, such as YYYY-MM or YYYY/MM.',
+  settingsMonthlyTemplate: 'Monthly note template',
+  settingsMonthlyTemplateDesc:
+    'Template for new monthly notes. Supports date, title, and time tokens.',
   paletteSpecialThisYear: "This year's note",
   paletteCreateWeeklyNote: "Create this week's note",
   paletteCreateYearlyNote: "Create this year's note",

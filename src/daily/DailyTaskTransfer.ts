@@ -100,7 +100,7 @@ export class DailyTaskTransfer {
         return null
       for (const view of this.openViews(source)) await view.save()
       const original = await this.app.vault.read(source)
-      const { remaining, pending, count } = extractPendingTasks(original)
+      const { markedSource, pending, count } = extractPendingTasks(original)
       if (!pending) return 0
       const destination = await createDailyNote(this.app, destinationDate, settings)
       for (const view of this.openViews(destination)) await view.save()
@@ -123,7 +123,7 @@ export class DailyTaskTransfer {
           ) {
             throw new Error('The source note changed during transfer. Try again.')
           }
-          return remaining
+          return markedSource
         })
       } catch (error) {
         // Roll back only if no subsequent edit would be overwritten.

@@ -26,9 +26,9 @@ interface ListItem {
   children: ListItem[]
 }
 
-/** Split pending branches from their completed siblings, retaining parent context. */
+/** Copy pending branches with their parent context and mark their source tasks. */
 export function extractPendingTasks(content: string): {
-  remaining: string
+  markedSource: string
   pending: string
   count: number
 } {
@@ -74,41 +74,29 @@ export function extractPendingTasks(content: string): {
     ;(stack.length ? stack[stack.length - 1].children : roots).push(item)
     stack.push(item)
   }
-  const removed = new Set<number>()
   const replacements = new Map<number, string>()
   let count = 0
-  function visit(item: ListItem): { pending: string[]; retained: boolean } {
-    if (item.status !== undefined && item.status !== ' ' && item.status !== '/')
-      return { pending: [], retained: true }
-    const children = item.children.map(visit)
-    const ownPending = item.status === ' ' || item.status === '/'
-    if (!ownPending && !children.some((child) => child.pending.length))
-      return { pending: [], retained: true }
-    if (ownPending) count++
+  function visit(item: ListItem): string[] {
+    if (item.status !== undefined && item.status !== ' ' && item.status !== '/') return []
+    const children = item.children.flatMap(visit)
+    const ownPending = item.status !== undefined
+    if (!ownPending && !children.length) return []
+
     const ownEnd = item.children[0]?.start ?? item.end
     let trimmedEnd = ownEnd
     while (trimmedEnd > item.start + 1 && !lines[trimmedEnd - 1].trim()) trimmedEnd--
-    const pending = [
-      ...lines.slice(item.start, trimmedEnd),
-      ...children.flatMap((child) => child.pending),
-    ]
-    const retained = children.some((child) => child.retained)
-    if (!retained) {
-      let end = item.end
-      while (end > item.start + 1 && !lines[end - 1].trim()) end--
-      for (let i = item.start; i < end; i++) removed.add(i)
-    } else if (ownPending) {
-      // All pending descendants moved; completed siblings remain under completed context.
-      replacements.set(item.start, lines[item.start].replace(/\[[ /]\]/, '[x]'))
+    const pending = lines.slice(item.start, trimmedEnd)
+    if (ownPending) {
+      count++
+      replacements.set(item.start, pending[0].replace(/\[[ /]\]/, '[>]'))
+      pending[0] = pending[0].replace(/\[[ /]\]/, '[ ]')
     }
-    return { pending, retained }
+    return [...pending, ...children]
   }
-  const pending = roots.flatMap((item) => visit(item).pending).join(newline)
+
+  const pending = roots.flatMap(visit).join(newline)
   return {
-    remaining: lines
-      .map((line, i) => replacements.get(i) ?? line)
-      .filter((_line, i) => !removed.has(i))
-      .join(newline),
+    markedSource: lines.map((line, i) => replacements.get(i) ?? line).join(newline),
     pending,
     count,
   }

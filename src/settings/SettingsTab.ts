@@ -165,6 +165,35 @@ export class SeamSettingsTab extends PluginSettingTab {
             'file',
           ),
           this.folderDefinition(
+            strings.settingsMonthlyFolder,
+            strings.settingsMonthlyFolderDesc,
+            'Monthly',
+            'calendarMonthlyFolder',
+            'folder',
+          ),
+          {
+            name: strings.settingsMonthlyFormat,
+            desc: strings.settingsMonthlyFormatDesc,
+            render: (setting) => {
+              setting.addText((text) =>
+                text
+                  .setPlaceholder('YYYY-MM')
+                  .setValue(this.plugin.settings.calendarMonthlyFormat)
+                  .onChange(async (value) => {
+                    this.plugin.settings.calendarMonthlyFormat = value
+                    await this.plugin.saveSettings()
+                  }),
+              )
+            },
+          },
+          this.folderDefinition(
+            strings.settingsMonthlyTemplate,
+            strings.settingsMonthlyTemplateDesc,
+            'Templates/Monthly',
+            'calendarMonthlyTemplate',
+            'file',
+          ),
+          this.folderDefinition(
             strings.settingsYearlyFolder,
             strings.settingsYearlyFolderDesc,
             'Yearly',
@@ -683,6 +712,8 @@ export class SeamSettingsTab extends PluginSettingTab {
       | 'sourceNoteTemplate'
       | 'calendarWeeklyFolder'
       | 'calendarWeeklyTemplate'
+      | 'calendarMonthlyFolder'
+      | 'calendarMonthlyTemplate'
       | 'calendarYearlyFolder'
       | 'calendarYearlyTemplate',
     pathType: 'folder' | 'file',

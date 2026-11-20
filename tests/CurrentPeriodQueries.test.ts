@@ -66,6 +66,10 @@ describe('Current-period queries', () => {
       search: 'thisYear',
       textQuery: 'text',
     })
+    assert.deepEqual(parseSpecialSearch('@THISMONTH #goals'), {
+      search: 'thisMonth',
+      textQuery: '#goals',
+    })
     assert.equal(parseSpecialSearch('@thisY').search, null)
     assert.equal(parseSpecialSearch('@thisWeekLater').search, null)
   })
@@ -80,6 +84,29 @@ describe('Current-period queries', () => {
     assert.equal(
       (await currentPeriodTarget(app, settings, 'thisYear', now.clone().year(2022))).path,
       'Yearly/2022.md',
+    )
+  })
+  it('creates the captured month using the active Periodic Notes month settings', async () => {
+    const f = fixture({
+      activeCalendarSet: 'Work',
+      calendarSets: [
+        {
+          id: 'Work',
+          month: { enabled: true, folder: 'Journal', format: 'YYYY/MM', templatePath: 'Template' },
+        },
+      ],
+    })
+    f.add('Template.md', '# {{title}}\n{{date:YYYY-MM-DD}}')
+    const now = moment('2026-12-31')
+    const config = { ...settings, calendarUsePeriodicNotes: true }
+    const december = await currentPeriodTarget(f.app, config, 'thisMonth', now)
+    now.add(1, 'day')
+    assert.equal(december.path, 'Journal/2026/12.md')
+    assert.equal((await december.create()).path, december.path)
+    assert.equal(f.contents.get(december.path), '# 12\n2026-12-01')
+    assert.equal(
+      (await currentPeriodTarget(f.app, config, 'thisMonth', now)).path,
+      'Journal/2027/01.md',
     )
   })
   it('keeps an offered destination anchored if the clock moves into the next year before activation', async () => {
@@ -167,13 +194,13 @@ describe('Current-period queries', () => {
   })
   it('returns only the current note and composes with tags, text, and directory filters', async () => {
     const f = fixture()
-    for (const period of ['thisWeek', 'thisYear'] as const) {
+    for (const period of ['thisWeek', 'thisMonth', 'thisYear'] as const) {
       const path = (await currentPeriodTarget(f.app, settings, period)).path
       f.add(path, 'Focus on goals')
     }
     f.add('Unrelated.md', 'Focus on goals')
     const search = new SearchService(f.app, settings)
-    for (const period of ['thisWeek', 'thisYear'] as const) {
+    for (const period of ['thisWeek', 'thisMonth', 'thisYear'] as const) {
       const expected = (await currentPeriodTarget(f.app, settings, period)).path
       const results = await search.searchCombinedSpecialWithContent(
         [{ search: period }],

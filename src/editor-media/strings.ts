@@ -1,6 +1,11 @@
 import { detectLocale } from '../i18n'
 
 const portuguese: Record<string, string> = {
+  'Expand layout': 'Expandir layout',
+  'Layout preview': 'Prévia do layout',
+  'Zoom in': 'Ampliar',
+  'Zoom out': 'Reduzir',
+  'Fit layout': 'Ajustar layout',
   selected: 'selecionadas',
   Dismiss: 'Dispensar',
   confirm: 'confirmar',

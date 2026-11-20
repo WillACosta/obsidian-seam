@@ -353,6 +353,7 @@ export class EditorMedia extends Plugin {
     document.body.classList.toggle('seam-media-layouts', this.mediaSettings.layouts)
   }
   onunload() {
+    this.layoutService?.dispose()
     this.active = false
     for (const modal of this.modals) modal.close()
     this.modals.clear()

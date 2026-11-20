@@ -44,6 +44,7 @@ function fixture() {
   const commands: Record<string, { hotkeys?: unknown[] }> = {
     'seam:open-palette': {},
     'seam:open-palette-command-mode': {},
+    'seam:toggle-fold': { hotkeys: [{ modifiers: ['Mod'], key: 'Enter' }] },
     'editor:insert-link': {},
   }
   const hotkeys: Record<string, unknown[]> = {}
@@ -202,6 +203,7 @@ describe('Initialize Seam safety and application', () => {
     assert.deepEqual(savedHotkeys['seam:open-palette-command-mode'], [
       { modifiers: ['Mod', 'Shift'], key: 'K' },
     ])
+    assert.deepEqual(savedHotkeys['seam:toggle-fold'], [{ modifiers: ['Mod'], key: 'Enter' }])
     const again = await f.service.preview()
     const count = f.writes.length
     assert.ok(again.items.every((item) => item.status === 'existing'))
@@ -351,6 +353,26 @@ describe('Initialize Seam safety and application', () => {
       await f.service.apply(plan)
       assert.ok(!f.writes.includes(`${f.configDir}/hotkeys.json`))
     }
+  })
+  it('preserves custom folding shortcuts and detects conflicts with the folding recommendation', async () => {
+    const custom = [{ modifiers: ['Alt'], key: 'F' }]
+    for (const binding of [custom, []]) {
+      const f = fixture()
+      f.config('hotkeys.json', { 'seam:toggle-fold': binding })
+      await f.service.apply(await f.service.preview())
+      const persisted = JSON.parse(f.storage.get(`${f.configDir}/hotkeys.json`) as string)
+      assert.deepEqual(persisted['seam:toggle-fold'], binding)
+    }
+
+    const f = fixture()
+    f.config('hotkeys.json', { 'editor:insert-link': [{ modifiers: ['Mod'], key: 'Enter' }] })
+    const plan = await f.service.preview()
+    assert.equal(
+      plan.items.find((item) => item.target.endsWith('/hotkeys.json'))?.reason,
+      'hotkeyConflict',
+    )
+    await f.service.apply(plan)
+    assert.ok(!f.writes.includes(`${f.configDir}/hotkeys.json`))
   })
   it('requires both palette commands and permits unrelated modified shortcuts', async () => {
     const missing = fixture()

@@ -1,6 +1,7 @@
 import { Translations } from './en'
 
 export const ptBr: Translations = {
+  tabPreviewTitle: 'Abas abertas',
   paletteViewOpenFailed: 'Não foi possível abrir esta visualização.',
   paletteHelpToggleCompletion: 'alternar conclusão de tarefas',
   settingsEditorMediaHeading: 'Editor e mídia',
@@ -199,7 +200,8 @@ export const ptBr: Translations = {
   settingsPaletteGroupsDesc:
     'Separar comandos e consultas especiais com nomes de grupos discretos.',
   settingsConfirmPeriodic: 'Perguntar antes de criar notas periódicas',
-  settingsConfirmPeriodicDesc: 'Confirmar antes de o Seam criar uma nota diária, semanal ou anual.',
+  settingsConfirmPeriodicDesc:
+    'Confirmar antes de o Seam criar uma nota diária, semanal, mensal ou anual.',
   confirmPeriodicTitle: 'Criar nota periódica?',
   confirmPeriodicDescription: 'Criar uma nova nota neste caminho usando o modelo configurado?',
   confirmPeriodicCancel: 'Cancelar',
@@ -256,7 +258,7 @@ export const ptBr: Translations = {
   settingsCalendarHeading: 'Calendário e notas periódicas',
   settingsWeeklyAuto: 'Usar configurações do Periodic Notes',
   settingsWeeklyAutoDesc:
-    'Usa as configurações semanais e anuais habilitadas no Periodic Notes, quando disponíveis. Caso contrário, usa as configurações abaixo.',
+    'Usa as configurações semanais, mensais e anuais habilitadas no Periodic Notes, quando disponíveis. Caso contrário, usa as configurações abaixo.',
   settingsWeeklyFolder: 'Pasta de notas semanais',
   settingsWeeklyFolderDesc: 'Pasta para notas semanais ao usar as configurações do Seam.',
   settingsWeeklyFormat: 'Formato da nota semanal',
@@ -266,6 +268,14 @@ export const ptBr: Translations = {
   settingsWeeklyTemplateDesc:
     'Modelo para novas notas semanais. Aceita date, title, time e os dias da semana.',
   paletteSpecialThisWeek: 'Nota da semana atual',
+  paletteSpecialThisMonth: 'Nota do mês atual',
+  paletteCreateMonthlyNote: 'Criar a nota deste mês',
+  settingsMonthlyFolder: 'Pasta de notas mensais',
+  settingsMonthlyFolderDesc: 'Pasta para notas mensais ao usar as configurações do Seam.',
+  settingsMonthlyFormat: 'Formato da nota mensal',
+  settingsMonthlyFormatDesc: 'Formato de data Moment, como YYYY-MM ou YYYY/MM.',
+  settingsMonthlyTemplate: 'Modelo de nota mensal',
+  settingsMonthlyTemplateDesc: 'Modelo para novas notas mensais. Aceita date, title e time.',
   paletteSpecialThisYear: 'Nota do ano atual',
   paletteCreateWeeklyNote: 'Criar a nota desta semana',
   paletteCreateYearlyNote: 'Criar a nota deste ano',

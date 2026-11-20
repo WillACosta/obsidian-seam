@@ -4,9 +4,13 @@ What's new and changed in each Seam release.
 
 ## [5.0.0] - 2026-11-06
 
-<!-- iterations: iteration_18..iteration_23 -->
+<!-- iterations: iteration_18..iteration_24 -->
 
 ### Added
+
+- **Tab previews**: Hold Ctrl and press Tab to preview open tabs. Shift+Tab reverses direction; release Ctrl or click a preview to select. Escape cancels.
+- **Full-screen layout preview**: Expand a layout from your note or the layout editor. Zoom and fit the whole composition, including image spacing and captions.
+
 
 - **Image Layout**: Arrange images in grid, flex, or masonry galleries. Preview changes, reorder images, and edit layouts from your note.
 

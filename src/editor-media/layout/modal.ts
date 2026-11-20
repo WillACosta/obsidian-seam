@@ -13,6 +13,7 @@ import {
 } from './model'
 import { renderLayout } from './render'
 import { ImageStripDrag } from './drag'
+import { LayoutPreviewModal } from './preview'
 
 export class LayoutModal extends MediaModal {
   constructor(
@@ -32,7 +33,11 @@ export class LayoutModal extends MediaModal {
     title.readOnly = true
     const prompt = this.contentEl.closest<HTMLElement>('.prompt')
     prompt?.addClass('seam-layout-dialog')
-    this.onLeave = () => prompt?.removeClass('seam-layout-dialog')
+    let preview: LayoutPreviewModal | undefined
+    this.onLeave = () => {
+      prompt?.removeClass('seam-layout-dialog')
+      preview?.close()
+    }
     this.contentEl.addClass('seam-layout-editor')
     const data: Layout = {
       ...this.initial,
@@ -423,7 +428,24 @@ export class LayoutModal extends MediaModal {
       })
       syncSelection()
     }
-    this.body.createEl('h4', { text: mediaText('Live Preview') })
+    const previewHeading = this.body.createDiv({ cls: 'seam-layout-section-heading' })
+    previewHeading.createEl('h4', { text: mediaText('Live Preview') })
+    const expand = previewHeading.createEl('button', {
+      cls: 'clickable-icon',
+      attr: { type: 'button', 'aria-label': mediaText('Expand layout') },
+    })
+    setIcon(expand, 'maximize')
+    setTooltip(expand, mediaText('Expand layout'))
+    expand.addEventListener('click', () => {
+      preview?.close()
+      preview = new LayoutPreviewModal(
+        this.app,
+        structuredClone(data),
+        this.sourcePath,
+        live.clientWidth,
+      )
+      preview.open()
+    })
     const live = this.body.createDiv({ cls: 'seam-layout-live' })
     const appearance = customizationSection(this.body, mediaText('Appearance'))
     appearance.addClass('seam-layout-appearance')

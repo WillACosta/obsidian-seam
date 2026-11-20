@@ -1,3 +1,4 @@
+import { TabPreview } from './ui/TabPreview'
 import { OutlineFolding } from './outline/OutlineFolding'
 import { EditorMedia } from './editor-media/EditorMedia'
 import { readEditorMediaSettings } from './editor-media/settings'
@@ -470,6 +471,7 @@ export default class SeamPlugin extends Plugin {
    * and seeds the tag suggestion cache.
    */
   private initializeAfterLayout(): void {
+    this.addChild(new TabPreview(this.app))
     // Register vault event handlers
     this.registerEvent(
       this.app.vault.on('create', (file: TAbstractFile) => {
@@ -1197,8 +1199,11 @@ export default class SeamPlugin extends Plugin {
       'calendarWeeklyFolder',
       'calendarWeeklyFormat',
       'calendarWeeklyTemplate',
+      'calendarMonthlyFolder',
       'calendarYearlyFolder',
+      'calendarMonthlyFormat',
       'calendarYearlyFormat',
+      'calendarMonthlyTemplate',
       'calendarYearlyTemplate',
     ] as const) {
       if (typeof this.settings[key] !== 'string') this.settings[key] = DEFAULT_SETTINGS[key]
