@@ -559,7 +559,8 @@ export const ptBr: Translations = {
   settingsMoveCleanupPropsDesc:
     'Lista separada por vírgulas de chaves de propriedades do frontmatter a serem removidas ao mover (ex: status).',
 
-  settingsInterfaceHeading: 'Paleta Universal',
+  settingsInterfaceHeading: 'Interface',
+  settingsPaletteHeading: 'Paleta Universal',
   settingsShowIcons: 'Mostrar ícones na Paleta Universal',
   settingsShowIconsDesc: 'Exibir ícones nas listagens de busca e comandos.',
   settingsSearchMarkdownOnly: 'Buscar apenas arquivos Markdown',

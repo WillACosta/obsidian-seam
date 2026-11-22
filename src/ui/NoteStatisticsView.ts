@@ -60,7 +60,7 @@ export function renderNoteStatistics(
       attr: { datetime: new Date(timestamp).toISOString() },
     })
   }
-  if (!completion) return null
+  if (!completion?.report.total) return null
   const section = container.createEl('details', { cls: 'seam-note-completion-section' })
   const summary = section.createEl('summary', { cls: 'seam-note-completion-toggle' })
   setIcon(

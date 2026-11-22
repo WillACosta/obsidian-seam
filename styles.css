@@ -2228,19 +2228,11 @@ body .seam-settings-group.seam-settings-collapsed > .setting-items {
 }
 .seam-media-media {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 35%;
   align-self: stretch;
   flex-shrink: 0;
   background: var(--background-secondary);
-  color: var(--text-faint);
   overflow: hidden;
-}
-.seam-media-media > svg {
-  width: 28px;
-  height: 28px;
 }
 .seam-media-media .seam-media-preview-image {
   position: absolute;

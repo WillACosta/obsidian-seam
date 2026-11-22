@@ -508,7 +508,7 @@ describe('Combined note statistics title', () => {
     const service = new SearchService(app, DEFAULT_SETTINGS)
     await service.refreshDailyNoteSettings()
     const palette = new UniversalPalette(app, DEFAULT_SETTINGS, service, [])
-    const render = async (path: string) => {
+    const render = async (path: string, hasTasks = true) => {
       const file = Object.assign(new MockTFile(path), { stat: { mtime: 0, ctime: 0 } })
       const host = new Element()
       palette.createReportHost = () => {
@@ -517,22 +517,27 @@ describe('Combined note statistics title', () => {
         return host
       }
       await palette.showNoteStatistics(file)
-      const details = host.children.find((child) => child.tag === 'details')! as Element & {
-        open?: boolean
-      }
-      assert.ok(details)
-      assert.equal(Boolean(details.open), false)
-      assert.ok(
-        palette.instructions.some(
-          (item: { purpose: string }) => item.purpose === 'toggle task completion',
-        ),
+      const details = host.children.find((child) => child.tag === 'details') as
+        | (Element & {
+            open?: boolean
+          })
+        | undefined
+      const hasToggleHint = palette.instructions.some(
+        (item: { purpose: string }) => item.purpose === 'toggle task completion',
       )
-      palette.handlers.get('Mod+Enter')({ preventDefault() {} })
-      assert.equal(details.open, true)
-      palette.handlers.get('Mod+Enter')({ preventDefault() {} })
-      assert.equal(details.open, false)
+      if (hasTasks) {
+        assert.ok(details)
+        assert.equal(Boolean(details.open), false)
+        assert.equal(hasToggleHint, true)
+        palette.handlers.get('Mod+Enter')({ preventDefault() {} })
+        assert.equal(details.open, true)
+        palette.handlers.get('Mod+Enter')({ preventDefault() {} })
+        assert.equal(details.open, false)
+      } else {
+        assert.equal(details, undefined)
+        assert.equal(hasToggleHint, false)
+      }
       assert.equal(host.children.filter((child) => child.tag === 'header').length, 1)
-      if (!content) assert.equal(details.querySelector('progress'), null)
       const header = host.children.find((child) => child.tag === 'header')!
       return {
         heading: header.children.find((child) => child.tag === 'h2')?.text,
@@ -553,7 +558,9 @@ describe('Combined note statistics title', () => {
     assert.equal((await render('Other/01-11-2026.md')).title, '01-11-2026')
     assert.equal((await render('Journal/31-02-2026.md')).title, '31-02-2026')
     content = ''
-    assert.equal((await render('Empty.md')).title, 'Empty')
+    assert.equal((await render('Empty.md', false)).title, 'Empty')
+    content = 'A note without tasks.'
+    assert.equal((await render('No tasks.md', false)).title, 'No tasks')
   })
 })
 

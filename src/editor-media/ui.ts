@@ -174,16 +174,13 @@ export function preview(app: App, el: HTMLElement, embed: Embed, sourcePath: str
     cls: `seam-media-embed seam-media-${embed.style}`,
   })
   anchor.setAttr('rel', 'noopener noreferrer')
-  if (embed.style !== 'minimal') {
+  const src = embed.style !== 'minimal' && embed.image && imageSource(app, embed.image, sourcePath)
+  if (src) {
     const media = anchor.createSpan({ cls: 'seam-media-media' })
-    setIcon(media, 'image')
-    const src = embed.image && imageSource(app, embed.image, sourcePath)
-    if (src) {
-      const img = media.createEl('img', { cls: 'seam-media-preview-image' })
-      img.referrerPolicy = 'no-referrer'
-      img.src = src
-      img.addEventListener('error', () => img.remove())
-    }
+    const img = media.createEl('img', { cls: 'seam-media-preview-image', attr: { alt: '' } })
+    img.referrerPolicy = 'no-referrer'
+    img.addEventListener('error', () => media.remove(), { once: true })
+    img.src = src
   }
   const text = anchor.createSpan({ cls: 'seam-media-embed-text' })
   const heading = text.createSpan({ cls: 'seam-media-heading' })

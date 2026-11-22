@@ -351,24 +351,30 @@ export class SeamSettingsTab extends PluginSettingTab {
         heading: strings.settingsInterfaceHeading,
         items: [
           {
-            name: strings.settingsPaletteGroups,
-            desc: strings.settingsPaletteGroupsDesc,
-            render: (setting) => {
-              setting.addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.showPaletteGroups).onChange(async (value) => {
-                  this.plugin.settings.showPaletteGroups = value
-                  await this.plugin.saveSettings()
-                }),
-              )
-            },
-          },
-          {
             name: strings.settingsTabPreview,
             desc: strings.settingsTabPreviewDesc,
             render: (setting) => {
               setting.addToggle((toggle) =>
                 toggle.setValue(this.plugin.settings.enableTabPreview).onChange(async (value) => {
                   this.plugin.settings.enableTabPreview = value
+                  await this.plugin.saveSettings()
+                }),
+              )
+            },
+          },
+        ],
+      },
+      {
+        type: 'group',
+        heading: strings.settingsPaletteHeading,
+        items: [
+          {
+            name: strings.settingsPaletteGroups,
+            desc: strings.settingsPaletteGroupsDesc,
+            render: (setting) => {
+              setting.addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.showPaletteGroups).onChange(async (value) => {
+                  this.plugin.settings.showPaletteGroups = value
                   await this.plugin.saveSettings()
                 }),
               )

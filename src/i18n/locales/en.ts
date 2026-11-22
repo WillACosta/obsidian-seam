@@ -544,7 +544,8 @@ export const en = {
   settingsMoveCleanupPropsDesc:
     'Comma-separated list of frontmatter property keys to strip upon moving (e.g. status).',
 
-  settingsInterfaceHeading: 'Universal Palette',
+  settingsInterfaceHeading: 'Interface',
+  settingsPaletteHeading: 'Universal Palette',
   settingsShowIcons: 'Show icons in Universal Palette',
   settingsShowIconsDesc: 'Display icons in search and command listings.',
   settingsSearchMarkdownOnly: 'Search Markdown files only',
