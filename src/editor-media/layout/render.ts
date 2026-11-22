@@ -3,7 +3,6 @@ import { App, setIcon, TFile } from 'obsidian'
 import { validUrl } from '../core'
 import { Layout, LayoutImage } from './model'
 
-let nextLayoutId = 0
 export function renderLayout(
   app: App,
   host: HTMLElement,
@@ -12,15 +11,18 @@ export function renderLayout(
   placeholder = false,
 ): void {
   host.empty()
-  const id = `seam-layout-${++nextLayoutId}`
-  const root = host.createDiv({ cls: `seam-layout seam-layout-${layout.type}`, attr: { id } })
+  const root = host.createDiv({ cls: `seam-layout seam-layout-${layout.type}` })
   const columns =
     layout.columns === 'auto'
       ? 'repeat(auto-fit,minmax(min(160px,100%),1fr))'
       : `repeat(${layout.columns},minmax(0,1fr))`
-  // Only validated numeric values and fixed enum values enter this component-scoped stylesheet.
-  root.createEl('style', {
-    text: `#${id}{--layout-gap:${layout.gap}px;--layout-height:${layout.height === 'auto' ? 180 : layout.height}px;--layout-radius:${layout.radius === undefined ? 'var(--radius-m)' : layout.radius + 'px'};--layout-grid:${columns};--layout-columns:${layout.columns === 'auto' ? 3 : layout.columns};--layout-fit:${layout.fit}}`,
+  root.setCssProps({
+    '--layout-gap': `${layout.gap}px`,
+    '--layout-height': `${layout.height === 'auto' ? 180 : layout.height}px`,
+    '--layout-radius': layout.radius === undefined ? 'var(--radius-m)' : `${layout.radius}px`,
+    '--layout-grid': columns,
+    '--layout-columns': String(layout.columns === 'auto' ? 3 : layout.columns),
+    '--layout-fit': layout.fit,
   })
   const gallery = root.createDiv({ cls: 'seam-layout-gallery' })
   const entries: LayoutImage[] = layout.images.length

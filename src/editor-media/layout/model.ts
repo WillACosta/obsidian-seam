@@ -60,7 +60,7 @@ export function layoutImageFromPath(value: string): LayoutImage | null {
   const path = value.trim()
   const url = validUrl(path)
   if (url) return parseLayoutImage(`![](<${url}>)`)
-  if (/^[a-z][a-z0-9+.-]*:/i.test(path) || /[\[\]\r\n|]/.test(path)) return null
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path) || /[[\]\r\n|]/.test(path)) return null
   return imageExtension.test(path) ? parseLayoutImage(`![[${path}]]`) : null
 }
 

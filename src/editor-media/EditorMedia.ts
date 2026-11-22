@@ -469,7 +469,9 @@ export class EditorMedia extends Plugin {
             const resolved = new URL(image, url)
             if (['http:', 'https:'].includes(resolved.protocol)) imageUrl = resolved.href
           }
-        } catch {}
+        } catch {
+          // Invalid image URLs are ignored.
+        }
         return {
           title: meta('og:title') || doc.querySelector('title')?.textContent?.trim().slice(0, 1000),
           description: meta('og:description') || meta('description'),

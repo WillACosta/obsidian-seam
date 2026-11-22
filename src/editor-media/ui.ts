@@ -60,7 +60,7 @@ export class MediaModal extends Modal {
     this.panel = panel
     this.contentEl = panel.host
     this.contentEl.empty()
-    this.onOpen()
+    void this.onOpen()
     panel.handleKey = (event) => this.handleKey(event)
   }
   protected get isEmbedded() {

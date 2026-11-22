@@ -1,4 +1,4 @@
-# Seam — Frictionless Note Organization for Obsidian
+# Seam
 
 > **English** · [Português](README.pt-br.md)
 

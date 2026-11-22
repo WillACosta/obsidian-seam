@@ -9,9 +9,8 @@ export class LayoutPreviewModal extends Modal {
   private observer?: ResizeObserver
   private viewport!: HTMLElement
   private surface!: HTMLElement
-  private sheet!: HTMLStyleElement
+  private stage!: HTMLElement
   private zoom: number | null = null
-  private id = `seam-layout-preview-${crypto.randomUUID()}`
 
   constructor(
     app: App,
@@ -25,7 +24,6 @@ export class LayoutPreviewModal extends Modal {
 
   onOpen(): void {
     this.modalEl.addClass('seam-layout-fullscreen')
-    this.modalEl.id = this.id
     this.setTitle(mediaText('Layout preview'))
     const controls = this.contentEl.createDiv({ cls: 'seam-layout-preview-controls' })
     const action = (label: string, icon: string, run: () => void) => {
@@ -44,10 +42,9 @@ export class LayoutPreviewModal extends Modal {
     })
     action('Zoom in', 'plus', () => this.changeZoom(1.25))
     this.viewport = this.contentEl.createDiv({ cls: 'seam-layout-preview-viewport' })
-    const stage = this.viewport.createDiv({ cls: 'seam-layout-preview-stage' })
-    this.surface = stage.createDiv({ cls: 'seam-layout-preview-surface' })
-    this.sheet = this.contentEl.createEl('style')
-    this.sheet.textContent = `#${this.id} .seam-layout-preview-surface{width:${this.width}px}`
+    this.stage = this.viewport.createDiv({ cls: 'seam-layout-preview-stage' })
+    this.surface = this.stage.createDiv({ cls: 'seam-layout-preview-surface' })
+    this.surface.setCssProps({ width: `${this.width}px` })
     renderLayout(this.app, this.surface, this.layout, this.sourcePath)
     // Preview is read-only; tapping images must not navigate away or zoom one image.
     this.surface.inert = true
@@ -75,8 +72,8 @@ export class LayoutPreviewModal extends Modal {
   private resize(): void {
     const scale = this.zoom ?? this.fit()
     const height = this.surface.offsetHeight
-    // Measured numbers only, scoped to this viewer; captions, spacing and images scale as one.
-    this.sheet.textContent = `#${this.id} .seam-layout-preview-surface{width:${this.width}px;transform:scale(${scale})}#${this.id} .seam-layout-preview-stage{width:${this.width * scale}px;height:${height * scale}px}`
+    this.surface.setCssProps({ transform: `scale(${scale})` })
+    this.stage.setCssProps({ width: `${this.width * scale}px`, height: `${height * scale}px` })
   }
 
   onClose(): void {
