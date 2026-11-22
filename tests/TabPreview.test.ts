@@ -97,7 +97,7 @@ function fixture(count = 3) {
   let modalOpen = false
   let active = leaves[0]
   const workspace = {
-    activeLeaf: active,
+    getMostRecentLeaf: () => active,
     containerEl: {
       ownerDocument: { defaultView: {}, querySelector: () => modalOpen, hidden: false },
     },

@@ -96,7 +96,7 @@ export class MediaModal extends Modal {
     close.addEventListener('click', () => this.close())
     this.body = root.createDiv({ cls: 'seam-media-view-body' })
     this.primary = input
-    setTimeout(() => input.focus(), 0)
+    input.win.setTimeout(() => input.focus(), 0)
     return input
   }
   protected confirmationAction(label: string, submit: () => void): HTMLButtonElement {

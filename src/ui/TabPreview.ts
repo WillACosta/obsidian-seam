@@ -76,7 +76,7 @@ class TabPreviewModal extends Modal {
     super(app)
     this.index = Math.max(
       0,
-      leaves.findIndex((leaf) => leaf === app.workspace.activeLeaf),
+      leaves.findIndex((leaf) => leaf === app.workspace.getMostRecentLeaf()),
     )
   }
 
