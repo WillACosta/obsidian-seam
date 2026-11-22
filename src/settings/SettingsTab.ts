@@ -1,3 +1,4 @@
+import { EditorMediaSettings } from '../editor-media/settings'
 import {
   App,
   ExtraButtonComponent,
@@ -164,6 +165,35 @@ export class SeamSettingsTab extends PluginSettingTab {
             'file',
           ),
           this.folderDefinition(
+            strings.settingsMonthlyFolder,
+            strings.settingsMonthlyFolderDesc,
+            'Monthly',
+            'calendarMonthlyFolder',
+            'folder',
+          ),
+          {
+            name: strings.settingsMonthlyFormat,
+            desc: strings.settingsMonthlyFormatDesc,
+            render: (setting) => {
+              setting.addText((text) =>
+                text
+                  .setPlaceholder('YYYY-MM')
+                  .setValue(this.plugin.settings.calendarMonthlyFormat)
+                  .onChange(async (value) => {
+                    this.plugin.settings.calendarMonthlyFormat = value
+                    await this.plugin.saveSettings()
+                  }),
+              )
+            },
+          },
+          this.folderDefinition(
+            strings.settingsMonthlyTemplate,
+            strings.settingsMonthlyTemplateDesc,
+            'Templates/Monthly',
+            'calendarMonthlyTemplate',
+            'file',
+          ),
+          this.folderDefinition(
             strings.settingsYearlyFolder,
             strings.settingsYearlyFolderDesc,
             'Yearly',
@@ -321,6 +351,24 @@ export class SeamSettingsTab extends PluginSettingTab {
         heading: strings.settingsInterfaceHeading,
         items: [
           {
+            name: strings.settingsTabPreview,
+            desc: strings.settingsTabPreviewDesc,
+            render: (setting) => {
+              setting.addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.enableTabPreview).onChange(async (value) => {
+                  this.plugin.settings.enableTabPreview = value
+                  await this.plugin.saveSettings()
+                }),
+              )
+            },
+          },
+        ],
+      },
+      {
+        type: 'group',
+        heading: strings.settingsPaletteHeading,
+        items: [
+          {
             name: strings.settingsPaletteGroups,
             desc: strings.settingsPaletteGroupsDesc,
             render: (setting) => {
@@ -388,6 +436,34 @@ export class SeamSettingsTab extends PluginSettingTab {
               this.renderHotkeySetting(setting, `${this.plugin.manifest.id}:open-palette`),
           },
         ],
+      },
+      {
+        type: 'group',
+        heading: strings.settingsEditorMediaHeading,
+        items: (
+          [
+            ['previews', strings.settingsMediaPreviews, strings.settingsMediaPreviewsDesc],
+            ['layouts', strings.settingsMediaLayouts, strings.settingsMediaLayoutsDesc],
+            ['captions', strings.settingsMediaCaptions, strings.settingsMediaCaptionsDesc],
+            ['folding', strings.settingsMediaFolding, strings.settingsMediaFoldingDesc],
+            ['autoSort', strings.settingsMediaAutoSort, strings.settingsMediaAutoSortDesc],
+            ['completed', strings.settingsMediaCompleted, strings.settingsMediaCompletedDesc],
+          ] as [keyof EditorMediaSettings, string, string][]
+        ).map(([key, name, desc]) => ({
+          name,
+          desc,
+          render: (setting: Setting) => {
+            setting.addToggle((toggle) =>
+              toggle.setValue(this.plugin.settings.editorMedia[key]).onChange(async (value) => {
+                this.plugin.settings.editorMedia = {
+                  ...this.plugin.settings.editorMedia,
+                  [key]: value,
+                }
+                await this.plugin.saveSettings()
+              }),
+            )
+          },
+        })),
       },
       {
         type: 'group',
@@ -654,6 +730,8 @@ export class SeamSettingsTab extends PluginSettingTab {
       | 'sourceNoteTemplate'
       | 'calendarWeeklyFolder'
       | 'calendarWeeklyTemplate'
+      | 'calendarMonthlyFolder'
+      | 'calendarMonthlyTemplate'
       | 'calendarYearlyFolder'
       | 'calendarYearlyTemplate',
     pathType: 'folder' | 'file',

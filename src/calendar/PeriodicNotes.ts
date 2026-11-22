@@ -9,7 +9,7 @@ const record = (value: unknown): Record<string, unknown> | null =>
 export async function readPeriodicConfig(
   app: App,
   enabled: boolean,
-  period: 'weekly' | 'yearly',
+  period: 'weekly' | 'monthly' | 'yearly',
 ): Promise<Record<string, unknown> | null> {
   const path = normalizePath(`${app.vault.configDir}/plugins/periodic-notes/data.json`)
   if (!enabled || !(await app.vault.adapter.exists(path))) return null
@@ -19,7 +19,8 @@ export async function readPeriodicConfig(
   if (Array.isArray(data.calendarSets)) {
     const active = data.calendarSets.map(record).find((set) => set?.id === data.activeCalendarSet)
     if (!active) throw new Error('Periodic Notes has no active calendar set.')
-    config = record(active[period === 'weekly' ? 'week' : 'year'])
+    const key = { weekly: 'week', monthly: 'month', yearly: 'year' }[period]
+    config = record(active[key])
   }
   return config?.enabled === true ? config : null
 }
@@ -37,7 +38,7 @@ export async function resolvePeriodNote(
   app: App,
   date: Moment,
   settings: DailyNoteSettings,
-  period: 'Weekly' | 'Yearly',
+  period: 'Weekly' | 'Monthly' | 'Yearly',
 ): Promise<TFile> {
   const path = periodNotePath(date, settings)
   const current = app.vault.getAbstractFileByPath(path)
@@ -64,7 +65,7 @@ async function createPeriodNote(
   date: Moment,
   settings: DailyNoteSettings,
   path: string,
-  period: 'Weekly' | 'Yearly',
+  period: 'Weekly' | 'Monthly' | 'Yearly',
 ): Promise<TFile> {
   const find = (): TFile | null => {
     const file = app.vault.getAbstractFileByPath(path)
@@ -87,7 +88,7 @@ async function createPeriodNote(
           const name = token.toLowerCase()
           if (name === 'title') return path.split('/').pop()!.slice(0, -3)
           const index = days.indexOf(name)
-          if (period === 'Yearly' && index >= 0) return match
+          if (period !== 'Weekly' && index >= 0) return match
           const target =
             index < 0 ? start : start.clone().add((index - start.day() + 7) % 7, 'days')
           return target.format(format?.trim() || (name === 'time' ? 'HH:mm' : settings.format))

@@ -9,7 +9,8 @@ import {
   DEFAULT_DAILY_SETTINGS,
   readDailyNoteSettings,
 } from '../daily/DailyNotes'
-import { currentPeriodTarget, CurrentPeriod } from '../calendar/CurrentPeriodNotes'
+import { currentPeriodTarget, CurrentPeriod, isCurrentPeriod } from '../calendar/CurrentPeriodNotes'
+import { CALENDAR_EVENT_STATUS } from '../calendar/CalendarEvents'
 import { DOCUMENT_EXTENSIONS, IMAGE_EXTENSIONS } from '../utils/attachments'
 
 /**
@@ -98,11 +99,12 @@ export function parseSpecialSearch(query: string): {
     }
   }
   const match = trimmed.match(
-    /^@(thisWeek|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?:\s+([\s\S]*))?$/i,
+    /^@(thisWeek|thisMonth|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?:\s+([\s\S]*))?$/i,
   )
   if (!match) return { search: null, textQuery: trimmed }
   const canonical: Record<string, SpecialSearch> = {
     thisweek: 'thisWeek',
+    thismonth: 'thisMonth',
     thisyear: 'thisYear',
     recentlyopened: 'recentlyOpened',
   }
@@ -144,6 +146,7 @@ export function matchesSpecialSearch(
   const cache = app.metadataCache.getFileCache(file)
   switch (search) {
     case 'thisWeek':
+    case 'thisMonth':
     case 'thisYear':
     case 'today':
     case 'yesterday':
@@ -163,11 +166,15 @@ export function matchesSpecialSearch(
     case 'images':
       return hasAttachmentType(app, file, IMAGE_EXTENSIONS)
     case 'task':
-      return (cache?.listItems ?? []).some((item) => item.task !== undefined)
+      return (cache?.listItems ?? []).some(
+        (item) => item.task !== undefined && item.task !== CALENDAR_EVENT_STATUS,
+      )
     case 'todo':
       return (cache?.listItems ?? []).some((item) => item.task === ' ')
     case 'done': {
-      const tasks = (cache?.listItems ?? []).filter((item) => item.task !== undefined)
+      const tasks = (cache?.listItems ?? []).filter(
+        (item) => item.task !== undefined && item.task !== CALENDAR_EVENT_STATUS,
+      )
       return tasks.length > 0 && tasks.every((item) => item.task !== ' ')
     }
     case 'code':
@@ -812,7 +819,7 @@ export class SearchService {
   }
 
   private getCachedSpecialSearchFiles(search: SpecialSearch, files: TFile[]): TFile[] {
-    if (search === 'thisWeek' || search === 'thisYear') {
+    if (isCurrentPeriod(search)) {
       const cached = this.periodPaths[search]
       return cached && cached.day === moment().format('YYYY-MM-DD')
         ? files.filter((file) => file.path === cached.path)
@@ -823,7 +830,7 @@ export class SearchService {
   }
 
   private async getSpecialSearchFiles(search: SpecialSearch, files: TFile[]): Promise<TFile[]> {
-    if (search === 'thisWeek' || search === 'thisYear') {
+    if (isCurrentPeriod(search)) {
       const target = await currentPeriodTarget(this.app, this.settings, search)
       this.periodPaths[search] = { path: target.path, day: target.day }
       return files.filter((file) => file.path === target.path)

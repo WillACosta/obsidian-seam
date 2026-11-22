@@ -1,4 +1,4 @@
-# Seam — Frictionless Note Organization for Obsidian
+# Seam
 
 > **English** · [Português](README.pt-br.md)
 
@@ -48,7 +48,7 @@ Open `@calendar` to browse Daily Notes and create missing ones from your templat
 
 ### See your progress
 
-Explore **Global Statistics** for your current note and word totals, writing activity, streaks, and monthly trends. Select a day to revisit its notes. For a closer look, open a note's statistics, task completion, or outline in the Palette.
+Explore **Global Statistics** for your current note and word totals, writing activity, streaks, and monthly trends. Select a day to revisit its notes. For a closer look, open **Note statistics** for word count and task progress, or browse the note's outline in the Palette.
 
 Writing history starts when Seam begins recording it; your existing notes are still included in vault totals. To share activity with Obsidian Sync, enable **Sync all other types** on each device.
 
@@ -59,6 +59,17 @@ Writing history starts when Seam begins recording it; your existing notes are st
 Turn documents and images into linked Source notes, then find them with `@sources`. Seam can create notes automatically for files in your chosen source folder, and you can read PDFs with continuous pages.
 
 ![Source note with a PDF](docs/images/sources.png)
+
+### Add images and links
+
+Create galleries with **Image Layout**, add image captions, and show links as cards or compact previews. Fold headings and lists, dim completed tasks, or move them to the end of the list automatically.
+
+Find these tools in the Palette under **Editor & media**, and choose which to use in **Settings → Seam → Editor & media**. URL previews and automatic task sorting are off by default. Previews and remote images contact their source websites.
+
+See [image layout options](docs/image-layouts.md).
+
+<!-- Screenshot: Image Layout gallery with captions -->
+<!-- Screenshot: URL preview styles -->
 
 ## Get started
 

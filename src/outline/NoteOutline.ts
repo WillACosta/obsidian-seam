@@ -10,6 +10,7 @@ export function getNoteOutline(app: App, file: TFile): PaletteItem[] {
     description: '',
     type: 'heading',
     headingLevel: heading.level,
+    headingLine: heading.position.start.line,
     action: async () => {
       await leaf.openFile(file, {
         active: true,

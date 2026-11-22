@@ -1,3 +1,6 @@
+import type { OutlineFolding } from '../outline/OutlineFolding'
+import type { PanelContext } from '../editor-media/ui'
+import type { EditorMediaView } from '../editor-media/settings'
 import {
   App,
   Component,
@@ -40,11 +43,12 @@ import { groupPaletteItems } from './PaletteGroups'
 import { orderPaletteCommands } from './PaletteCommandOrder'
 import { paletteResultMetadata } from './ResultMetadata'
 import { confirmPeriodicNote } from './PeriodicNoteConfirmation'
-import { renderNoteCompletion } from './NoteCompletionView'
 import { readNoteCompletion, summarizeTasks } from '../statistics/NoteCompletion'
 import { renderNoteStatistics } from './NoteStatisticsView'
-import { currentPeriodTarget, CurrentPeriod } from '../calendar/CurrentPeriodNotes'
+import { CALENDAR_EVENT_STATUS } from '../calendar/CalendarEvents'
+import { currentPeriodTarget, CurrentPeriod, isCurrentPeriod } from '../calendar/CurrentPeriodNotes'
 import { CalendarPins } from '../calendar/CalendarPins'
+import { readMonthlyNoteSettings } from '../calendar/MonthlyNotes'
 import { readWeeklyNoteSettings } from '../calendar/WeeklyNotes'
 import { DailyNoteCalendar } from '../calendar/DailyNoteCalendar'
 import { readDailyNoteSettings } from '../daily/DailyNotes'
@@ -111,6 +115,82 @@ function renderHighlightedText(parent: HTMLElement, text: string, query: string)
  */
 export class UniversalPalette extends SuggestModal<PaletteItem> {
   onClosed?: () => void
+  private editorMediaPanel: {
+    host: HTMLElement
+    handleKey?: (event: KeyboardEvent) => boolean
+    dispose?: () => void
+  } | null = null
+  private editorMediaHidden: HTMLElement[] = []
+  private editorMediaScope: Scope | null = null
+
+  private leaveEditorMediaPanel(): void {
+    if (this.editorMediaScope) this.app.keymap.popScope(this.editorMediaScope)
+    this.editorMediaScope = null
+    this.editorMediaPanel?.dispose?.()
+    this.editorMediaPanel?.host.remove()
+    this.editorMediaPanel = null
+    for (const el of this.editorMediaHidden) el.hidden = false
+    this.editorMediaHidden = []
+    this.modalEl.removeClass('seam-media-palette-active')
+    this.inputEl.focus()
+  }
+
+  private async showEditorMediaPanel(id: EditorMediaView): Promise<void> {
+    this.leaveEditorMediaPanel()
+    const host = this.modalEl.createDiv({ cls: 'seam-media-panel-host' })
+    const panel = {
+      host,
+      id,
+      back: () => {
+        if (this.editorMediaPanel === panel) this.leaveEditorMediaPanel()
+      },
+      close: () => {
+        if (this.editorMediaPanel === panel) this.close()
+      },
+      handleKey: undefined as ((event: KeyboardEvent) => boolean) | undefined,
+    }
+    this.editorMediaPanel = panel
+    this.modalEl.addClass('seam-media-palette-active')
+    this.editorMediaHidden = Array.from(
+      this.modalEl.querySelectorAll<HTMLElement>(
+        '.prompt-input-container, .prompt-results, .prompt-instructions',
+      ),
+    ).filter((el) => !host.contains(el) && !el.hidden)
+    for (const el of this.editorMediaHidden) el.hidden = true
+    if (!this.openEditorMediaView) {
+      this.leaveEditorMediaPanel()
+      return
+    }
+    try {
+      await this.openEditorMediaView(id, panel)
+    } catch {
+      if (this.editorMediaPanel === panel) this.leaveEditorMediaPanel()
+      new Notice(t().paletteViewOpenFailed)
+      return
+    }
+    if (this.editorMediaPanel !== panel) return
+    if (!panel.handleKey) {
+      this.leaveEditorMediaPanel()
+      return
+    }
+    const scope = new Scope(this.scope)
+    for (const key of ['Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', ' '])
+      scope.register([], key, (evt) => {
+        if (panel.handleKey?.(evt)) return false
+        if (key === 'Enter' && (evt.target as HTMLElement)?.tagName === 'BUTTON') {
+          ;(evt.target as HTMLButtonElement).click()
+          return false
+        }
+        return true
+      })
+    scope.register(['Mod'], '[', (evt) => (panel.handleKey?.(evt) ? false : true))
+    scope.register(['Mod'], 'Enter', (evt) => {
+      panel.handleKey?.(evt)
+      return false
+    })
+    this.editorMediaScope = scope
+    this.app.keymap.pushScope(scope)
+  }
   private createSuggestionActive = false
   private closeButtonScope: Scope | null = null
   private mobileKeyboardButton: HTMLButtonElement | null = null
@@ -124,6 +204,15 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private composedQueryPrefixEl: HTMLElement | null = null
   private queryInputMirrorEl: HTMLElement | null = null
   private mode: 'search' | 'quick-add' | 'statistics' | 'outline' = 'search'
+  private commandReturnQuery: string | null = null
+  private toggleNoteCompletion: (() => void) | null = null
+  private outlineFile: TFile | null = null
+  private rememberCommandOrigin(): void {
+    if (this.mode === 'search')
+      this.commandReturnQuery = this.inputEl.value.trimStart().startsWith('>')
+        ? this.inputEl.value
+        : null
+  }
   private outlineItems: PaletteItem[] = []
   private collapsedOutline = new Set<string>()
   private outlineParents = new Set<string>()
@@ -131,6 +220,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private calendarView: DailyNoteCalendar | null = null
   private calendarHost: HTMLElement | null = null
   private calendarGeneration = 0
+  private calendarFullscreenButton: HTMLButtonElement | null = null
   private statisticsHost: HTMLElement | null = null
   private globalStatisticsView: GlobalStatisticsView | null = null
   private quickAddDraft = ''
@@ -145,7 +235,28 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   private baseNavigationEnabled = false
   private baseSourcePath = ''
   private readonly baseNavigationKeyListener = (event: KeyboardEvent): void => {
+    if (this.editorMediaPanel) {
+      if (this.editorMediaPanel.handleKey?.(event)) event.preventDefault()
+      event.stopImmediatePropagation()
+      return
+    }
     if (this.mode === 'statistics') {
+      const completion = this.statisticsHost?.querySelector<HTMLElement>(
+        '.seam-note-completion-toggle',
+      )
+      if (
+        completion &&
+        event.target === completion &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        (event.key === 'Enter' || event.key === ' ')
+      ) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        completion.click()
+        return
+      }
       const dismiss = this.modalEl.querySelector<HTMLButtonElement>('.seam-note-statistics-dismiss')
       if (dismiss && event.target === dismiss && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault()
@@ -154,6 +265,20 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         return
       }
       this.globalStatisticsView?.handleKey(event)
+      return
+    }
+    if (
+      this.calendarFullscreenButton &&
+      event.target === this.calendarFullscreenButton &&
+      !event.isComposing &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      (event.key === 'Enter' || event.key === ' ')
+    ) {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      this.calendarFullscreenButton.click()
       return
     }
     if (this.calendarView?.handleKey(event)) return
@@ -179,6 +304,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     private calendarPins?: CalendarPins,
     private globalStatistics?: GlobalStatistics,
     private pinnedCommandItems: PaletteItem[] = [],
+    private openEditorMediaView?: (
+      id: EditorMediaView,
+      panel: PanelContext,
+    ) => void | Promise<void>,
+    private outlineFolding?: OutlineFolding,
   ) {
     super(app)
     this.setPlaceholder(t().palettePlaceholder)
@@ -196,7 +326,14 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         if (heading) this.toggleOutlineHeading(heading)
         return false
       }
-      if (this.mode === 'statistics' || this.calendarHost || this.closeButtonScope) return false
+      if (this.mode === 'statistics') {
+        if (this.toggleNoteCompletion) {
+          evt.preventDefault()
+          this.toggleNoteCompletion()
+        }
+        return false
+      }
+      if (this.calendarHost || this.closeButtonScope) return false
       evt.preventDefault()
       const item = this.getSelectedItem()
       if (item?.type === 'note' && item.file) {
@@ -243,13 +380,16 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.returnToSearch()
       return false
     })
-    this.scope.register([], 'Backspace', (evt: KeyboardEvent) => {
-      if (this.mode === 'statistics') {
-        evt.preventDefault()
-        this.returnToSearch()
-        return false
-      }
-      if (this.mode === 'search' || this.inputEl.value.length > 0) return true
+    this.scope.register(['Mod'], '[', (evt: KeyboardEvent) => {
+      if (evt.isComposing) return true
+      if (
+        this.mode === 'search' &&
+        !this.calendarHost &&
+        !this.baseRenderHost &&
+        !this.composedQueryPrefix &&
+        !/^[>@]/.test(this.inputEl.value.trimStart())
+      )
+        return true
       evt.preventDefault()
       this.returnToSearch()
       return false
@@ -264,6 +404,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   }
 
   onClose(): void {
+    this.leaveEditorMediaPanel()
+    this.toggleNoteCompletion = null
+    this.outlineFile = null
     window.removeEventListener('keydown', this.baseNavigationKeyListener, true)
     this.removeMobileKeyboardDismiss()
     this.releaseCloseButtonScope()
@@ -297,7 +440,28 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.calendarView = null
     this.calendarHost?.remove()
     this.calendarHost = null
-    this.modalEl.removeClass('seam-palette-calendar')
+    this.calendarFullscreenButton?.remove()
+    this.calendarFullscreenButton = null
+    this.modalEl.removeClass('seam-palette-calendar', 'seam-palette-calendar-fullscreen')
+  }
+
+  private addCalendarFullscreenButton(): void {
+    const close = this.modalEl.querySelector('.seam-palette-close')
+    if (!close) return
+    const button = createEl('button', {
+      cls: 'clickable-icon seam-palette-calendar-expand',
+      attr: { type: 'button', 'aria-pressed': 'false', 'aria-label': t().calendarExpand },
+    })
+    close.before(button)
+    setIcon(button, 'maximize')
+    button.addEventListener('click', () => {
+      const expanded = this.modalEl.classList.toggle('seam-palette-calendar-fullscreen')
+      const label = expanded ? t().calendarExitFullscreen : t().calendarExpand
+      button.setAttribute('aria-pressed', String(expanded))
+      button.setAttribute('aria-label', label)
+      setIcon(button, expanded ? 'minimize' : 'maximize')
+    })
+    this.calendarFullscreenButton = button
   }
 
   private showCalendar(): void {
@@ -305,6 +469,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.baseNavigationEnabled = false
     this.disposeBaseRender()
     this.modalEl.addClass('seam-palette-calendar')
+    this.addCalendarFullscreenButton()
     const host = this.modalEl.createDiv({
       cls: 'seam-calendar',
       attr: { 'aria-label': t().paletteSpecialCalendar, 'aria-busy': 'true' },
@@ -316,8 +481,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     void Promise.all([
       readDailyNoteSettings(this.app),
       readWeeklyNoteSettings(this.app, this.settings),
+      readMonthlyNoteSettings(this.app, this.settings).catch((error: unknown) =>
+        error instanceof Error ? error : new Error(String(error)),
+      ),
     ])
-      .then(([settings, weekly]) => {
+      .then(([settings, weekly, monthly]) => {
         if (generation !== this.calendarGeneration) return
         const leaf = this.app.workspace.getLeaf(false)
         this.calendarView = new DailyNoteCalendar(
@@ -341,6 +509,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
           this.scope,
           this.calendarPins,
           weekly,
+          monthly,
           this.settings.confirmPeriodicNoteCreation,
         )
         this.calendarView.load()
@@ -365,6 +534,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
   /** Keep native suggestion navigation and clicking for the note's full heading hierarchy. */
   showNoteOutline(file: TFile): void {
+    this.rememberCommandOrigin()
+    this.outlineFile = file
     this.mode = 'outline'
     this.lastQuery = ''
     this.baseNavigationEnabled = false
@@ -381,6 +552,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     )
     this.modalEl.addClass('seam-palette-outline')
     this.collapsedOutline.clear()
+    for (const line of this.outlineFolding?.collapsedLines(file) ?? [])
+      this.collapsedOutline.add(`heading-${line}`)
     this.outlineItems = getNoteOutline(this.app, file)
     this.outlineParents = outlineParentIds(this.outlineItems)
     this.outlinePreviousLimit = this.limit
@@ -398,6 +571,12 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     if (!this.outlineParents.has(item.id)) return
     if (this.collapsedOutline.has(item.id)) this.collapsedOutline.delete(item.id)
     else this.collapsedOutline.add(item.id)
+    if (this.outlineFile && item.headingLine !== undefined)
+      this.outlineFolding?.setCollapsed(
+        this.outlineFile,
+        item.headingLine,
+        this.collapsedOutline.has(item.id),
+      )
     this.refreshSuggestions()
     window.setTimeout(() => {
       if (this.mode !== 'outline') return
@@ -409,6 +588,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
 
   /** Replace search with a read-only report in the same Palette. */
   private createReportHost(title: string): HTMLElement {
+    this.rememberCommandOrigin()
+    this.toggleNoteCompletion = null
     this.mode = 'statistics'
     this.lastQuery = ''
     this.baseNavigationEnabled = false
@@ -480,26 +661,21 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     this.modalEl.querySelector('.seam-global-maximize')?.remove()
   }
 
-  async showNoteStatistics(file: TFile, completion = false): Promise<void> {
-    const host = this.createReportHost(completion ? t().completionTitle : t().statisticsTitle)
+  async showNoteStatistics(file: TFile): Promise<void> {
+    const host = this.createReportHost(t().statisticsTitle)
     try {
-      if (completion) {
-        const [report] = await Promise.all([
-          readNoteCompletion(this.app, file),
-          this.searchService.refreshDailyNoteSettings(),
-        ])
-        if (this.statisticsHost !== host) return
-        renderNoteCompletion(
-          host,
-          file,
-          report,
-          this.searchService.getDailyNoteDisplayTitle(file) ?? file.basename,
-        )
-      } else {
-        const report = await readNoteStatistics(this.app, file)
-        if (this.statisticsHost !== host) return
-        renderNoteStatistics(host, report, this.settings.showIcons)
-      }
+      const [report, completion] = await Promise.all([
+        readNoteStatistics(this.app, file),
+        readNoteCompletion(this.app, file),
+        this.searchService.refreshDailyNoteSettings(),
+      ])
+      if (this.statisticsHost !== host) return
+      report.title = this.searchService.getDailyNoteDisplayTitle(file) ?? file.basename
+      this.toggleNoteCompletion = renderNoteStatistics(host, report, this.settings.showIcons, {
+        file,
+        report: completion,
+      })
+      this.updateInstructions('')
     } catch {
       if (this.statisticsHost !== host) return
       host.empty()
@@ -839,6 +1015,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.onChooseSuggestion(value, evt)
       return
     }
+    if (value.editorMediaView) {
+      void this.showEditorMediaPanel(value.editorMediaView)
+      return
+    }
     if (value.id === 'cmd-global-statistics') {
       this.showGlobalStatistics()
       return
@@ -847,8 +1027,8 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.showNoteOutline(value.file)
       return
     }
-    if ((value.id === 'cmd-note-statistics' || value.id === 'cmd-note-completion') && value.file) {
-      void this.showNoteStatistics(value.file, value.id === 'cmd-note-completion')
+    if (value.id === 'cmd-note-statistics' && value.file) {
+      void this.showNoteStatistics(value.file)
       return
     }
     const fullInput = this.composedQueryPrefix + this.inputEl.value
@@ -976,7 +1156,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     if (this.app.vault.getAbstractFileByPath(target.path)) return null
     return {
       id: `create-period-note-${search}`,
-      title: search === 'thisWeek' ? t().paletteCreateWeeklyNote : t().paletteCreateYearlyNote,
+      title: {
+        thisWeek: t().paletteCreateWeeklyNote,
+        thisMonth: t().paletteCreateMonthlyNote,
+        thisYear: t().paletteCreateYearlyNote,
+      }[search],
       description: target.path,
       type: 'create',
       icon: 'calendar-plus',
@@ -1171,13 +1355,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
               !chipQuery &&
               (dailySearch === 'today' ||
                 dailySearch === 'yesterday' ||
-                dailySearch === 'thisWeek' ||
-                dailySearch === 'thisYear')
+                isCurrentPeriod(dailySearch))
             ) {
-              const suggestion =
-                dailySearch === 'thisWeek' || dailySearch === 'thisYear'
-                  ? await this.getPeriodNoteCreationSuggestion(dailySearch)
-                  : await this.getDailyNoteCreationSuggestion(dailySearch)
+              const suggestion = isCurrentPeriod(dailySearch)
+                ? await this.getPeriodNoteCreationSuggestion(dailySearch)
+                : await this.getDailyNoteCreationSuggestion(dailySearch)
               if (this.lastQuery !== trimmed) return []
               if (suggestion) items.push(suggestion)
             }
@@ -1186,13 +1368,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
             return items
           })
           .catch((error: unknown) => {
-            if (
-              !combined.some(
-                (entry) =>
-                  entry.special?.search === 'thisWeek' || entry.special?.search === 'thisYear',
-              )
-            )
-              throw error
+            if (!combined.some((entry) => isCurrentPeriod(entry.special?.search))) throw error
             if (this.lastQuery !== trimmed) return []
             this.createSuggestionActive = false
             this.setKeyboardInstructions([{ command: 'esc', purpose: t().paletteHelpDismiss }])
@@ -1591,7 +1767,9 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     const tasks =
       this.app.metadataCache
         .getFileCache(file)
-        ?.listItems?.filter((item) => item.task !== undefined) ?? []
+        ?.listItems?.filter(
+          (item) => item.task !== undefined && item.task !== CALENDAR_EVENT_STATUS,
+        ) ?? []
     if (tasks.length === 0) return undefined
     return summarizeTasks(tasks.map((item) => item.task!)).percent
   }
@@ -1691,6 +1869,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   }
 
   showQuickAdd(): void {
+    this.rememberCommandOrigin()
     this.mode = 'quick-add'
     this.inputEl.value = ''
     this.setPlaceholder(t().paletteSelectChoice)
@@ -1699,6 +1878,10 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
   }
 
   private returnToSearch(): void {
+    const query = this.commandReturnQuery ?? ''
+    this.commandReturnQuery = null
+    this.toggleNoteCompletion = null
+    this.outlineFile = null
     if (this.mode === 'statistics') {
       this.globalStatisticsView?.destroy()
       this.globalStatisticsView = null
@@ -1717,15 +1900,33 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       this.outlinePreviousLimit = null
       this.emptyStateText = 'No results found.'
     }
+    if (this.calendarHost) this.disposeCalendar()
+    if (this.baseRenderHost || this.baseNavigationEnabled) {
+      this.baseNavigationEnabled = false
+      this.disposeBaseRender()
+    }
+    this.composedQueryPrefix = ''
     this.mode = 'search'
-    this.inputEl.value = ''
+    this.inputEl.value = query
     this.setPlaceholder(t().palettePlaceholder)
-    this.updateInstructions('')
+    this.updateInstructions(query)
     this.refreshSuggestions()
     this.inputEl.focus()
   }
 
   private setKeyboardInstructions(instructions: Instruction[]): void {
+    const canGoBack =
+      this.calendarHost ||
+      this.baseRenderHost ||
+      this.composedQueryPrefix ||
+      /^[>@]/.test(this.inputEl.value.trimStart())
+    if (canGoBack && !instructions.some((item) => item.purpose === t().paletteHelpBack)) {
+      const dismiss = instructions.findIndex((item) => item.command === 'esc')
+      instructions.splice(dismiss < 0 ? instructions.length : dismiss, 0, {
+        command: Platform.isMacOS ? '⌘[' : 'Ctrl+[',
+        purpose: t().paletteHelpBack,
+      })
+    }
     this.setInstructions(showShortcutHints() ? instructions : [])
   }
 
@@ -1794,14 +1995,25 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         { command: '↵', purpose: t().paletteHelpSelect },
         { command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵', purpose: t().outlineToggleChildren },
       ]
-      if (!query) instructions.push({ command: '⌫', purpose: t().paletteHelpBack })
+      instructions.push({
+        command: Platform.isMacOS ? '⌘[' : 'Ctrl+[',
+        purpose: t().paletteHelpBack,
+      })
       instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
       this.setKeyboardInstructions(instructions)
       return
     }
     if (this.mode === 'statistics') {
       this.setKeyboardInstructions([
-        { command: '⌫', purpose: t().paletteHelpBack },
+        ...(this.toggleNoteCompletion
+          ? [
+              {
+                command: Platform.isMacOS ? '⌘↵' : 'Ctrl+↵',
+                purpose: t().paletteHelpToggleCompletion,
+              },
+            ]
+          : []),
+        { command: Platform.isMacOS ? '⌘[' : 'Ctrl+[', purpose: t().paletteHelpBack },
         { command: 'esc', purpose: t().paletteHelpDismiss },
       ])
       return
@@ -1874,8 +2086,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
       { command: '↑↓', purpose: t().paletteHelpNavigate },
       { command: '↵', purpose: t().paletteHelpOpen },
     ]
-    if (this.mode !== 'search' && !query) {
-      instructions.push({ command: '⌫', purpose: t().paletteHelpBack })
+    if (this.mode !== 'search') {
+      instructions.push({
+        command: Platform.isMacOS ? '⌘[' : 'Ctrl+[',
+        purpose: t().paletteHelpBack,
+      })
     }
     instructions.push({ command: 'esc', purpose: t().paletteHelpDismiss })
     this.setKeyboardInstructions(instructions)
@@ -1930,6 +2145,11 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
         search: 'thisWeek',
         label: SPECIAL_SEARCH_LABELS.thisWeek,
         description: t().paletteSpecialThisWeek,
+      },
+      {
+        search: 'thisMonth',
+        label: SPECIAL_SEARCH_LABELS.thisMonth,
+        description: t().paletteSpecialThisMonth,
       },
       {
         search: 'thisYear',
@@ -2066,7 +2286,7 @@ export class UniversalPalette extends SuggestModal<PaletteItem> {
     const match = query
       .trimStart()
       .match(
-        /^@(last[1-9]\d*days|calendar|thisWeek|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i,
+        /^@(last[1-9]\d*days|calendar|thisWeek|thisMonth|thisYear|today|yesterday|recentlyOpened|fleeting|permanent|recent|untagged|docs|images|task|todo|done|code|sources)(?=\s|$)/i,
       )
     return match?.[0] ?? null
   }

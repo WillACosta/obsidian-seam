@@ -62,6 +62,17 @@ Crie notas vinculadas aos documentos e imagens que usa como referência e encont
 
 ![Nota de fonte com PDF](docs/images/sources.png)
 
+### Adicione imagens e links
+
+Crie galerias com **Layout de imagens**, adicione legendas e mostre links como cartões ou prévias compactas. Recolha títulos e listas, suavize tarefas concluídas ou mova-as automaticamente para o final da lista.
+
+Encontre essas ferramentas em **Editor e mídia** na Paleta e escolha quais usar em **Configurações → Seam → Editor e mídia**. As prévias de URL e a ordenação automática de tarefas ficam desativadas por padrão. Prévias e imagens remotas acessam seus sites de origem.
+
+Veja as [opções de layout de imagens](docs/image-layouts.md).
+
+<!-- Captura de tela: galeria com legendas -->
+<!-- Captura de tela: estilos de prévia de URL -->
+
 ## Comece a usar
 
 O Seam requer o Obsidian **1.13.0** ou posterior.

@@ -1,6 +1,30 @@
 import { Translations } from './en'
 
 export const ptBr: Translations = {
+  tabPreviewTitle: 'Abas abertas',
+  paletteViewOpenFailed: 'Não foi possível abrir esta visualização.',
+  paletteHelpToggleCompletion: 'alternar conclusão de tarefas',
+  settingsEditorMediaHeading: 'Editor e mídia',
+  editorMediaEmbed: 'Incorporar URL',
+  editorMediaCaption: 'Adicionar legenda à imagem',
+  editorMediaFold: 'Recolher ou expandir grupo atual',
+  editorMediaLayout: 'Layout de imagens',
+  settingsMediaPreviews: 'Prévias de URL',
+  settingsMediaPreviewsDesc:
+    'Ative incorporações de URL e solicitações de metadados aos sites vinculados e seus servidores de imagens. Desativado por padrão.',
+  settingsMediaCaptions: 'Legendas de imagens',
+  settingsMediaCaptionsDesc:
+    'Mostre aliases e texto alternativo como legendas e ative o editor de legendas. Imagens remotas selecionadas no editor são baixadas e armazenadas em cache.',
+  settingsMediaLayouts: 'Layouts de imagens',
+  settingsMediaLayoutsDesc: 'Crie e renderize galerias responsivas em grade, flex e mosaico.',
+  settingsMediaFolding: 'Recolher grupos',
+  settingsMediaFoldingDesc: 'Recolha ou expanda o título, lista ou checklist que contém o cursor.',
+  settingsMediaAutoSort: 'Ordenar itens concluídos automaticamente',
+  settingsMediaAutoSortDesc:
+    'Mova tarefas recém-concluídas para o final da lista, sem adicionar linhas em branco. Desativado por padrão.',
+  settingsMediaCompleted: 'Suavizar itens concluídos',
+  settingsMediaCompletedDesc: 'Use texto suavizado e tachado nas tarefas concluídas.',
+
   setupTitle: 'Inicializar o Seam',
   setupDescription:
     'Visualize pastas, modelos, visualizações da biblioteca e preferências recomendadas do Obsidian/Seam para este vault.',
@@ -88,10 +112,17 @@ export const ptBr: Translations = {
   globalTitle: 'Estatísticas globais',
   globalMaximize: 'Maximizar',
   globalRestoreSize: 'Restaurar tamanho',
-  globalDescription: 'Atividade de escrita, consistência e crescimento do cofre.',
+  globalDescription: 'Atividade de escrita, consistência e tamanho do cofre.',
   globalOverview: 'Visão geral',
-  globalWordsMonthChange: (value: string) => `${value} em relação ao mês passado`,
-  globalNoMonthBaseline: 'Sem referência no mês anterior',
+  globalWordsMonthChange: (value: string, days: string) =>
+    `${value} · ${days === '1' ? 'primeiro dia' : `primeiros ${days} dias`} em relação ao mês passado`,
+  globalNoMonthBaseline: 'Nenhuma palavra no período de comparação',
+  globalInsufficientHistory: 'Histórico insuficiente para comparação',
+  globalCurrentVaultSize: 'Tamanho atual do cofre',
+  globalWordsThisMonth: (value: string) =>
+    `${value} ${value === '1' ? 'palavra adicionada' : 'palavras adicionadas'} neste mês`,
+  globalWordsAddedInfo:
+    'As adições registradas incluem texto colado no editor e palavras de substituição. Exclusões não são descontadas deste histórico.',
   globalNotesThisMonth: (value: string) => `${value} criadas neste mês`,
   globalActiveYear: (value: string) => `${value} do ano`,
   globalLongestStreak: (value: string) => `Maior sequência: ${value} dias`,
@@ -101,7 +132,7 @@ export const ptBr: Translations = {
   globalStreak: 'Sequência de escrita',
   globalMetricInfoLabel: (metric: string) => `Sobre ${metric}`,
   globalWordsInfo:
-    'Palavras atuais nas notas Markdown. A porcentagem compara as palavras adicionadas neste mês com todo o mês passado.',
+    'Palavras atuais nas notas Markdown, incluindo propriedades, código e destinos de links. Exclusões reduzem este total.',
   globalNotesInfo:
     'Notas Markdown atuais no cofre. O número menor conta as notas registradas como criadas neste mês.',
   globalActiveDaysInfo:
@@ -111,7 +142,7 @@ export const ptBr: Translations = {
   globalContributions: 'Atividade de escrita',
   globalMetric: 'Métrica',
   globalPeriod: 'Período',
-  globalWordsWritten: 'Palavras escritas',
+  globalWordsWritten: 'Palavras adicionadas',
   globalNotesEdited: 'Notas editadas',
   globalWritingActivity: 'Atividade de escrita',
   globalYear: 'Ano',
@@ -162,6 +193,9 @@ export const ptBr: Translations = {
   paletteGroupPinnedNotes: 'Notas fixadas',
   paletteGroupBuiltinQueries: 'Consultas especiais',
   paletteGroupCustomQueries: 'Consultas personalizadas',
+  settingsTabPreview: 'Prévias de abas',
+  settingsTabPreviewDesc:
+    'Mostra prévias das abas abertas ao manter Ctrl pressionado e pressionar Tab.',
   settingsMobileKeyboardDismiss: 'Mostrar botão para ocultar o teclado',
   settingsMobileKeyboardDismissDesc:
     'Exibe um botão ao lado da busca da Paleta Universal para ocultar o teclado em dispositivos móveis.',
@@ -169,7 +203,8 @@ export const ptBr: Translations = {
   settingsPaletteGroupsDesc:
     'Separar comandos e consultas especiais com nomes de grupos discretos.',
   settingsConfirmPeriodic: 'Perguntar antes de criar notas periódicas',
-  settingsConfirmPeriodicDesc: 'Confirmar antes de o Seam criar uma nota diária, semanal ou anual.',
+  settingsConfirmPeriodicDesc:
+    'Confirmar antes de o Seam criar uma nota diária, semanal, mensal ou anual.',
   confirmPeriodicTitle: 'Criar nota periódica?',
   confirmPeriodicDescription: 'Criar uma nova nota neste caminho usando o modelo configurado?',
   confirmPeriodicCancel: 'Cancelar',
@@ -220,13 +255,16 @@ export const ptBr: Translations = {
   calendarAddPin: 'Fixar nota',
   calendarThisWeek: 'Esta semana',
   calendarCreateWeekly: 'Criar nota semanal',
+  calendarCreateMonthly: 'Criar nota mensal',
+  calendarOpenMonthly: 'Abrir nota mensal',
+  calendarMonthlyUnavailable: (detail: string) => `Nota mensal indisponível. ${detail}`,
   calendarOpenWeekly: 'Abrir nota semanal',
   calendarUnpin: 'Desafixar',
   calendarKeepWeekPinned: 'Manter esta semana fixada',
   settingsCalendarHeading: 'Calendário e notas periódicas',
   settingsWeeklyAuto: 'Usar configurações do Periodic Notes',
   settingsWeeklyAutoDesc:
-    'Usa as configurações semanais e anuais habilitadas no Periodic Notes, quando disponíveis. Caso contrário, usa as configurações abaixo.',
+    'Usa as configurações semanais, mensais e anuais habilitadas no Periodic Notes, quando disponíveis. Caso contrário, usa as configurações abaixo.',
   settingsWeeklyFolder: 'Pasta de notas semanais',
   settingsWeeklyFolderDesc: 'Pasta para notas semanais ao usar as configurações do Seam.',
   settingsWeeklyFormat: 'Formato da nota semanal',
@@ -236,6 +274,14 @@ export const ptBr: Translations = {
   settingsWeeklyTemplateDesc:
     'Modelo para novas notas semanais. Aceita date, title, time e os dias da semana.',
   paletteSpecialThisWeek: 'Nota da semana atual',
+  paletteSpecialThisMonth: 'Nota do mês atual',
+  paletteCreateMonthlyNote: 'Criar a nota deste mês',
+  settingsMonthlyFolder: 'Pasta de notas mensais',
+  settingsMonthlyFolderDesc: 'Pasta para notas mensais ao usar as configurações do Seam.',
+  settingsMonthlyFormat: 'Formato da nota mensal',
+  settingsMonthlyFormatDesc: 'Formato de data Moment, como YYYY-MM ou YYYY/MM.',
+  settingsMonthlyTemplate: 'Modelo de nota mensal',
+  settingsMonthlyTemplateDesc: 'Modelo para novas notas mensais. Aceita date, title e time.',
   paletteSpecialThisYear: 'Nota do ano atual',
   paletteCreateWeeklyNote: 'Criar a nota desta semana',
   paletteCreateYearlyNote: 'Criar a nota deste ano',
@@ -252,9 +298,15 @@ export const ptBr: Translations = {
   calendarChooseYear: 'Escolher ano',
   calendarPrevious: 'Período anterior',
   calendarNext: 'Próximo período',
+  calendarEventsHelp: 'Adicione - [<] Título do evento a uma nota diária.',
+  calendarEventsOn: (date: string) => `Eventos · ${date}`,
+  calendarEventCount: (count: number) => `${count} ${count === 1 ? 'evento' : 'eventos'}`,
+  calendarUntitledEvent: 'Evento sem título',
+  calendarEventsReadFailed: 'Não foi possível ler os eventos deste dia.',
   calendarOpenNote: 'Abrir nota diária',
   calendarCreateNote: 'Criar nota diária',
-  calendarKeyboardHint: 'Setas para navegar · Page Up/Down muda o período · Esc volta à busca',
+  calendarExpand: 'Expandir calendário',
+  calendarExitFullscreen: 'Sair da tela cheia do calendário',
   calendarLoading: 'Carregando calendário…',
   calendarLoadFailed: 'Não foi possível carregar as configurações do calendário.',
   calendarRetry: 'Tentar novamente',
@@ -507,7 +559,8 @@ export const ptBr: Translations = {
   settingsMoveCleanupPropsDesc:
     'Lista separada por vírgulas de chaves de propriedades do frontmatter a serem removidas ao mover (ex: status).',
 
-  settingsInterfaceHeading: 'Paleta Universal',
+  settingsInterfaceHeading: 'Interface',
+  settingsPaletteHeading: 'Paleta Universal',
   settingsShowIcons: 'Mostrar ícones na Paleta Universal',
   settingsShowIconsDesc: 'Exibir ícones nas listagens de busca e comandos.',
   settingsSearchMarkdownOnly: 'Buscar apenas arquivos Markdown',

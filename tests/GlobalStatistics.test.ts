@@ -22,7 +22,10 @@ import {
   monthlyTrends,
   monthlyChartScale,
 } from '../src/statistics/GlobalStatisticsModel'
-import { observeWritingTransactions } from '../src/statistics/WritingActivityExtension'
+import {
+  observeWritingTransactions,
+  WritingActivityMoves,
+} from '../src/statistics/WritingActivityExtension'
 import { GlobalStatistics } from '../src/statistics/GlobalStatistics'
 import {
   encodeStatistics,
@@ -53,6 +56,30 @@ function edit(before: string, from: number, to: number, insert: string) {
   return grossWordsAdded(before, transaction.newDoc.toString(), changes)
 }
 describe('Gross words added', () => {
+  it('retains words moved between distant change windows in either direction', () => {
+    const padding = 'padding '.repeat(20)
+    for (const [before, changes] of [
+      [
+        'alpha ' + padding + 'omega',
+        [
+          { from: 0, to: 6 },
+          { from: 171, insert: ' alpha' },
+        ],
+      ],
+      [
+        'omega ' + padding + 'alpha',
+        [
+          { from: 0, insert: 'alpha ' },
+          { from: 166, to: 171 },
+        ],
+      ],
+    ] as const) {
+      const tr = EditorState.create({ doc: before }).update({ changes: [...changes] })
+      const spans: { fromA: number; toA: number; fromB: number; toB: number }[] = []
+      tr.changes.iterChanges((fromA, toA, fromB, toB) => spans.push({ fromA, toA, fromB, toB }))
+      assert.equal(grossWordsAdded(before, tr.newDoc.toString(), spans), 0)
+    }
+  })
   it('credits a typed word once, including growing prefixes and trailing separators', () => {
     assert.equal(edit('', 0, 0, 'h'), 1)
     assert.equal(edit('h', 1, 1, 'ello'), 0)
@@ -93,6 +120,78 @@ describe('Gross words added', () => {
       changes.push({ fromA, toA, fromB, toB }),
     )
     assert.equal(grossWordsAdded(before, transaction.newDoc.toString(), changes), 2)
+  })
+})
+
+describe('Cut and paste activity across editors', () => {
+  function fixture() {
+    const moves = new WritingActivityMoves()
+    const words: number[] = []
+    const observe = (before: string, after: string, event: string, path = 'A.md') => {
+      const tr = EditorState.create({ doc: before }).update({
+        changes: { from: 0, to: before.length, insert: after },
+        userEvent: event,
+      })
+      observeWritingTransactions(
+        {
+          updateEditor() {},
+          recordEdit: (_file, count) => {
+            words.push(count)
+          },
+        },
+        new MockTFile(path) as TFile,
+        [tr],
+        true,
+        after,
+        false,
+        moves,
+      )
+      return tr
+    }
+    return { moves, words, observe }
+  }
+  it('counts a cross-note move as editing without new words, then credits a subsequent copy', () => {
+    const f = fixture()
+    f.observe('one two three', '', 'delete.cut')
+    f.observe('', 'one two three', 'input.paste', 'B.md')
+    f.observe('', 'one two three', 'input.paste', 'C.md')
+    assert.deepEqual(f.words, [0, 0, 3])
+  })
+  it('credits unrelated pasted words and clears a pending move on intervening writing', () => {
+    const f = fixture()
+    f.observe('one two three', '', 'delete.cut')
+    f.observe('', 'new text', 'input.paste', 'B.md')
+    f.observe('', 'one two three', 'input.paste', 'C.md')
+    f.observe('one two three', '', 'delete.cut')
+    f.observe('', 'typed', 'input.type')
+    f.observe('', 'one two three', 'input.paste', 'C.md')
+    assert.deepEqual(f.words, [0, 2, 3, 0, 1, 3])
+  })
+  it('does not suppress a paste after undo restores the cut text', () => {
+    const f = fixture()
+    f.observe('one two three', '', 'delete.cut')
+    f.observe('', 'one two three', 'undo')
+    f.observe('', 'one two three', 'input.paste', 'B.md')
+    assert.deepEqual(f.words, [0, 3])
+  })
+  it('expires pending moves after five minutes and handles repeated transaction notifications', () => {
+    const f = fixture()
+    const cut = EditorState.create({ doc: 'one two three' }).update({
+      changes: { from: 0, to: 13 },
+      userEvent: 'delete.cut',
+    })
+    const paste = EditorState.create({ doc: '' }).update({
+      changes: { from: 0, insert: 'one two three' },
+      userEvent: 'input.paste',
+    })
+    const changes = (tr: Transaction) => {
+      const spans: { fromA: number; toA: number; fromB: number; toB: number }[] = []
+      tr.changes.iterChanges((fromA, toA, fromB, toB) => spans.push({ fromA, toA, fromB, toB }))
+      return spans
+    }
+    f.moves.count(cut, changes(cut), false, 0)
+    assert.equal(f.moves.count(paste, changes(paste), false, SESSION_GAP_MS + 1), 3)
+    assert.equal(f.moves.count(paste, changes(paste), false, SESSION_GAP_MS + 2), 3)
   })
 })
 

@@ -75,11 +75,11 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 class HotkeyConflictError extends Error {}
-function modK(value: unknown, shift: boolean): boolean {
+function matchesHotkey(value: unknown, key: string, shift: boolean): boolean {
   if (
     !object(value) ||
     typeof value.key !== 'string' ||
-    value.key.toUpperCase() !== 'K' ||
+    value.key.toUpperCase() !== key.toUpperCase() ||
     !Array.isArray(value.modifiers)
   )
     return false
@@ -474,33 +474,48 @@ export class SeamInitializer {
     if (
       !effective ||
       !this.compatibility.hasCommand('seam:open-palette') ||
-      !this.compatibility.hasCommand('seam:open-palette-command-mode')
+      !this.compatibility.hasCommand('seam:open-palette-command-mode') ||
+      !this.compatibility.hasCommand('seam:toggle-fold')
     ) {
       plan.items.push({
-        target: 'hotkeys.json · Mod+K / Mod+Shift+K',
+        target: 'hotkeys.json · Mod+K / Mod+Shift+K / Mod+Enter',
         group: 'obsidian',
         status: 'unsupported',
         reason: 'unsupported',
       })
       return
     }
+    const recommendations = [
+      { id: 'seam:open-palette', key: 'K', shift: false },
+      { id: 'seam:open-palette-command-mode', key: 'K', shift: true },
+      { id: 'seam:toggle-fold', key: 'Enter', shift: false },
+    ]
     await this.config(
       plan,
       'hotkeys.json',
       (current) => {
-        const recommended = {
-          'seam:open-palette': [{ modifiers: ['Mod'], key: 'K' }],
-          'seam:open-palette-command-mode': [{ modifiers: ['Mod', 'Shift'], key: 'K' }],
-        }
+        const recommended = recommendations.filter(
+          ({ id }) =>
+            id !== 'seam:toggle-fold' || !Object.prototype.hasOwnProperty.call(current, id),
+        )
         const conflicts = Object.entries({ ...effective, ...current }).flatMap(([id, keys]) => {
-          if (id in recommended || !Array.isArray(keys)) return []
-          const matches = [false, true].filter((shift) => keys.some((key) => modK(key, shift)))
-          return matches.map((shift) => `${shift ? 'Mod+Shift+K' : 'Mod+K'}: ${id}`)
+          if (recommended.some((binding) => binding.id === id) || !Array.isArray(keys)) return []
+          return recommended
+            .filter(({ key, shift }) => keys.some((value) => matchesHotkey(value, key, shift)))
+            .map(({ key, shift }) => `Mod+${shift ? 'Shift+' : ''}${key}: ${id}`)
         })
         if (conflicts.length) throw new HotkeyConflictError(conflicts.join(', '))
-        return { ...current, ...recommended }
+        return {
+          ...current,
+          ...Object.fromEntries(
+            recommended.map(({ id, key, shift }) => [
+              id,
+              [{ modifiers: shift ? ['Mod', 'Shift'] : ['Mod'], key }],
+            ]),
+          ),
+        }
       },
-      ['seam:open-palette', 'seam:open-palette-command-mode'],
+      recommendations.map(({ id }) => id),
     )
     const item = plan.items[plan.items.length - 1]
     if (item.operation?.kind === 'config') item.operation.hotkeys = JSON.stringify(effective)

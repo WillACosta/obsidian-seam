@@ -114,6 +114,7 @@ Object.assign(require.cache['obsidian']!.exports, {
   Modal: ModalHost,
   Notice: class {},
   setIcon() {},
+  setTooltip() {},
 })
 const { DailyNoteCalendar } = require('../src/calendar/DailyNoteCalendar')
 const tick = () => new Promise((resolve) => setImmediate(resolve))
@@ -142,6 +143,7 @@ function fixture({ existing = true, ask = false, weeklyExisting = true, rolling 
   const app = {
     workspace: { getActiveFile: () => null },
     keymap: { popScope() {} },
+    metadataCache: { getFileCache: () => null },
     vault: {
       getAbstractFileByPath: (path: string) => files.get(path) ?? null,
       createFolder: async (path: string) => {
@@ -161,7 +163,7 @@ function fixture({ existing = true, ask = false, weeklyExisting = true, rolling 
     setWeeklySettings() {},
     weeklyTarget: (_pin: unknown, config: typeof weekly, date: moment.Moment) =>
       weeklyNotePath(date, config),
-    hasFile: () => false,
+    pinForFile: () => undefined,
     reconcile: async () => {},
   }
   const calendar = new DailyNoteCalendar(
@@ -178,6 +180,7 @@ function fixture({ existing = true, ask = false, weeklyExisting = true, rolling 
     new ScopeHost(),
     pins,
     weekly,
+    { folder: 'Monthly', format: 'YYYY-MM', template: '', source: 'seam' },
     ask,
   )
   calendar.model.selected = date
@@ -209,6 +212,17 @@ function fixture({ existing = true, ask = false, weeklyExisting = true, rolling 
 }
 
 describe('Calendar note-opening shortcuts', () => {
+  it('selects a clicked day with an existing note and keeps the calendar open', () => {
+    const f = fixture()
+    const date = '2024-02-28'
+    f.files.set(`Daily/${date}.md`, new MockTFile(`Daily/${date}.md`))
+    f.calendar.render()
+    f.host.all.find((node) => node.getAttribute('data-calendar-cell') === date)!.click()
+    assert.equal(f.calendar.model.selected.format('YYYY-MM-DD'), date)
+    assert.equal(f.calendar.openingAction, 'open')
+    assert.deepEqual(f.opened, [])
+  })
+
   for (const [name, options, target] of [
     ['Enter', {}, false],
     ['Mod+Enter', { metaKey: true }, 'tab'],
@@ -282,6 +296,58 @@ describe('Calendar note-opening shortcuts', () => {
       { path: weeklyNotePath(moment(), rolling.weekly), target: 'split' },
     ])
   })
+  for (const accept of [false, true]) {
+    it(`monthly note: ${accept ? 'creates in a split' : 'cancels creation'} for the selected month`, async () => {
+      const f = fixture({ ask: true })
+      f.control('next').click()
+      const button = f.control('monthly-action')
+      assert.match(button.text, /Create monthly note.*March 2024/)
+      f.key(button, { shiftKey: true })
+      assert.equal(f.calendar.openingAction, 'create')
+      const path = 'Monthly/2024-03.md'
+      assert.equal(f.files.has(path), false)
+      confirmations[0].click(accept ? 'Create note' : 'Cancel')
+      await tick()
+      assert.equal(f.files.has(path), accept)
+      assert.deepEqual(f.opened, accept ? [{ path, target: 'split' }] : [])
+      if (accept) {
+        const existing = f.control('monthly-action')
+        assert.match(existing.text, /Open monthly note.*March 2024/)
+        f.key(existing, { metaKey: true })
+        await tick()
+        assert.equal(confirmations.length, 1)
+        assert.deepEqual(f.opened[1], { path, target: 'tab' })
+      }
+    })
+  }
+
+  it('shows Open and a pin control for each existing period note', () => {
+    const f = fixture({ existing: false, weeklyExisting: false })
+    const periods = [
+      ['action', f.dailyPath],
+      ['weekly-action', f.weeklyPath],
+      ['monthly-action', 'Monthly/2024-02.md'],
+    ]
+    for (const [id] of periods) {
+      assert.equal(f.control(id).getAttribute('data-calendar-action'), 'create')
+      assert.equal(f.control(`${id}-pin`), undefined)
+    }
+    for (const [, path] of periods) f.files.set(path, new MockTFile(path))
+    f.calendar.render()
+    for (const [id] of periods) {
+      assert.equal(f.control(id).getAttribute('data-calendar-action'), 'open')
+      assert.equal(f.control(`${id}-pin`).getAttribute('data-calendar-action'), 'pin')
+    }
+  })
+
+  it('supports period shortcuts while the navigation buttons have focus', () => {
+    const f = fixture()
+    assert.equal(f.key(f.control('next'), {}, 'PageDown').consumed, true)
+    assert.equal(f.calendar.model.selected.format('YYYY-MM'), '2024-03')
+    assert.equal(f.key(f.control('previous'), { shiftKey: true }, 'PageUp').consumed, true)
+    assert.equal(f.calendar.model.selected.format('YYYY-MM'), '2023-03')
+  })
+
   it('keeps picker and pin controls separate from note-opening shortcuts', () => {
     const f = fixture()
     f.key(f.control('title'), { metaKey: true })

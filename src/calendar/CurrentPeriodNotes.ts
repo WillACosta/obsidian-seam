@@ -4,9 +4,15 @@ import type { Moment } from 'moment'
 import { SeamSettings } from '../types'
 import { detectLocale } from '../i18n'
 import { readWeeklyNoteSettings, resolveWeeklyNote, weeklyNotePath } from './WeeklyNotes'
+import { monthlyNotePath, readMonthlyNoteSettings, resolveMonthlyNote } from './MonthlyNotes'
 import { readYearlyNoteSettings, resolveYearlyNote, yearlyNotePath } from './YearlyNotes'
 
-export type CurrentPeriod = 'thisWeek' | 'thisYear'
+export type CurrentPeriod = 'thisWeek' | 'thisMonth' | 'thisYear'
+
+export function isCurrentPeriod(search: unknown): search is CurrentPeriod {
+  return search === 'thisWeek' || search === 'thisMonth' || search === 'thisYear'
+}
+
 /** Capture the period at suggestion time so activation cannot unexpectedly change its destination. */
 export async function currentPeriodTarget(
   app: App,
@@ -21,6 +27,14 @@ export async function currentPeriodTarget(
       day: date.format('YYYY-MM-DD'),
       path: weeklyNotePath(date, config),
       create: () => resolveWeeklyNote(app, date, config),
+    }
+  }
+  if (search === 'thisMonth') {
+    const config = await readMonthlyNoteSettings(app, settings)
+    return {
+      day: date.format('YYYY-MM-DD'),
+      path: monthlyNotePath(date, config),
+      create: () => resolveMonthlyNote(app, date, config),
     }
   }
   const config = await readYearlyNoteSettings(app, settings)

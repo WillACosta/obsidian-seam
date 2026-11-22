@@ -14,7 +14,6 @@ const COMMAND_ICONS: Record<string, string> = {
   'show-note-outline': 'list-tree',
   'pin-note': 'pin',
   'unpin-note': 'pin-off',
-  'show-note-completion': 'chart-no-axes-combined',
   'show-note-statistics': 'chart-no-axes-column',
   'archive-current-note': 'archive',
   'move-to-permanent': 'folder-input',

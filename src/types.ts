@@ -1,3 +1,4 @@
+import { DEFAULT_EDITOR_MEDIA, EditorMediaSettings, EditorMediaView } from './editor-media/settings'
 import { TFile } from 'obsidian'
 
 export type AutomationDelayMode = 'on-switch' | '2000' | '5000' | '1000'
@@ -10,6 +11,7 @@ export type CalendarPin =
   { kind: 'file'; path: string } | { kind: 'weekly'; week?: string; path?: string }
 
 export interface SeamSettings {
+  editorMedia: EditorMediaSettings
   palettePinnedNotes: string[]
   paletteNoteCommandIds: Record<string, string>
   palettePinnedCommands: string[]
@@ -21,8 +23,11 @@ export interface SeamSettings {
   calendarWeeklyFolder: string
   calendarWeeklyFormat: string
   calendarWeeklyTemplate: string
+  calendarMonthlyFolder: string
   calendarYearlyFolder: string
+  calendarMonthlyFormat: string
   calendarYearlyFormat: string
+  calendarMonthlyTemplate: string
   calendarYearlyTemplate: string
   permanentFolder: string
   archiveFolder: string
@@ -52,6 +57,7 @@ export interface SeamSettings {
   lastAnnouncedVersion: string
   customSpecialSearches: CustomSpecialSearch[]
   showPaletteDescriptions: boolean
+  enableTabPreview: boolean
   specialSearchPreferences: SpecialSearchPreference[]
   specialSearchOrder: string[]
   showTodoCompletionPercent: boolean
@@ -96,6 +102,7 @@ export interface CustomSpecialSearch {
 }
 
 export const DEFAULT_SETTINGS: SeamSettings = {
+  editorMedia: { ...DEFAULT_EDITOR_MEDIA },
   palettePinnedNotes: [],
   paletteNoteCommandIds: {},
   palettePinnedCommands: [],
@@ -107,8 +114,11 @@ export const DEFAULT_SETTINGS: SeamSettings = {
   calendarWeeklyFolder: 'Weekly',
   calendarWeeklyFormat: 'gggg-[W]ww',
   calendarWeeklyTemplate: '',
+  calendarMonthlyFolder: 'Monthly',
   calendarYearlyFolder: 'Yearly',
+  calendarMonthlyFormat: 'YYYY-MM',
   calendarYearlyFormat: 'YYYY',
+  calendarMonthlyTemplate: '',
   calendarYearlyTemplate: '',
   permanentFolder: 'Permanent',
   archiveFolder: 'Archive',
@@ -138,11 +148,13 @@ export const DEFAULT_SETTINGS: SeamSettings = {
   lastAnnouncedVersion: '',
   customSpecialSearches: [],
   showPaletteDescriptions: true,
+  enableTabPreview: true,
   specialSearchPreferences: [
     { search: 'today', pinned: false, hidden: false },
     { search: 'yesterday', pinned: false, hidden: false },
     { search: 'calendar', pinned: false, hidden: false },
     { search: 'thisWeek', pinned: false, hidden: false },
+    { search: 'thisMonth', pinned: false, hidden: false },
     { search: 'thisYear', pinned: false, hidden: false },
     { search: 'recent', pinned: false, hidden: false },
     { search: 'recentlyOpened', pinned: false, hidden: false },
@@ -163,6 +175,7 @@ export const DEFAULT_SETTINGS: SeamSettings = {
     'builtin:yesterday',
     'builtin:calendar',
     'builtin:thisWeek',
+    'builtin:thisMonth',
     'builtin:thisYear',
     'builtin:recent',
     'builtin:recentlyOpened',
@@ -213,6 +226,7 @@ export type QueryTokenType = 'tag' | 'negativeTag' | 'directory' | 'or' | 'text'
 
 export type SpecialSearch =
   | 'thisWeek'
+  | 'thisMonth'
   | 'thisYear'
   | 'calendar'
   | 'today'
@@ -232,6 +246,7 @@ export type SpecialSearch =
   | 'permanent'
 export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
   thisWeek: 'calendar-range',
+  thisMonth: 'calendar',
   thisYear: 'calendar',
   calendar: 'calendar-days',
   today: 'calendar-days',
@@ -253,6 +268,7 @@ export const SPECIAL_SEARCH_ICONS: Record<SpecialSearch, string> = {
 
 export const SPECIAL_SEARCH_LABELS: Record<SpecialSearch, string> = {
   thisWeek: '@thisWeek',
+  thisMonth: '@thisMonth',
   thisYear: '@thisYear',
   calendar: '@calendar',
   today: '@today',
@@ -304,6 +320,7 @@ export interface AutomationError {
 }
 
 export interface PaletteItem {
+  editorMediaView?: EditorMediaView
   id: string
   title: string
   description: string
@@ -313,6 +330,7 @@ export interface PaletteItem {
   pinnedCommand?: boolean
   groupLabel?: string
   headingLevel?: number
+  headingLine?: number
   icon?: string
   file?: TFile
   tags?: string[]

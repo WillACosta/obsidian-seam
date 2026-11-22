@@ -131,34 +131,38 @@ describe('Pending daily tasks', () => {
     assert.equal(created, existing)
     assert.equal(fixture.contents.get(target.path), 'Keep concurrent content')
   })
-  it('moves unfinished branches and retains completed children under completed source context', () => {
+  it('copies unfinished branches and marks only the copied source tasks', () => {
     const content =
       '# Today\n- [x] Read Hyperion\n- [/] Implement Seam Features\n\t- [x] Implement mobile UI\n\t- [ ] Write unit tests\n- [ ] Buy a new espresso machine\n'
     const result = extractPendingTasks(content)
     assert.equal(
       result.pending,
-      '- [/] Implement Seam Features\n\t- [ ] Write unit tests\n- [ ] Buy a new espresso machine',
+      '- [ ] Implement Seam Features\n\t- [ ] Write unit tests\n- [ ] Buy a new espresso machine',
     )
-    assert.match(result.remaining, /- \[x\] Implement Seam Features\n\t- \[x\] Implement mobile UI/)
-    assert.match(result.remaining, /Read Hyperion/)
-    assert.doesNotMatch(result.remaining, /Write unit tests|espresso/)
-    assert.equal(extractPendingTasks(result.remaining).pending, '')
+    assert.equal(
+      result.markedSource,
+      '# Today\n- [x] Read Hyperion\n- [>] Implement Seam Features\n\t- [x] Implement mobile UI\n\t- [>] Write unit tests\n- [>] Buy a new espresso machine\n',
+    )
+    assert.equal(extractPendingTasks(result.markedSource).pending, '')
   })
   it('preserves list parents, continuations, CRLF, and ordered list markers', () => {
     const result = extractPendingTasks(
       '## Work\r\n1. Project\r\n    - [ ] Pending\r\n      details\r\n    - [x] Done\r\n\r\nAfter\r\n',
     )
     assert.equal(result.pending, '1. Project\r\n    - [ ] Pending\r\n      details')
-    assert.match(result.remaining, /1\. Project\r\n    - \[x\] Done/)
-    assert.match(result.remaining, /After\r\n$/)
+    assert.match(
+      result.markedSource,
+      /1\. Project\r\n    - \[>\] Pending\r\n      details\r\n    - \[x\] Done/,
+    )
+    assert.match(result.markedSource, /After\r\n$/)
   })
   it('excludes YAML, fenced and indented code, and descendants of completed or cancelled tasks', () => {
     const result = extractPendingTasks(
       '---\n- [ ] property\n---\n```md\n- [ ] code\n```\n    - [ ] indented code\n- [x] Done\n  - [ ] Child\n- [-] Cancelled\n  - [ ] Child\n- [ ] Actual\n\n<!--\n- [ ] Commented out\n-->\n\n~~~\n- [ ] more code\n~~~\n',
     )
     assert.equal(result.pending, '- [ ] Actual')
-    assert.match(result.remaining, /more code/)
-    assert.match(result.remaining, /Child/)
+    assert.match(result.markedSource, /more code/)
+    assert.match(result.markedSource, /Child/)
   })
   it('preserves both notes and creates no destination when creation is cancelled', async () => {
     const fixture = vaultFixture()
@@ -192,7 +196,7 @@ describe('Pending daily tasks', () => {
     )
     assert.match(fixture.contents.get('Journal/2026-10-24.md')!, /- \[ \] Pending/)
     assert.equal(await service.transfer(source, 'tomorrow'), 0)
-    assert.match(fixture.contents.get(source.path)!, /Done/)
+    assert.equal(fixture.contents.get(source.path), '- [>] Pending\n- [x] Done\n')
   })
   it('pulls yesterday into an existing note without replacing its content', async () => {
     const fixture = vaultFixture()
@@ -200,6 +204,7 @@ describe('Pending daily tasks', () => {
     const today = fixture.file('Journal/2026-10-23.md', '# Keep this\n')
     assert.equal(await new DailyTaskTransfer(fixture.app).transfer(today, 'yesterday'), 1)
     assert.equal(fixture.contents.get(today.path), '# Keep this\n\n- [ ] Yesterday\n')
+    assert.equal(fixture.contents.get('Journal/2026-10-22.md'), '- [>] Yesterday\n')
     assert.equal(await new DailyTaskTransfer(fixture.app).transfer(today, 'yesterday'), 0)
   })
   it('preserves source when template is missing or destination creation fails', async () => {

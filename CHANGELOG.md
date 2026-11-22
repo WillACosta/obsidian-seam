@@ -2,6 +2,44 @@
 
 What's new and changed in each Seam release.
 
+## [5.0.0] - 2026-11-06
+
+<!-- iterations: iteration_18..iteration_24 -->
+
+### Added
+
+- **Calendar events and monthly notes**: Add `- [<] Event title` to a Daily Note to show it in `@calendar`. Expand the calendar to full screen, pin daily, weekly, or monthly notes, and use `@thisMonth` to find or create this month's note.
+
+![Calendar events](https://raw.githubusercontent.com/WillACosta/obsidian-seam/5.0.0/docs/images/v5.0.0/calendar_events.png)
+
+- **Tab previews**: Hold Ctrl and press Tab to preview open tabs. Release Ctrl or click a preview to switch tabs. Turn previews off in **Settings → Seam → Interface**.
+
+![Tab previews](https://raw.githubusercontent.com/WillACosta/obsidian-seam/5.0.0/docs/images/v5.0.0/tabs_preview.png)
+
+- **Image Layout**: Arrange images in grid, flex, or masonry galleries. Turn existing image embeds into a layout and expand the gallery to zoom or fit the whole composition.
+
+- **URL previews**: Show links as cards, compact previews, or minimal links. Customize the title, description, and image.
+
+- **Image captions**: Add captions from the Palette or an image's context menu. Edit the caption in your note to update it immediately.
+
+![Image Layout, URL previews, and captions](https://raw.githubusercontent.com/WillACosta/obsidian-seam/5.0.0/docs/images/v5.0.0/img_layout_url_preview.png)
+
+- **Writing tools**: Fold the current heading or list, dim completed tasks, and optionally move newly completed tasks to the end of their list.
+
+Choose your tools in **Settings → Seam → Editor & media**. URL previews and automatic task sorting are off by default.
+
+### Changed
+
+- **Daily task transfers**: Moving unfinished tasks between Daily Notes leaves the originals marked `[>]` and adds unchecked copies to the destination.
+
+- **Note statistics**: See word count, reading time, and task progress in one view. Expand completion with Cmd/Ctrl+Enter or a click.
+
+![Note statistics](https://raw.githubusercontent.com/WillACosta/obsidian-seam/5.0.0/docs/images/v5.0.0/note_stats.png)
+
+- **Outline folding**: Fold a heading in the Palette and its section folds in the note too.
+- **Writing statistics**: See words added this month and compare the same days with last month.
+- **Back navigation**: Use Cmd+[ on macOS or Ctrl+[ elsewhere. Views opened from commands return to the command list; Backspace keeps editing text.
+
 ## [4.0.1] - 2026-11-03
 
 ### Fixed
